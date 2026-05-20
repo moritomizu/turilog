@@ -57,6 +57,22 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
             {item.officialTideStationDistance == null ? "" : ` / 約${item.officialTideStationDistance}km`}
           </p>
         ) : null}
+        {item.officialCurrentCurveUrl ? (
+          <a
+            href={item.officialCurrentCurveUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="tap-target flex items-center justify-center rounded border border-coral px-4 py-3 text-sm font-black text-coral"
+          >
+            {item.officialCurrentDate ? `${item.officialCurrentDate}の潮流曲線を見る` : "海上保安庁の潮流曲線を見る"}
+          </a>
+        ) : null}
+        {item.officialCurrentStationName ? (
+          <p className="text-xs font-bold text-slate-500">
+            潮流参照地点: {item.officialCurrentStationName}
+            {item.officialCurrentStationDistance == null ? "" : ` / 約${item.officialCurrentStationDistance}km`}
+          </p>
+        ) : null}
       </div>
     </article>
   );

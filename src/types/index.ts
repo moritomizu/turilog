@@ -34,6 +34,15 @@ export type OfficialTideReference = {
   officialTideDate: string | null;
 };
 
+export type OfficialCurrentReference = {
+  officialCurrentStationName: string | null;
+  officialCurrentStationDistance: number | null;
+  officialCurrentCurveUrl: string | null;
+  officialCurrentSourceName: string | null;
+  officialCurrentDate: string | null;
+  officialCurrentNote: string | null;
+};
+
 export type WeatherInfo = {
   weatherLabel: string;
   weatherCode: number | null;
@@ -69,7 +78,8 @@ export type TackleInfo = {
 };
 
 export type Catch = TideInfo &
-  OfficialTideReference & {
+  OfficialTideReference &
+  OfficialCurrentReference & {
   weather: WeatherInfo;
   lunar: LunarInfo;
   tackle: TackleInfo;

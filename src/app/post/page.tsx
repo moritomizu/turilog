@@ -1,12 +1,14 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Loader } from "@googlemaps/js-api-loader";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
 import { geocodePlaceName } from "@/lib/geocoding";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
 import { getLunarInfo } from "@/lib/lunar";
+import { getOfficialCurrentReference } from "@/lib/officialCurrent";
 import { getOfficialTideReference } from "@/lib/officialTide";
 import { fetchTideInfo } from "@/lib/tide";
 import { emptyWeatherInfo, fetchWeatherInfo } from "@/lib/weather";
@@ -44,6 +46,7 @@ function PostForm({ userId }: { userId: string }) {
   });
   const [locationSuggestions, setLocationSuggestions] = useState<Array<{ label: string; latitude: number; longitude: number }>>([]);
   const [showDetails, setShowDetails] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
@@ -94,12 +97,12 @@ function PostForm({ userId }: { userId: string }) {
     setMessage("入力した位置を設定しました。");
   }
 
-  function applyLocation(point: LocationPoint) {
+  const applyLocation = useCallback((point: LocationPoint) => {
     setLocation(point);
     setManualLatitude(String(point.latitude));
     setManualLongitude(String(point.longitude));
     setMessage("過去の釣果地点を設定しました。");
-  }
+  }, []);
 
   async function handleGeocodePlace() {
     setMessage("地名から場所を検索しています。");
@@ -162,6 +165,7 @@ function PostForm({ userId }: { userId: string }) {
         longitude: location?.longitude ?? null,
         weather,
         lunar: getLunarInfo(caughtAtIso),
+        ...getOfficialCurrentReference(location?.latitude, location?.longitude, caughtAtIso),
         ...getOfficialTideReference(location?.latitude, location?.longitude, caughtAtIso),
         ...tideInfo
       });
@@ -227,6 +231,10 @@ function PostForm({ userId }: { userId: string }) {
                 地名から緯度経度を入れる
               </button>
             </div>
+            <button type="button" onClick={() => setShowMapPicker((value) => !value)} className="tap-target mt-3 w-full rounded bg-water px-4 py-3 text-sm font-black text-white">
+              {showMapPicker ? "地図を閉じる" : "地図でピン指定"}
+            </button>
+            {showMapPicker ? <MapPicker location={location} onPick={applyLocation} /> : null}
             <p className="mt-3 text-sm text-slate-600">
               現在位置: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
             </p>
@@ -300,6 +308,80 @@ function PostForm({ userId }: { userId: string }) {
         </form>
       </main>
     </>
+  );
+}
+
+function MapPicker({ location, onPick }: { location: LocationPoint | null; onPick: (point: LocationPoint) => void }) {
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const initialLocationRef = useRef(location);
+  const [message, setMessage] = useState("地図を読み込んでいます。");
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function load() {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        setMessage("Google Maps APIキーが未設定です。");
+        return;
+      }
+
+      const loader = new Loader({ apiKey, version: "weekly" });
+      const google = await loader.load();
+      if (!mounted || !mapRef.current) return;
+
+      const initialLocation = initialLocationRef.current;
+      const center = initialLocation
+        ? { lat: initialLocation.latitude, lng: initialLocation.longitude }
+        : { lat: 34.617, lng: 135.015 };
+      const map = new google.maps.Map(mapRef.current, {
+        center,
+        zoom: initialLocation ? 14 : 9,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false
+      });
+
+      markerRef.current = new google.maps.Marker({
+        position: center,
+        map,
+        draggable: true
+      });
+
+      function setPoint(latLng: google.maps.LatLng) {
+        const point = { latitude: latLng.lat(), longitude: latLng.lng() };
+        markerRef.current?.setPosition(latLng);
+        onPick(point);
+        setMessage("ピンの場所を投稿位置に設定しました。");
+      }
+
+      map.addListener("click", (event: google.maps.MapMouseEvent) => {
+        if (event.latLng) setPoint(event.latLng);
+      });
+
+      markerRef.current.addListener("dragend", () => {
+        const position = markerRef.current?.getPosition();
+        if (position) setPoint(position);
+      });
+
+      setMessage("地図をタップ、またはピンを動かして場所を指定できます。");
+    }
+
+    load().catch((error) => {
+      setMessage(error instanceof Error ? error.message : "地図を表示できませんでした。");
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [onPick]);
+
+  return (
+    <div className="mt-3">
+      <div ref={mapRef} className="h-72 w-full rounded border border-teal-100 bg-white" />
+      <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p>
+    </div>
   );
 }
 

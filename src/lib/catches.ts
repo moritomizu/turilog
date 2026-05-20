@@ -4,8 +4,9 @@ import { addDoc, collection, getDocs, query, serverTimestamp, where } from "fire
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import { emptyLunarInfo } from "@/lib/lunar";
+import { emptyOfficialCurrentReference } from "@/lib/officialCurrent";
 import { emptyWeatherInfo } from "@/lib/weather";
-import type { Catch, LunarInfo, OfficialTideReference, TackleInfo, TideInfo, WeatherInfo } from "@/types";
+import type { Catch, LunarInfo, OfficialCurrentReference, OfficialTideReference, TackleInfo, TideInfo, WeatherInfo } from "@/types";
 
 export async function uploadCatchImage(userId: string, file: File) {
   const storageRef = ref(getFirebaseStorage(), `catches/${userId}/${crypto.randomUUID()}-${file.name}`);
@@ -39,7 +40,8 @@ export async function getUserCatches(userId: string): Promise<Catch[]> {
       lunar: normalizeLunar(data.lunar),
       tackle: normalizeTackle(data.tackle),
       ...normalizeTide(data),
-      ...normalizeOfficialTideReference(data)
+      ...normalizeOfficialTideReference(data),
+      ...normalizeOfficialCurrentReference(data)
     };
   }).sort((a, b) => getSortableTime(b) - getSortableTime(a));
 }
@@ -84,6 +86,18 @@ function normalizeOfficialTideReference(data: Record<string, unknown>): Official
     officialTideCurveUrl: typeof data.officialTideCurveUrl === "string" ? data.officialTideCurveUrl : null,
     officialTideSourceName: typeof data.officialTideSourceName === "string" ? data.officialTideSourceName : null,
     officialTideDate: typeof data.officialTideDate === "string" ? data.officialTideDate : null
+  };
+}
+
+function normalizeOfficialCurrentReference(data: Record<string, unknown>): OfficialCurrentReference {
+  const empty = emptyOfficialCurrentReference();
+  return {
+    officialCurrentStationName: typeof data.officialCurrentStationName === "string" ? data.officialCurrentStationName : empty.officialCurrentStationName,
+    officialCurrentStationDistance: typeof data.officialCurrentStationDistance === "number" ? data.officialCurrentStationDistance : empty.officialCurrentStationDistance,
+    officialCurrentCurveUrl: typeof data.officialCurrentCurveUrl === "string" ? data.officialCurrentCurveUrl : empty.officialCurrentCurveUrl,
+    officialCurrentSourceName: typeof data.officialCurrentSourceName === "string" ? data.officialCurrentSourceName : empty.officialCurrentSourceName,
+    officialCurrentDate: typeof data.officialCurrentDate === "string" ? data.officialCurrentDate : empty.officialCurrentDate,
+    officialCurrentNote: typeof data.officialCurrentNote === "string" ? data.officialCurrentNote : empty.officialCurrentNote
   };
 }
 
