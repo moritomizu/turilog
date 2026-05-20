@@ -39,7 +39,7 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
           <Info label="当時の気温" value={item.weather.temperatureC == null ? "未取得" : `${item.weather.temperatureC}度`} />
           <Info label="当時の水温" value={formatSeaTemperature(item)} />
           <Info label="旧暦/月齢" value={formatLunar(item)} />
-          <Info label="潮位" value={item.tideHeight == null ? "未取得" : `${item.tideHeight}m`} />
+          <Info label="潮回り" value={formatTideCycle(item)} />
           <Info label="潮" value={item.tidePhaseLabel || "未取得"} />
         </div>
         {item.officialCurrentCurveUrl ? (
@@ -89,6 +89,25 @@ function formatLunar(item: Catch) {
   if (!item.lunar.lunarDateLabel && item.lunar.moonAge == null) return "未取得";
   const moonAge = item.lunar.moonAge == null ? "" : `月齢${item.lunar.moonAge}`;
   return [item.lunar.lunarDateLabel, moonAge].filter(Boolean).join(" / ");
+}
+
+function formatTideCycle(item: Catch) {
+  const lunarDay = item.lunar.lunarDay;
+  if (lunarDay != null) return getTideCycleByLunarDay(lunarDay);
+
+  const moonAge = item.lunar.moonAge;
+  if (moonAge == null) return "未取得";
+  const estimatedLunarDay = Math.max(1, Math.min(30, Math.round(moonAge) + 1));
+  return `${getTideCycleByLunarDay(estimatedLunarDay)}目安`;
+}
+
+function getTideCycleByLunarDay(lunarDay: number) {
+  const day = ((Math.round(lunarDay) - 1) % 30) + 1;
+  if ([1, 2, 3, 15, 16, 17].includes(day)) return "大潮";
+  if ([7, 8, 9, 22, 23, 24].includes(day)) return "小潮";
+  if ([10, 25].includes(day)) return "長潮";
+  if ([11, 26].includes(day)) return "若潮";
+  return "中潮";
 }
 
 function Info({ label, value }: { label: string; value: string }) {
