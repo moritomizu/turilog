@@ -478,39 +478,39 @@ function SizeEstimator({ imageUrl, onApply }: { imageUrl: string; onApply: (valu
         ) : null}
       </div>
 
-      <button type="button" onClick={() => setOpen((value) => !value)} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
-        {open ? "サイズ推定を閉じる" : "メジャー画像からサイズ推定"}
+      <button type="button" onClick={() => setOpen((value) => !value)} className="tap-target mt-2 rounded border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600">
+        {open ? "サイズ推定を閉じる" : "サイズ推定(テスト)"}
       </button>
 
       {open ? (
-        <div className="mt-3 space-y-3 rounded bg-foam p-3">
+        <div className="mt-2 space-y-2 rounded bg-foam p-3">
           <label className="block">
-            <span className="text-sm font-bold">メジャー基準 cm</span>
+            <span className="text-xs font-bold text-slate-600">メジャー基準 cm</span>
             <input
-              className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
+              className="mt-1 w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold"
               inputMode="decimal"
               value={knownCm}
               onChange={(event) => setKnownCm(event.target.value)}
               placeholder="例: 10"
             />
           </label>
-          <p className="text-sm font-bold leading-6 text-slate-700">
+          <p className="text-xs font-bold leading-5 text-slate-700">
             {points.length < 4 ? `${nextStepLabel}をタップしてください。` : `推定サイズ: ${roundSize(estimatedSize ?? 0)}cm`}
           </p>
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => setPoints([])} className="tap-target rounded border border-slate-300 bg-white px-4 py-2 text-sm font-black text-ink">
+            <button type="button" onClick={() => setPoints([])} className="tap-target rounded border border-slate-300 bg-white px-3 py-2 text-xs font-black text-ink">
               やり直す
             </button>
             <button
               type="button"
               disabled={estimatedSize == null}
               onClick={applyEstimate}
-              className="tap-target rounded bg-water px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+              className="tap-target rounded bg-water px-3 py-2 text-xs font-black text-white disabled:opacity-50"
             >
               サイズに反映
             </button>
           </div>
-          <p className="text-xs font-bold leading-5 text-slate-500">1、2でメジャーの既知幅、3、4で魚の両端を指定します。</p>
+          <p className="text-xs font-bold leading-5 text-slate-500">テスト機能です。1、2でメジャー、3、4で魚の両端を指定します。</p>
         </div>
       ) : null}
     </section>
@@ -649,28 +649,34 @@ function topValues(values: string[], limit: number) {
 }
 
 function topLocations(items: Catch[], limit: number) {
-  const counts = new Map<string, { latitude: number; longitude: number; count: number; pointNames: Map<string, number>; areaNames: Map<string, number> }>();
+  const counts = new Map<
+    string,
+    { latitude: number; longitude: number; count: number; latestTime: number; pointNames: Map<string, number>; areaNames: Map<string, number> }
+  >();
   items
     .filter((item) => item.latitude != null && item.longitude != null)
     .forEach((item) => {
       const latitude = item.latitude as number;
       const longitude = item.longitude as number;
       const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+      const caughtTime = new Date(item.caughtAt).getTime();
       const current = counts.get(key) ?? {
         latitude,
         longitude,
         count: 0,
+        latestTime: 0,
         pointNames: new Map<string, number>(),
         areaNames: new Map<string, number>()
       };
       current.count += 1;
+      current.latestTime = Math.max(current.latestTime, Number.isFinite(caughtTime) ? caughtTime : 0);
       if (item.pointName.trim()) current.pointNames.set(item.pointName.trim(), (current.pointNames.get(item.pointName.trim()) ?? 0) + 1);
       if (item.areaName.trim()) current.areaNames.set(item.areaName.trim(), (current.areaNames.get(item.areaName.trim()) ?? 0) + 1);
       counts.set(key, current);
     });
 
   return [...counts.values()]
-    .sort((a, b) => b.count - a.count)
+    .sort((a, b) => b.latestTime - a.latestTime || b.count - a.count)
     .slice(0, limit)
     .map((value, index) => ({
       label: formatLocationSuggestionLabel(value, index),
