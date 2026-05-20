@@ -42,22 +42,6 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
           <Info label="当時の水温" value={formatSeaTemperature(item)} />
           <Info label="旧暦/月齢" value={formatLunar(item)} />
         </div>
-        {item.officialTideCurveUrl ? (
-          <a
-            href={item.officialTideCurveUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="tap-target flex items-center justify-center rounded border border-tide px-4 py-3 text-sm font-black text-tide"
-          >
-            {item.officialTideDate ? `${item.officialTideDate}の潮汐曲線を見る` : "海上保安庁の潮汐曲線を見る"}
-          </a>
-        ) : null}
-        {item.officialTideStationName ? (
-          <p className="text-xs font-bold text-slate-500">
-            公式参照地点: {item.officialTideStationName}
-            {item.officialTideStationDistance == null ? "" : ` / 約${item.officialTideStationDistance}km`}
-          </p>
-        ) : null}
         {item.officialCurrentCurveUrl ? (
           <a
             href={item.officialCurrentCurveUrl}
@@ -71,7 +55,6 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
         {item.officialCurrentStationName ? (
           <p className="text-xs font-bold text-slate-500">
             潮流参照地点: {item.officialCurrentStationName}
-            {item.officialCurrentStationDistance == null ? "" : ` / 約${item.officialCurrentStationDistance}km`}
           </p>
         ) : null}
       </div>
@@ -88,7 +71,8 @@ function formatArea(item: Catch) {
 
 function formatSeaTemperature(item: Catch) {
   if (item.seaTemperature.seaTemperatureC == null) return item.seaTemperature.seaTemperatureAreaName ?? "未取得";
-  return `${item.seaTemperature.seaTemperatureC}度 (${item.seaTemperature.seaTemperatureAreaName ?? "海域未取得"})`;
+  const date = item.seaTemperature.seaTemperatureDate ? ` ${item.seaTemperature.seaTemperatureDate}` : "";
+  return `${item.seaTemperature.seaTemperatureC}度 (${item.seaTemperature.seaTemperatureAreaName ?? "海域未取得"}${date})`;
 }
 
 function hasTackle(item: Catch) {

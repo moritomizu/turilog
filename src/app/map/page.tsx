@@ -70,21 +70,11 @@ function CatchMap({ userId }: { userId: string }) {
 
 function infoHtml(item: Catch) {
   const image = item.imageUrl ? `<img src="${item.imageUrl}" alt="" style="width:220px;height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px;" />` : "";
-  const officialLink = item.officialTideCurveUrl
-    ? `<p style="margin:8px 0 0;"><a href="${item.officialTideCurveUrl}" target="_blank" rel="noreferrer">${item.officialTideDate ? `${escapeHtml(item.officialTideDate)}の潮汐曲線を見る` : "海上保安庁の潮汐曲線を見る"}</a></p>`
-    : "";
-  const officialStation = item.officialTideStationName
-    ? `<p style="margin:4px 0;color:#475569;">公式参照地点: ${escapeHtml(item.officialTideStationName)}${
-        item.officialTideStationDistance == null ? "" : ` / 約${item.officialTideStationDistance}km`
-      }</p>`
-    : "";
   const officialCurrent = item.officialCurrentCurveUrl
     ? `<p style="margin:8px 0 0;"><a href="${item.officialCurrentCurveUrl}" target="_blank" rel="noreferrer">${item.officialCurrentDate ? `${escapeHtml(item.officialCurrentDate)}の潮流曲線を見る` : "海上保安庁の潮流曲線を見る"}</a></p>`
     : "";
   const officialCurrentStation = item.officialCurrentStationName
-    ? `<p style="margin:4px 0;color:#475569;">潮流参照地点: ${escapeHtml(item.officialCurrentStationName)}${
-        item.officialCurrentStationDistance == null ? "" : ` / 約${item.officialCurrentStationDistance}km`
-      }</p>`
+    ? `<p style="margin:4px 0;color:#475569;">潮流参照地点: ${escapeHtml(item.officialCurrentStationName)}</p>`
     : "";
   const tackle = formatTackleHtml(item);
   return `
@@ -98,8 +88,6 @@ function infoHtml(item: Catch) {
       <p style="margin:4px 0;">${escapeHtml(item.lunar.lunarDateLabel ?? "旧暦未取得")}${item.lunar.moonAge == null ? "" : ` / 月齢${item.lunar.moonAge}`}</p>
       ${tackle}
       <p style="margin:4px 0;">${escapeHtml(item.comment)}</p>
-      ${officialStation}
-      ${officialLink}
       ${officialCurrentStation}
       ${officialCurrent}
     </div>
@@ -108,7 +96,8 @@ function infoHtml(item: Catch) {
 
 function formatSeaTemperatureHtml(item: Catch) {
   if (item.seaTemperature.seaTemperatureC == null) return escapeHtml(item.seaTemperature.seaTemperatureAreaName ?? "未取得");
-  return `${item.seaTemperature.seaTemperatureC}度 (${escapeHtml(item.seaTemperature.seaTemperatureAreaName ?? "海域未取得")})`;
+  const date = item.seaTemperature.seaTemperatureDate ? ` ${escapeHtml(item.seaTemperature.seaTemperatureDate)}` : "";
+  return `${item.seaTemperature.seaTemperatureC}度 (${escapeHtml(item.seaTemperature.seaTemperatureAreaName ?? "海域未取得")}${date})`;
 }
 
 function formatTackleHtml(item: Catch) {

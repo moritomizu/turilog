@@ -20,13 +20,13 @@ export async function POST(request: Request) {
     const textUrl = getSeaTemperatureTextUrl(area.code);
     const response = await fetch(textUrl, { next: { revalidate: 21600 } });
     const text = response.ok ? await response.text() : "";
-    const temperature = parseTemperature(text, date);
+    const parsed = parseTemperature(text, date);
 
     const result: SeaTemperatureInfo = {
-      seaTemperatureC: temperature,
+      seaTemperatureC: parsed?.temp ?? null,
       seaTemperatureAreaName: area.name,
       seaTemperatureAreaCode: area.code,
-      seaTemperatureDate: temperature == null ? date : date,
+      seaTemperatureDate: parsed?.date ?? date,
       seaTemperatureSourceName: SOURCE_NAME,
       seaTemperatureSourceUrl: getSeaTemperatureSourceUrl(area.code),
       seaTemperatureFetchedAt: new Date().toISOString()
@@ -41,23 +41,64 @@ export async function POST(request: Request) {
 
 function parseTemperature(text: string, date: string) {
   const target = date.split("-").map(Number);
-  let latestBeforeTarget: { time: number; temp: number } | null = null;
+  let latestBeforeTarget: { time: number; temp: number; date: string } | null = null;
+  const targetTime = Date.UTC(target[0], target[1] - 1, target[2]);
 
   for (const line of text.split(/\r?\n/)) {
-    const [year, month, day, , flag, temp] = line.split(",").map((value) => value.trim());
-    const y = Number(year);
-    const m = Number(month);
-    const d = Number(day);
-    const value = Number(temp);
-    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) || !Number.isFinite(value)) continue;
-    if (flag && flag !== "0" && flag !== "1") continue;
+    const parsed = parseTemperatureLine(line);
+    if (!parsed) continue;
 
-    const time = Date.UTC(y, m - 1, d);
-    const targetTime = Date.UTC(target[0], target[1] - 1, target[2]);
+    const time = Date.UTC(parsed.year, parsed.month - 1, parsed.day);
     if (time <= targetTime && (!latestBeforeTarget || time > latestBeforeTarget.time)) {
-      latestBeforeTarget = { time, temp: value };
+      latestBeforeTarget = {
+        time,
+        temp: parsed.temp,
+        date: `${parsed.year}-${pad(parsed.month)}-${pad(parsed.day)}`
+      };
     }
   }
 
-  return latestBeforeTarget?.temp ?? null;
+  return latestBeforeTarget;
+}
+
+function parseTemperatureLine(line: string) {
+  const normalized = line.trim();
+  if (!normalized || normalized.startsWith("#")) return null;
+
+  const isoDate = normalized.match(/(20\d{2})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (isoDate) {
+    const tail = normalized.slice(isoDate.index! + isoDate[0].length);
+    const temp = findTemperature(tail);
+    if (temp == null) return null;
+    return {
+      year: Number(isoDate[1]),
+      month: Number(isoDate[2]),
+      day: Number(isoDate[3]),
+      temp
+    };
+  }
+
+  const values = normalized.split(/[,\s]+/).map((value) => value.trim()).filter(Boolean);
+  if (values.length < 4) return null;
+
+  const year = Number(values[0]);
+  const month = Number(values[1]);
+  const day = Number(values[2]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  if (year < 2000 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const temp = findTemperature(values.slice(3).join(" "));
+  if (temp == null) return null;
+
+  return { year, month, day, temp };
+}
+
+function findTemperature(text: string) {
+  const numbers = text.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+  const plausible = numbers.filter((value) => value > -2 && value < 40);
+  return plausible.at(-1) ?? null;
+}
+
+function pad(value: number) {
+  return String(value).padStart(2, "0");
 }
