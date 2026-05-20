@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
-import { geocodePlaceName } from "@/lib/geocoding";
+import { getFishingAreaById, groupedFishingAreas } from "@/lib/fishingAreas";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
 import { getLunarInfo } from "@/lib/lunar";
 import { getOfficialCurrentReference } from "@/lib/officialCurrent";
@@ -32,8 +32,7 @@ function PostForm({ userId }: { userId: string }) {
   const [location, setLocation] = useState<LocationPoint | null>(null);
   const [manualLatitude, setManualLatitude] = useState("");
   const [manualLongitude, setManualLongitude] = useState("");
-  const [placeName, setPlaceName] = useState("");
-  const [resolvedPlaceName, setResolvedPlaceName] = useState("");
+  const [selectedAreaId, setSelectedAreaId] = useState("");
   const [fishSuggestions, setFishSuggestions] = useState<string[]>([]);
   const [commentSuggestions, setCommentSuggestions] = useState<string[]>([]);
   const [tackleSuggestions, setTackleSuggestions] = useState<Record<keyof TackleInfo, string[]>>({
@@ -104,18 +103,12 @@ function PostForm({ userId }: { userId: string }) {
     setMessage("過去の釣果地点を設定しました。");
   }, []);
 
-  async function handleGeocodePlace() {
-    setMessage("地名から場所を検索しています。");
-    try {
-      const point = await geocodePlaceName(placeName);
-      setLocation(point);
-      setManualLatitude(String(Number(point.latitude.toFixed(6))));
-      setManualLongitude(String(Number(point.longitude.toFixed(6))));
-      setResolvedPlaceName(point.formattedAddress);
-      setMessage(`地名から緯度経度を設定しました: ${point.formattedAddress}`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "地名検索に失敗しました。");
-    }
+  function handleAreaChange(areaId: string) {
+    setSelectedAreaId(areaId);
+    const area = getFishingAreaById(areaId);
+    if (!area) return;
+    applyLocation(area);
+    setMessage(`${area.prefecture}・${area.name} の代表地点を設定しました。必要なら地図でピンを微調整してください。`);
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -221,15 +214,30 @@ function PostForm({ userId }: { userId: string }) {
           </section>
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
-            <h2 className="text-sm font-black">地名で場所指定</h2>
+            <h2 className="text-sm font-black">釣りエリアから場所指定</h2>
             <p className="mt-1 text-sm leading-6 text-slate-600">
-              過去釣果やPC入力では、地名から大まかな緯度経度を入れられます。
+              大まかな釣りエリアを選び、必要なら地図でピンを微調整できます。
             </p>
             <div className="mt-3">
-              <Field label="地名で検索" value={placeName} onChange={setPlaceName} placeholder="例: 横浜 本牧海づり施設" />
-              <button type="button" onClick={handleGeocodePlace} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
-                地名から緯度経度を入れる
-              </button>
+              <label className="block">
+                <span className="text-sm font-bold">エリア</span>
+                <select
+                  value={selectedAreaId}
+                  onChange={(event) => handleAreaChange(event.target.value)}
+                  className="mt-2 w-full rounded border border-slate-300 bg-white p-4 text-base font-bold"
+                >
+                  <option value="">選択してください</option>
+                  {Object.entries(groupedFishingAreas()).map(([prefecture, areas]) => (
+                    <optgroup key={prefecture} label={prefecture}>
+                      {areas.map((area) => (
+                        <option key={area.id} value={area.id}>
+                          {area.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
             </div>
             <button type="button" onClick={() => setShowMapPicker((value) => !value)} className="tap-target mt-3 w-full rounded bg-water px-4 py-3 text-sm font-black text-white">
               {showMapPicker ? "地図を閉じる" : "地図でピン指定"}
@@ -238,7 +246,6 @@ function PostForm({ userId }: { userId: string }) {
             <p className="mt-3 text-sm text-slate-600">
               現在位置: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
             </p>
-            {resolvedPlaceName ? <p className="mt-2 rounded bg-foam p-2 text-xs font-bold text-slate-600">検索結果: {resolvedPlaceName}</p> : null}
           </section>
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
