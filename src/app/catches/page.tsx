@@ -37,7 +37,7 @@ function CatchList({ userId }: { userId: string }) {
         {items.length ? <CatchDigest digest={digest} /> : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <div key={item.id} className="space-y-2">
+            <div key={item.id} className="relative">
               <CatchCard item={item} />
               <EmbedControls
                 item={item}
@@ -53,6 +53,7 @@ function CatchList({ userId }: { userId: string }) {
 }
 
 function EmbedControls({ item, userId, onChange }: { item: Catch; userId: string; onChange: (item: Catch) => void }) {
+  const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/embed/catches/${item.id}`;
@@ -87,34 +88,62 @@ function EmbedControls({ item, userId, onChange }: { item: Catch; userId: string
   }
 
   return (
-    <section className="rounded border border-teal-100 bg-white p-3 shadow-soft">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-black text-ink">ブログ/SNS埋め込み</p>
-        <span className={`rounded-full px-2 py-1 text-xs font-black ${item.isPublic ? "bg-sky-100 text-sky-800" : "bg-slate-100 text-slate-600"}`}>
-          {item.isPublic ? "公開中" : "非公開"}
-        </span>
-      </div>
+    <>
       <button
         type="button"
-        disabled={busy}
-        onClick={togglePublic}
-        className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-2 text-sm font-black text-water disabled:opacity-60"
+        title="共有・埋め込み"
+        aria-label="共有・埋め込み"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className={`tap-target absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border shadow-soft ${
+          item.isPublic ? "border-sky-200 bg-sky-600 text-white" : "border-white/80 bg-white/95 text-water"
+        }`}
       >
-        {item.isPublic ? "埋め込み公開を停止" : "埋め込みを有効にする"}
+        <ShareIcon />
+        {item.isPublic ? <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-lime-300 ring-2 ring-white" /> : null}
       </button>
-      {item.isPublic ? (
-        <div className="mt-3 space-y-2">
-          <button type="button" onClick={copyEmbedCode} className="tap-target w-full rounded bg-water px-4 py-2 text-sm font-black text-white">
-            埋め込みコードをコピー
+      {open ? (
+        <section className="absolute left-3 right-3 top-16 z-20 rounded border border-teal-100 bg-white p-3 shadow-soft">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-black text-ink">共有</p>
+            <span className={`rounded-full px-2 py-1 text-xs font-black ${item.isPublic ? "bg-sky-100 text-sky-800" : "bg-slate-100 text-slate-600"}`}>
+              {item.isPublic ? "公開中" : "非公開"}
+            </span>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={togglePublic}
+            className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-2 text-sm font-black text-water disabled:opacity-60"
+          >
+            {item.isPublic ? "公開を停止" : "埋め込みを有効化"}
           </button>
-          <a href={shareUrl} target="_blank" rel="noreferrer" className="tap-target block rounded border border-slate-300 px-4 py-2 text-center text-sm font-black text-ink">
-            表示を確認
-          </a>
-          <textarea readOnly value={embedCode} className="h-24 w-full rounded border border-slate-300 bg-foam p-2 text-xs text-slate-700" />
-        </div>
+          {item.isPublic ? (
+            <div className="mt-3 space-y-2">
+              <button type="button" onClick={copyEmbedCode} className="tap-target w-full rounded bg-water px-4 py-2 text-sm font-black text-white">
+                コードをコピー
+              </button>
+              <a href={shareUrl} target="_blank" rel="noreferrer" className="tap-target block rounded border border-slate-300 px-4 py-2 text-center text-sm font-black text-ink">
+                表示を確認
+              </a>
+              <textarea readOnly value={embedCode} className="h-20 w-full rounded border border-slate-300 bg-foam p-2 text-xs text-slate-700" />
+            </div>
+          ) : null}
+          {message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
+        </section>
       ) : null}
-      {message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
-    </section>
+    </>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+      <path d="M8.7 10.7 15.3 7M8.7 13.3l6.6 3.7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+      <circle cx="18" cy="5.5" r="3" stroke="currentColor" strokeWidth="2" />
+      <circle cx="18" cy="18.5" r="3" stroke="currentColor" strokeWidth="2" />
+    </svg>
   );
 }
 
