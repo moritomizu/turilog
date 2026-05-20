@@ -1,9 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import type { Catch } from "@/types";
 
 export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
+  const [showTideHelp, setShowTideHelp] = useState(false);
+
   return (
     <article className="overflow-hidden rounded border border-teal-100 bg-white shadow-soft">
       <div className="relative aspect-[4/3] bg-teal-50">
@@ -40,8 +43,22 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
           <Info label="当時の水温" value={formatSeaTemperature(item)} />
           <Info label="旧暦/月齢" value={formatLunar(item)} />
           <Info label="潮回り" value={formatTideCycle(item)} />
-          <Info label="潮" value={item.tidePhaseLabel || "未取得"} />
+          <Info
+            label="潮"
+            value={item.tidePhaseLabel || "未取得"}
+            action={
+              <button
+                type="button"
+                onClick={() => setShowTideHelp((value) => !value)}
+                className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-black text-slate-600"
+                aria-expanded={showTideHelp}
+              >
+                ?
+              </button>
+            }
+          />
         </div>
+        {showTideHelp ? <TideHelp /> : null}
         {item.officialCurrentCurveUrl ? (
           <a
             href={item.officialCurrentCurveUrl}
@@ -59,6 +76,16 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
         ) : null}
       </div>
     </article>
+  );
+}
+
+function TideHelp() {
+  return (
+    <div className="rounded border border-sky-100 bg-sky-50 p-3 text-xs font-bold leading-5 text-slate-700">
+      <p className="font-black text-sky-800">潮の計算</p>
+      <p className="mt-1">前回の満潮/干潮から次回の潮止まりまでを10等分し、釣った時刻の位置を表示しています。</p>
+      <p className="mt-1">干潮から満潮へ向かう時は上げ、満潮から干潮へ向かう時は下げです。</p>
+    </div>
   );
 }
 
@@ -110,10 +137,13 @@ function getTideCycleByLunarDay(lunarDay: number) {
   return "中潮";
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({ label, value, action }: { label: string; value: string; action?: React.ReactNode }) {
   return (
     <div className="rounded bg-foam p-3">
-      <p className="text-xs font-bold text-slate-500">{label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-bold text-slate-500">{label}</p>
+        {action}
+      </div>
       <p className="mt-1 break-words font-bold text-ink">{value}</p>
     </div>
   );
