@@ -28,7 +28,7 @@ function Ranking({ userId }: { userId: string }) {
       .catch((error) => setMessage(error instanceof Error ? error.message : "ランキングを読み込めませんでした。"));
   }, [userId]);
 
-  const yearly = useMemo(() => [...items].sort((a, b) => b.sizeCm - a.sizeCm).slice(0, 10), [items]);
+  const yearly = useMemo(() => [...items].sort((a, b) => b.sizeCm - a.sizeCm).slice(0, 6), [items]);
   const byFish = useMemo(() => topBy(items, (item) => item.fishType), [items]);
   const byMonth = useMemo(() => topBy(items, (item) => new Date(item.caughtAt).toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit" })), [items]);
 
