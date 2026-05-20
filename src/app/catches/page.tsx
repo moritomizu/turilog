@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
-import { getUserCatches } from "@/lib/catches";
+import { getUserCatches, updateCatchPublicStatus } from "@/lib/catches";
 import type { Catch } from "@/types";
 
 export default function CatchesPage() {
@@ -37,11 +37,84 @@ function CatchList({ userId }: { userId: string }) {
         {items.length ? <CatchDigest digest={digest} /> : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <CatchCard key={item.id} item={item} />
+            <div key={item.id} className="space-y-2">
+              <CatchCard item={item} />
+              <EmbedControls
+                item={item}
+                userId={userId}
+                onChange={(nextItem) => setItems((current) => current.map((value) => (value.id === nextItem.id ? nextItem : value)))}
+              />
+            </div>
           ))}
         </div>
       </main>
     </>
+  );
+}
+
+function EmbedControls({ item, userId, onChange }: { item: Catch; userId: string; onChange: (item: Catch) => void }) {
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/embed/catches/${item.id}`;
+  const embedCode = `<iframe src="${shareUrl}" width="100%" height="560" style="border:0;border-radius:8px;max-width:420px;" loading="lazy" title="TsuriLog catch"></iframe>`;
+
+  async function togglePublic() {
+    setBusy(true);
+    setMessage(item.isPublic ? "公開を停止しています。" : "埋め込み公開を有効にしています。");
+    try {
+      const nextPublic = !item.isPublic;
+      await updateCatchPublicStatus(item.id, userId, nextPublic);
+      onChange({
+        ...item,
+        isPublic: nextPublic,
+        publicShareEnabledAt: nextPublic ? new Date().toISOString() : null
+      });
+      setMessage(nextPublic ? "埋め込みコードを使えるようになりました。" : "埋め込み公開を停止しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "公開設定を変更できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyEmbedCode() {
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      setMessage("埋め込みコードをコピーしました。");
+    } catch {
+      setMessage("コピーできませんでした。下のコードを手動でコピーしてください。");
+    }
+  }
+
+  return (
+    <section className="rounded border border-teal-100 bg-white p-3 shadow-soft">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-black text-ink">ブログ/SNS埋め込み</p>
+        <span className={`rounded-full px-2 py-1 text-xs font-black ${item.isPublic ? "bg-sky-100 text-sky-800" : "bg-slate-100 text-slate-600"}`}>
+          {item.isPublic ? "公開中" : "非公開"}
+        </span>
+      </div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={togglePublic}
+        className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-2 text-sm font-black text-water disabled:opacity-60"
+      >
+        {item.isPublic ? "埋め込み公開を停止" : "埋め込みを有効にする"}
+      </button>
+      {item.isPublic ? (
+        <div className="mt-3 space-y-2">
+          <button type="button" onClick={copyEmbedCode} className="tap-target w-full rounded bg-water px-4 py-2 text-sm font-black text-white">
+            埋め込みコードをコピー
+          </button>
+          <a href={shareUrl} target="_blank" rel="noreferrer" className="tap-target block rounded border border-slate-300 px-4 py-2 text-center text-sm font-black text-ink">
+            表示を確認
+          </a>
+          <textarea readOnly value={embedCode} className="h-24 w-full rounded border border-slate-300 bg-foam p-2 text-xs text-slate-700" />
+        </div>
+      ) : null}
+      {message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
+    </section>
   );
 }
 

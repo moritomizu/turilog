@@ -1,6 +1,6 @@
 "use client";
 
-import { addDoc, collection, getDocs, query, serverTimestamp, where } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import { emptyLunarInfo } from "@/lib/lunar";
@@ -24,30 +24,68 @@ export async function createCatch(data: Omit<Catch, "id" | "createdAt">) {
 
 export async function getUserCatches(userId: string): Promise<Catch[]> {
   const snapshot = await getDocs(query(collection(getFirebaseDb(), "catches"), where("userId", "==", userId)));
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      userId: data.userId,
-      imageUrl: data.imageUrl ?? null,
-      fishType: data.fishType ?? "",
-      sizeCm: Number(data.sizeCm ?? 0),
-      caughtAt: normalizeDate(data.caughtAt),
-      comment: data.comment ?? "",
-      latitude: typeof data.latitude === "number" ? data.latitude : null,
-      longitude: typeof data.longitude === "number" ? data.longitude : null,
-      areaName: typeof data.areaName === "string" ? data.areaName : "",
-      pointName: typeof data.pointName === "string" ? data.pointName : "",
-      createdAt: normalizeDate(data.createdAt),
-      weather: normalizeWeather(data.weather),
-      seaTemperature: normalizeSeaTemperature(data.seaTemperature),
-      lunar: normalizeLunar(data.lunar),
-      tackle: normalizeTackle(data.tackle),
-      ...normalizeTide(data),
-      ...normalizeOfficialTideReference(data),
-      ...normalizeOfficialCurrentReference(data)
-    };
-  }).sort((a, b) => getSortableTime(b) - getSortableTime(a));
+  return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
+}
+
+export async function getPublicCatch(catchId: string): Promise<Catch | null> {
+  const snapshot = await getDoc(doc(getFirebaseDb(), "publicCatches", catchId));
+  if (!snapshot.exists()) return null;
+  const item = normalizeCatchDoc(snapshot.id, snapshot.data());
+  return item.isPublic ? item : null;
+}
+
+export async function updateCatchPublicStatus(catchId: string, userId: string, isPublic: boolean) {
+  const catchRef = doc(getFirebaseDb(), "catches", catchId);
+  const snapshot = await getDoc(catchRef);
+  if (!snapshot.exists()) throw new Error("釣果が見つかりませんでした。");
+  if (snapshot.data().userId !== userId) throw new Error("この釣果を更新する権限がありません。");
+  const publicRef = doc(getFirebaseDb(), "publicCatches", catchId);
+  await updateDoc(catchRef, {
+    isPublic,
+    publicShareEnabledAt: isPublic ? new Date().toISOString() : null
+  });
+  if (isPublic) {
+    await setDoc(publicRef, sanitizeCatchForEmbed(normalizeCatchDoc(snapshot.id, snapshot.data())));
+  } else {
+    await deleteDoc(publicRef);
+  }
+}
+
+function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
+  return {
+    id,
+    userId: typeof data.userId === "string" ? data.userId : "",
+    imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : null,
+    fishType: typeof data.fishType === "string" ? data.fishType : "",
+    sizeCm: Number(data.sizeCm ?? 0),
+    caughtAt: normalizeDate(data.caughtAt),
+    comment: typeof data.comment === "string" ? data.comment : "",
+    latitude: typeof data.latitude === "number" ? data.latitude : null,
+    longitude: typeof data.longitude === "number" ? data.longitude : null,
+    areaName: typeof data.areaName === "string" ? data.areaName : "",
+    pointName: typeof data.pointName === "string" ? data.pointName : "",
+    isPublic: data.isPublic === true,
+    publicShareEnabledAt: typeof data.publicShareEnabledAt === "string" ? data.publicShareEnabledAt : null,
+    createdAt: normalizeDate(data.createdAt),
+    weather: normalizeWeather(data.weather),
+    seaTemperature: normalizeSeaTemperature(data.seaTemperature),
+    lunar: normalizeLunar(data.lunar),
+    tackle: normalizeTackle(data.tackle),
+    ...normalizeTide(data),
+    ...normalizeOfficialTideReference(data),
+    ...normalizeOfficialCurrentReference(data)
+  };
+}
+
+function sanitizeCatchForEmbed(item: Catch): Omit<Catch, "id"> {
+  return {
+    ...item,
+    latitude: null,
+    longitude: null,
+    pointName: "",
+    isPublic: true,
+    publicShareEnabledAt: new Date().toISOString()
+  };
 }
 
 function getSortableTime(item: Catch) {

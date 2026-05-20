@@ -64,6 +64,26 @@ MVPでは自分自身の釣果管理と潮位分析に集中しています。�
 
 Firestoreのインデックスエラーが表示された場合は、エラーメッセージ内のリンクを開いて作成してもOKです。
 
+### 埋め込み公開を使う場合のFirestoreルール例
+
+ブログやSNSに釣果カードを埋め込む場合、公開用の `publicCatches` コレクションだけをログインなしで読める必要があります。元の `catches` ではなく、緯度経度・ポイント名を抜いた埋め込み専用データを公開します。
+
+まずはMVPとして、以下のような考え方でルールを設定します。
+
+```txt
+match /catches/{catchId} {
+  allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+  allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+  allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+}
+
+match /publicCatches/{catchId} {
+  allow read: if resource.data.isPublic == true;
+  allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+  allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+}
+```
+
 ## Firebase Storageの有効化方法
 
 1. Firebase Consoleで「Storage」を開きます。

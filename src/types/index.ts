@@ -105,6 +105,8 @@ export type Catch = TideInfo &
   longitude: number | null;
   areaName: string;
   pointName: string;
+  isPublic: boolean;
+  publicShareEnabledAt: string | null;
   createdAt: string;
 };
 

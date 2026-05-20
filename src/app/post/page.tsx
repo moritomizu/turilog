@@ -178,6 +178,8 @@ function PostForm({ userId }: { userId: string }) {
         longitude: location?.longitude ?? null,
         areaName,
         pointName: pointName.trim(),
+        isPublic: false,
+        publicShareEnabledAt: null,
         weather,
         seaTemperature,
         lunar: getLunarInfo(caughtAtIso),
