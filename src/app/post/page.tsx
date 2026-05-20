@@ -215,6 +215,22 @@ function PostForm({ userId }: { userId: string }) {
           </section>
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
+            <h2 className="text-sm font-black">地名で場所指定</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              過去釣果やPC入力では、地名から大まかな緯度経度を入れられます。
+            </p>
+            <div className="mt-3">
+              <Field label="地名で検索" value={placeName} onChange={setPlaceName} placeholder="例: 横浜 本牧海づり施設" />
+              <button type="button" onClick={handleGeocodePlace} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
+                地名から緯度経度を入れる
+              </button>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">
+              現在位置: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
+            </p>
+          </section>
+
+          <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
             <button type="button" onClick={() => setShowDetails((value) => !value)} className="tap-target flex w-full items-center justify-between rounded bg-foam px-4 py-3 text-left font-black">
               <span>詳細入力</span>
               <span>{showDetails ? "閉じる" : "開く"}</span>
@@ -229,12 +245,6 @@ function PostForm({ userId }: { userId: string }) {
                   <p className="mt-1 text-sm text-slate-600">
                     緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
                   </p>
-                  <div className="mt-3">
-                    <Field label="地名で検索" value={placeName} onChange={setPlaceName} placeholder="例: 横浜 本牧海づり施設" />
-                    <button type="button" onClick={handleGeocodePlace} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
-                      地名から緯度経度を入れる
-                    </button>
-                  </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <Field label="緯度" type="number" inputMode="decimal" value={manualLatitude} onChange={setManualLatitude} placeholder="35.454" />
                     <Field label="経度" type="number" inputMode="decimal" value={manualLongitude} onChange={setManualLongitude} placeholder="139.644" />
