@@ -63,7 +63,6 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
 }
 
 function formatArea(item: Catch) {
-  if (item.pointName) return item.areaName ? `${item.pointName} / ${item.areaName}` : item.pointName;
   if (item.areaName) return item.areaName;
   if (item.officialCurrentStationName) return item.officialCurrentStationName;
   if (item.latitude != null) return `${item.latitude.toFixed(4)}, ${item.longitude?.toFixed(4)}`;
