@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader } from "@googlemaps/js-api-loader";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
@@ -19,6 +19,11 @@ type LocationSuggestion = LocationPoint & {
   label: string;
   pointName: string;
   areaName: string;
+};
+
+type MeasurePoint = {
+  x: number;
+  y: number;
 };
 
 export default function PostPage() {
@@ -215,7 +220,7 @@ function PostForm({ userId }: { userId: string }) {
             <input className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             <p className="mt-2 text-xs font-bold text-slate-500">カメラ撮影または写真ライブラリから選択できます。</p>
           </label>
-          {preview ? <img src={preview} alt="投稿プレビュー" className="aspect-[4/3] w-full rounded object-cover" /> : null}
+          {preview ? <SizeEstimator imageUrl={preview} onApply={(value) => setSizeCm(value)} /> : null}
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
             <Field label="魚種" value={fishType} onChange={setFishType} placeholder="例: シーバス" required listId="fish-suggestions" autoFocus />
@@ -429,6 +434,89 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
   );
 }
 
+function SizeEstimator({ imageUrl, onApply }: { imageUrl: string; onApply: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [knownCm, setKnownCm] = useState("10");
+  const [points, setPoints] = useState<MeasurePoint[]>([]);
+  const estimatedSize = useMemo(() => estimateSizeCm(points, Number(knownCm)), [knownCm, points]);
+  const stepLabels = ["メジャー始点", "メジャー終点", "魚の頭", "魚の尾"];
+  const nextStepLabel = stepLabels[points.length] ?? "計算完了";
+
+  function handlePick(event: PointerEvent<HTMLDivElement>) {
+    if (points.length >= 4) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPoints((current) => [
+      ...current,
+      {
+        x: ((event.clientX - rect.left) / rect.width) * 100,
+        y: ((event.clientY - rect.top) / rect.height) * 100
+      }
+    ]);
+  }
+
+  function applyEstimate() {
+    if (estimatedSize == null) return;
+    onApply(String(roundSize(estimatedSize)));
+  }
+
+  return (
+    <section className="rounded border border-teal-100 bg-white p-3 shadow-soft">
+      <div className="relative overflow-hidden rounded bg-teal-50">
+        <img src={imageUrl} alt="投稿プレビュー" className="aspect-[4/3] w-full object-cover" />
+        {open ? (
+          <div className="absolute inset-0 cursor-crosshair" onPointerDown={handlePick}>
+            {points.map((point, index) => (
+              <span
+                key={`${point.x}-${point.y}-${index}`}
+                className="absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-coral text-xs font-black text-white ring-2 ring-white"
+                style={{ left: `${point.x}%`, top: `${point.y}%` }}
+              >
+                {index + 1}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <button type="button" onClick={() => setOpen((value) => !value)} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
+        {open ? "サイズ推定を閉じる" : "メジャー画像からサイズ推定"}
+      </button>
+
+      {open ? (
+        <div className="mt-3 space-y-3 rounded bg-foam p-3">
+          <label className="block">
+            <span className="text-sm font-bold">メジャー基準 cm</span>
+            <input
+              className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
+              inputMode="decimal"
+              value={knownCm}
+              onChange={(event) => setKnownCm(event.target.value)}
+              placeholder="例: 10"
+            />
+          </label>
+          <p className="text-sm font-bold leading-6 text-slate-700">
+            {points.length < 4 ? `${nextStepLabel}をタップしてください。` : `推定サイズ: ${roundSize(estimatedSize ?? 0)}cm`}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setPoints([])} className="tap-target rounded border border-slate-300 bg-white px-4 py-2 text-sm font-black text-ink">
+              やり直す
+            </button>
+            <button
+              type="button"
+              disabled={estimatedSize == null}
+              onClick={applyEstimate}
+              className="tap-target rounded bg-water px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+            >
+              サイズに反映
+            </button>
+          </div>
+          <p className="text-xs font-bold leading-5 text-slate-500">1、2でメジャーの既知幅、3、4で魚の両端を指定します。</p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function TackleField({
   label,
   field,
@@ -607,6 +695,22 @@ function formatLocationSuggestionLabel(
 
 function topMapValue(values: Map<string, number>) {
   return [...values.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"))[0]?.[0] ?? "";
+}
+
+function estimateSizeCm(points: MeasurePoint[], knownCm: number) {
+  if (points.length < 4 || !Number.isFinite(knownCm) || knownCm <= 0) return null;
+  const rulerPixels = distance(points[0], points[1]);
+  const fishPixels = distance(points[2], points[3]);
+  if (!rulerPixels || !fishPixels) return null;
+  return (fishPixels / rulerPixels) * knownCm;
+}
+
+function distance(a: MeasurePoint, b: MeasurePoint) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function roundSize(value: number) {
+  return Math.round(value * 10) / 10;
 }
 
 function formatLocalDateTime(value: string) {
