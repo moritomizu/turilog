@@ -15,8 +15,12 @@ export default function Home() {
         <div className="py-8">
           <p className="text-sm font-bold text-water">Personal fishing log</p>
           <h1 className="mt-2 text-4xl font-black tracking-normal text-ink">TsuriLog</h1>
-          <p className="mt-3 max-w-md text-base leading-7 text-slate-700">
-            釣行後すぐに写真と釣果を残し、潮位との関係をあとから見返せる個人用ログです。
+          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-700">
+            created by TaPiYoTa
+            <br />
+            心に残る一枚のために。釣果を残して振り返ろう。
+            <br />
+            潮位や水温、釣行データなどデータから振り返ることができる個人用釣りログです。
           </p>
         </div>
 
