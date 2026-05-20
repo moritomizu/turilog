@@ -31,6 +31,7 @@ function PostForm({ userId }: { userId: string }) {
   const [manualLatitude, setManualLatitude] = useState("");
   const [manualLongitude, setManualLongitude] = useState("");
   const [placeName, setPlaceName] = useState("");
+  const [resolvedPlaceName, setResolvedPlaceName] = useState("");
   const [fishSuggestions, setFishSuggestions] = useState<string[]>([]);
   const [commentSuggestions, setCommentSuggestions] = useState<string[]>([]);
   const [tackleSuggestions, setTackleSuggestions] = useState<Record<keyof TackleInfo, string[]>>({
@@ -107,7 +108,8 @@ function PostForm({ userId }: { userId: string }) {
       setLocation(point);
       setManualLatitude(String(Number(point.latitude.toFixed(6))));
       setManualLongitude(String(Number(point.longitude.toFixed(6))));
-      setMessage("地名から緯度経度を設定しました。");
+      setResolvedPlaceName(point.formattedAddress);
+      setMessage(`地名から緯度経度を設定しました: ${point.formattedAddress}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "地名検索に失敗しました。");
     }
@@ -228,6 +230,7 @@ function PostForm({ userId }: { userId: string }) {
             <p className="mt-3 text-sm text-slate-600">
               現在位置: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
             </p>
+            {resolvedPlaceName ? <p className="mt-2 rounded bg-foam p-2 text-xs font-bold text-slate-600">検索結果: {resolvedPlaceName}</p> : null}
           </section>
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
@@ -257,7 +260,7 @@ function PostForm({ userId }: { userId: string }) {
 
                 <section className="rounded bg-foam p-3">
                   <h2 className="text-sm font-black">タックル</h2>
-                  <div className="mt-3 space-y-4">
+                  <div className="mt-3 grid grid-cols-2 gap-2">
                     <TackleField label="ルアー" field="lureName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lureName} placeholder="例: カゲロウ100F" />
                     <TackleField label="カラー" field="lureColor" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lureColor} placeholder="例: チャートバック" />
                     <TackleField label="ロッド" field="rodName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.rodName} placeholder="例: 9.6ft ML" />
@@ -283,7 +286,7 @@ function PostForm({ userId }: { userId: string }) {
             )}
           </section>
 
-          {location ? <p className="rounded bg-foam p-3 text-sm font-bold leading-6 text-slate-700">潮位、公式潮汐曲線リンク、天候、風速を自動保存します。</p> : null}
+          {location ? <p className="rounded bg-foam p-3 text-sm font-bold leading-6 text-slate-700">釣った場所と日時をもとに、潮位、公式潮汐曲線リンク、当時の天候、当時の風速を自動保存します。</p> : null}
 
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
 
@@ -317,13 +320,12 @@ function TackleField({
 }) {
   return (
     <div>
-      <Field label={label} value={tackle[field]} onChange={(value) => setTackle({ ...tackle, [field]: value })} placeholder={placeholder} listId={`tackle-${field}`} />
+      <Field label={label} value={tackle[field]} onChange={(value) => setTackle({ ...tackle, [field]: value })} placeholder={placeholder} listId={`tackle-${field}`} compact />
       <datalist id={`tackle-${field}`}>
         {suggestions.map((value) => (
           <option key={value} value={value} />
         ))}
       </datalist>
-      <SuggestionChips values={suggestions} onPick={(value) => setTackle({ ...tackle, [field]: value })} />
     </div>
   );
 }
@@ -337,7 +339,8 @@ function Field({
   required,
   listId,
   inputMode,
-  autoFocus
+  autoFocus,
+  compact
 }: {
   label: string;
   value: string;
@@ -348,13 +351,14 @@ function Field({
   listId?: string;
   inputMode?: "decimal" | "numeric" | "text";
   autoFocus?: boolean;
+  compact?: boolean;
 }) {
   return (
     <label className="block">
       <span className="text-sm font-bold">{label}</span>
       <input
         required={required}
-        className="mt-2 w-full rounded border border-slate-300 bg-white p-4 text-lg font-bold"
+        className={`mt-2 w-full rounded border border-slate-300 bg-white font-bold ${compact ? "p-2 text-sm" : "p-4 text-lg"}`}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}

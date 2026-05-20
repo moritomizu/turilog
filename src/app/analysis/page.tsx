@@ -41,7 +41,7 @@ function Analysis({ userId }: { userId: string }) {
         <Table title="何分目で釣れたかの分布" rows={stats.phaseRows} />
         <Table title="魚種別の釣れやすい潮位傾向" rows={stats.fishRows} />
         <Table title="サイズが大きかった潮位傾向" rows={stats.sizeRows} />
-        <Table title="天候・風速の傾向" rows={stats.weatherRows} />
+        <Table title="当時の天候・風速の傾向" rows={stats.weatherRows} />
         <Table title="旧暦・月齢の傾向" rows={stats.lunarRows} />
       </main>
     </>
