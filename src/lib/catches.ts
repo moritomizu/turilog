@@ -5,7 +5,7 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import { emptyLunarInfo } from "@/lib/lunar";
 import { emptyWeatherInfo } from "@/lib/weather";
-import type { Catch, LunarInfo, OfficialTideReference, TideInfo, WeatherInfo } from "@/types";
+import type { Catch, LunarInfo, OfficialTideReference, TackleInfo, TideInfo, WeatherInfo } from "@/types";
 
 export async function uploadCatchImage(userId: string, file: File) {
   const storageRef = ref(getFirebaseStorage(), `catches/${userId}/${crypto.randomUUID()}-${file.name}`);
@@ -37,6 +37,7 @@ export async function getUserCatches(userId: string): Promise<Catch[]> {
       createdAt: normalizeDate(data.createdAt),
       weather: normalizeWeather(data.weather),
       lunar: normalizeLunar(data.lunar),
+      tackle: normalizeTackle(data.tackle),
       ...normalizeTide(data),
       ...normalizeOfficialTideReference(data)
     };
@@ -109,5 +110,29 @@ function normalizeLunar(value: unknown): LunarInfo {
     moonAge: typeof data.moonAge === "number" ? data.moonAge : null,
     moonPhase: typeof data.moonPhase === "number" ? data.moonPhase : null,
     moonPhaseLabel: typeof data.moonPhaseLabel === "string" ? data.moonPhaseLabel : null
+  };
+}
+
+function normalizeTackle(value: unknown): TackleInfo {
+  if (!value || typeof value !== "object") return emptyTackleInfo();
+  const data = value as Record<string, unknown>;
+  return {
+    lureName: typeof data.lureName === "string" ? data.lureName : "",
+    lureColor: typeof data.lureColor === "string" ? data.lureColor : "",
+    rodName: typeof data.rodName === "string" ? data.rodName : "",
+    reelName: typeof data.reelName === "string" ? data.reelName : "",
+    lineName: typeof data.lineName === "string" ? data.lineName : "",
+    leaderName: typeof data.leaderName === "string" ? data.leaderName : ""
+  };
+}
+
+export function emptyTackleInfo(): TackleInfo {
+  return {
+    lureName: "",
+    lureColor: "",
+    rodName: "",
+    reelName: "",
+    lineName: "",
+    leaderName: ""
   };
 }

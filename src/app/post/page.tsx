@@ -3,13 +3,13 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
-import { createCatch, getUserCatches, uploadCatchImage } from "@/lib/catches";
+import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
 import { getLunarInfo } from "@/lib/lunar";
 import { getOfficialTideReference } from "@/lib/officialTide";
 import { fetchTideInfo } from "@/lib/tide";
 import { emptyWeatherInfo, fetchWeatherInfo } from "@/lib/weather";
-import type { LocationPoint } from "@/types";
+import type { Catch, LocationPoint, TackleInfo } from "@/types";
 
 export default function PostPage() {
   return (
@@ -24,10 +24,22 @@ function PostForm({ userId }: { userId: string }) {
   const [sizeCm, setSizeCm] = useState("");
   const [caughtAt, setCaughtAt] = useState(toLocalInputValue(new Date()));
   const [comment, setComment] = useState("");
+  const [tackle, setTackle] = useState<TackleInfo>(emptyTackleInfo());
   const [file, setFile] = useState<File | null>(null);
   const [location, setLocation] = useState<LocationPoint | null>(null);
+  const [manualLatitude, setManualLatitude] = useState("");
+  const [manualLongitude, setManualLongitude] = useState("");
   const [fishSuggestions, setFishSuggestions] = useState<string[]>([]);
   const [commentSuggestions, setCommentSuggestions] = useState<string[]>([]);
+  const [tackleSuggestions, setTackleSuggestions] = useState<Record<keyof TackleInfo, string[]>>({
+    lureName: [],
+    lureColor: [],
+    rodName: [],
+    reelName: [],
+    lineName: [],
+    leaderName: []
+  });
+  const [locationSuggestions, setLocationSuggestions] = useState<Array<{ label: string; latitude: number; longitude: number }>>([]);
   const [showDetails, setShowDetails] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -39,6 +51,15 @@ function PostForm({ userId }: { userId: string }) {
       .then((items) => {
         setFishSuggestions(topValues(items.map((item) => item.fishType), 8));
         setCommentSuggestions(topValues(items.map((item) => item.comment).filter(Boolean), 6));
+        setTackleSuggestions({
+          lureName: topValues(items.map((item) => item.tackle.lureName), 8),
+          lureColor: topValues(items.map((item) => item.tackle.lureColor), 8),
+          rodName: topValues(items.map((item) => item.tackle.rodName), 6),
+          reelName: topValues(items.map((item) => item.tackle.reelName), 6),
+          lineName: topValues(items.map((item) => item.tackle.lineName), 6),
+          leaderName: topValues(items.map((item) => item.tackle.leaderName), 6)
+        });
+        setLocationSuggestions(topLocations(items, 6));
       })
       .catch(() => {
         setFishSuggestions(["シーバス", "アジ", "メバル", "クロダイ", "マダイ", "ヒラメ"]);
@@ -53,6 +74,28 @@ function PostForm({ userId }: { userId: string }) {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "位置情報を取得できませんでした。");
     }
+  }
+
+  function applyManualLocation() {
+    const latitude = Number(manualLatitude);
+    const longitude = Number(manualLongitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      setMessage("緯度と経度を数字で入力してください。");
+      return;
+    }
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      setMessage("緯度は-90〜90、経度は-180〜180の範囲で入力してください。");
+      return;
+    }
+    setLocation({ latitude, longitude });
+    setMessage("入力した位置を設定しました。");
+  }
+
+  function applyLocation(point: LocationPoint) {
+    setLocation(point);
+    setManualLatitude(String(point.latitude));
+    setManualLongitude(String(point.longitude));
+    setMessage("過去の釣果地点を設定しました。");
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -97,6 +140,7 @@ function PostForm({ userId }: { userId: string }) {
         sizeCm: Number(sizeCm),
         caughtAt: caughtAtIso,
         comment,
+        tackle,
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
         weather,
@@ -108,6 +152,7 @@ function PostForm({ userId }: { userId: string }) {
       setFishType("");
       setSizeCm("");
       setComment("");
+      setTackle(emptyTackleInfo());
       setFile(null);
       setCaughtAt(toLocalInputValue(new Date()));
       setMessage("投稿しました。");
@@ -125,7 +170,8 @@ function PostForm({ userId }: { userId: string }) {
         <form onSubmit={handleSubmit} className="space-y-5">
           <label className="block rounded border border-teal-100 bg-white p-4 shadow-soft">
             <span className="text-sm font-black">写真</span>
-            <input className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <input className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <p className="mt-2 text-xs font-bold text-slate-500">カメラ撮影または写真ライブラリから選択できます。</p>
           </label>
           {preview ? <img src={preview} alt="投稿プレビュー" className="aspect-[4/3] w-full rounded object-cover" /> : null}
 
@@ -163,6 +209,33 @@ function PostForm({ userId }: { userId: string }) {
               <div className="mt-4 space-y-4">
                 <Field label="釣った日時" type="datetime-local" value={caughtAt} onChange={setCaughtAt} required />
 
+                <section className="rounded bg-foam p-3">
+                  <h2 className="text-sm font-black">場所</h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <Field label="緯度" type="number" inputMode="decimal" value={manualLatitude} onChange={setManualLatitude} placeholder="35.454" />
+                    <Field label="経度" type="number" inputMode="decimal" value={manualLongitude} onChange={setManualLongitude} placeholder="139.644" />
+                  </div>
+                  <button type="button" onClick={applyManualLocation} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
+                    入力した場所を使う
+                  </button>
+                  <SuggestionLocationChips values={locationSuggestions} onPick={applyLocation} />
+                </section>
+
+                <section className="rounded bg-foam p-3">
+                  <h2 className="text-sm font-black">タックル</h2>
+                  <div className="mt-3 space-y-4">
+                    <TackleField label="ルアー" field="lureName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lureName} placeholder="例: カゲロウ100F" />
+                    <TackleField label="カラー" field="lureColor" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lureColor} placeholder="例: チャートバック" />
+                    <TackleField label="ロッド" field="rodName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.rodName} placeholder="例: 9.6ft ML" />
+                    <TackleField label="リール" field="reelName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.reelName} placeholder="例: 4000XG" />
+                    <TackleField label="ライン" field="lineName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lineName} placeholder="例: PE1.0号" />
+                    <TackleField label="リーダー" field="leaderName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.leaderName} placeholder="例: フロロ20lb" />
+                  </div>
+                </section>
+
                 <label className="block">
                   <span className="text-sm font-bold">コメント</span>
                   <textarea className="mt-2 min-h-24 w-full rounded border border-slate-300 bg-white p-3 text-base" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="ルアー、状況、メモなど" />
@@ -193,6 +266,34 @@ function PostForm({ userId }: { userId: string }) {
         </form>
       </main>
     </>
+  );
+}
+
+function TackleField({
+  label,
+  field,
+  tackle,
+  setTackle,
+  suggestions,
+  placeholder
+}: {
+  label: string;
+  field: keyof TackleInfo;
+  tackle: TackleInfo;
+  setTackle: (value: TackleInfo) => void;
+  suggestions: string[];
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <Field label={label} value={tackle[field]} onChange={(value) => setTackle({ ...tackle, [field]: value })} placeholder={placeholder} listId={`tackle-${field}`} />
+      <datalist id={`tackle-${field}`}>
+        {suggestions.map((value) => (
+          <option key={value} value={value} />
+        ))}
+      </datalist>
+      <SuggestionChips values={suggestions} onPick={(value) => setTackle({ ...tackle, [field]: value })} />
+    </div>
   );
 }
 
@@ -248,6 +349,30 @@ function SuggestionChips({ values, onPick }: { values: string[]; onPick: (value:
   );
 }
 
+function SuggestionLocationChips({
+  values,
+  onPick
+}: {
+  values: Array<{ label: string; latitude: number; longitude: number }>;
+  onPick: (value: LocationPoint) => void;
+}) {
+  if (!values.length) return null;
+  return (
+    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+      {values.map((value) => (
+        <button
+          key={value.label}
+          type="button"
+          onClick={() => onPick({ latitude: value.latitude, longitude: value.longitude })}
+          className="tap-target shrink-0 rounded border border-teal-100 bg-white px-4 py-2 text-sm font-black text-ink"
+        >
+          {value.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function SizeStepper({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const current = Number(value) || 0;
   const steps = [-5, -1, 1, 5];
@@ -272,6 +397,32 @@ function topValues(values: string[], limit: number) {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"))
     .slice(0, limit)
     .map(([value]) => value);
+}
+
+function topLocations(items: Catch[], limit: number) {
+  const counts = new Map<string, { latitude: number; longitude: number; count: number }>();
+  items
+    .filter((item) => item.latitude != null && item.longitude != null)
+    .forEach((item) => {
+      const latitude = item.latitude as number;
+      const longitude = item.longitude as number;
+      const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+      const current = counts.get(key);
+      counts.set(key, {
+        latitude,
+        longitude,
+        count: (current?.count ?? 0) + 1
+      });
+    });
+
+  return [...counts.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map((value, index) => ({
+      label: `過去地点${index + 1} (${value.latitude.toFixed(4)}, ${value.longitude.toFixed(4)})`,
+      latitude: value.latitude,
+      longitude: value.longitude
+    }));
 }
 
 function formatLocalDateTime(value: string) {

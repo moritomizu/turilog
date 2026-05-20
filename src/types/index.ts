@@ -59,10 +59,20 @@ export type LunarInfo = {
   moonPhaseLabel: string | null;
 };
 
+export type TackleInfo = {
+  lureName: string;
+  lureColor: string;
+  rodName: string;
+  reelName: string;
+  lineName: string;
+  leaderName: string;
+};
+
 export type Catch = TideInfo &
   OfficialTideReference & {
   weather: WeatherInfo;
   lunar: LunarInfo;
+  tackle: TackleInfo;
   id: string;
   userId: string;
   imageUrl: string | null;

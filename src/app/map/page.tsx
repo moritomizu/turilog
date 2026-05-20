@@ -78,6 +78,7 @@ function infoHtml(item: Catch) {
         item.officialTideStationDistance == null ? "" : ` / 約${item.officialTideStationDistance}km`
       }</p>`
     : "";
+  const tackle = formatTackleHtml(item);
   return `
     <div style="max-width:240px;font-family:sans-serif;color:#17201d;">
       ${image}
@@ -86,11 +87,22 @@ function infoHtml(item: Catch) {
       <p style="margin:4px 0;">潮位: ${item.tideHeight == null ? "未取得" : `${item.tideHeight}m`} / ${escapeHtml(item.tidePhaseLabel)}</p>
       <p style="margin:4px 0;">天候: ${escapeHtml(item.weather.weatherLabel)} / 風: ${formatWindHtml(item)}</p>
       <p style="margin:4px 0;">${escapeHtml(item.lunar.lunarDateLabel ?? "旧暦未取得")}${item.lunar.moonAge == null ? "" : ` / 月齢${item.lunar.moonAge}`}</p>
+      ${tackle}
       <p style="margin:4px 0;">${escapeHtml(item.comment)}</p>
       ${officialStation}
       ${officialLink}
     </div>
   `;
+}
+
+function formatTackleHtml(item: Catch) {
+  const values = [
+    item.tackle.lureName ? `ルアー: ${escapeHtml(item.tackle.lureName)}${item.tackle.lureColor ? ` / ${escapeHtml(item.tackle.lureColor)}` : ""}` : "",
+    item.tackle.rodName ? `ロッド: ${escapeHtml(item.tackle.rodName)}` : "",
+    item.tackle.reelName ? `リール: ${escapeHtml(item.tackle.reelName)}` : ""
+  ].filter(Boolean);
+  if (!values.length) return "";
+  return `<p style="margin:4px 0;">${values.join("<br />")}</p>`;
 }
 
 function formatWindHtml(item: Catch) {

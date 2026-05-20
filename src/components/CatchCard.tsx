@@ -23,6 +23,15 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
           <p className="shrink-0 text-2xl font-black text-water">{item.sizeCm}cm</p>
         </div>
         {item.comment ? <p className="text-sm leading-6 text-slate-700">{item.comment}</p> : null}
+        {hasTackle(item) ? (
+          <div className="rounded bg-foam p-3 text-sm leading-6">
+            <p className="text-xs font-bold text-slate-500">タックル</p>
+            {item.tackle.lureName ? <p className="font-bold">ルアー: {item.tackle.lureName}{item.tackle.lureColor ? ` / ${item.tackle.lureColor}` : ""}</p> : null}
+            {item.tackle.rodName ? <p>ロッド: {item.tackle.rodName}</p> : null}
+            {item.tackle.reelName ? <p>リール: {item.tackle.reelName}</p> : null}
+            {item.tackle.lineName || item.tackle.leaderName ? <p>ライン: {[item.tackle.lineName, item.tackle.leaderName].filter(Boolean).join(" / ")}</p> : null}
+          </div>
+        ) : null}
         <div className="grid grid-cols-2 gap-2 text-sm">
           <Info label="潮位" value={item.tideHeight == null ? "未取得" : `${item.tideHeight}m`} />
           <Info label="潮" value={item.tidePhaseLabel || "未取得"} />
@@ -52,6 +61,10 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
       </div>
     </article>
   );
+}
+
+function hasTackle(item: Catch) {
+  return Object.values(item.tackle).some(Boolean);
 }
 
 function formatWind(item: Catch) {
