@@ -55,6 +55,9 @@ type Digest = {
   topFish: string;
   topTide: string;
   topArea: string;
+  activeDays: number;
+  averagePerActiveDay: string;
+  averageCatchPace: string;
   latestText: string;
 };
 
@@ -78,6 +81,16 @@ function CatchDigest({ digest }: { digest: Digest }) {
         <DigestStat label="直近30日" value={`${digest.recent30}匹`} />
         <DigestStat label="連続記録" value={`${digest.streak}日`} />
         <DigestStat label="最大" value={digest.best ? `${digest.best.sizeCm}cm` : "未取得"} />
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <DigestStat label="釣行日数" value={`${digest.activeDays}日`} />
+        <DigestStat label="1日平均" value={`${digest.averagePerActiveDay}匹`} />
+        <div className="rounded bg-foam p-3">
+          <p className="text-xs font-bold text-slate-500">平均釣速</p>
+          <p className="mt-1 text-lg font-black text-ink">{digest.averageCatchPace}</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">はじめと終わりの釣果からその日の釣果までの平均期間を算出しています。</p>
+        </div>
       </div>
 
       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
@@ -113,6 +126,9 @@ function buildDigest(items: Catch[]): Digest {
   const thirtyDaysAgo = now.getTime() - 30 * 86400000;
   const best = [...items].sort((a, b) => b.sizeCm - a.sizeCm)[0] ?? null;
   const latest = items[0] ?? null;
+  const activeDayGroups = groupByDay(items);
+  const activeDays = activeDayGroups.size;
+  const averagePerActiveDay = activeDays ? (items.length / activeDays).toFixed(1) : "0.0";
 
   return {
     total: items.length,
@@ -124,6 +140,9 @@ function buildDigest(items: Catch[]): Digest {
     topFish: topLabel(items, (item) => item.fishType),
     topTide: topLabel(items, (item) => item.tidePhaseLabel),
     topArea: topLabel(items, (item) => item.areaName || item.officialCurrentStationName || "未取得"),
+    activeDays,
+    averagePerActiveDay,
+    averageCatchPace: formatAverageCatchPace(activeDayGroups),
     latestText: latest ? `最新は${formatShortDate(latest.caughtAt)}の${latest.fishType} ${latest.sizeCm}cm。次の一匹で記録を伸ばしましょう。` : "まだ釣果がありません。"
   };
 }
@@ -151,6 +170,32 @@ function getStreakDays(items: Catch[]) {
     cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
+}
+
+function groupByDay(items: Catch[]) {
+  const groups = new Map<string, Catch[]>();
+  for (const item of items) {
+    const key = new Date(item.caughtAt).toISOString().slice(0, 10);
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return groups;
+}
+
+function formatAverageCatchPace(groups: Map<string, Catch[]>) {
+  const intervals: number[] = [];
+  for (const dayItems of groups.values()) {
+    if (dayItems.length < 2) continue;
+    const times = dayItems.map((item) => new Date(item.caughtAt).getTime()).filter(Number.isFinite).sort((a, b) => a - b);
+    if (times.length < 2) continue;
+    intervals.push((times[times.length - 1] - times[0]) / (times.length - 1));
+  }
+
+  if (!intervals.length) return "単発記録";
+  const averageMinutes = intervals.reduce((sum, value) => sum + value, 0) / intervals.length / 60000;
+  if (averageMinutes < 60) return `${Math.round(averageMinutes)}分/匹`;
+  const hours = Math.floor(averageMinutes / 60);
+  const minutes = Math.round(averageMinutes % 60);
+  return minutes ? `${hours}時間${minutes}分/匹` : `${hours}時間/匹`;
 }
 
 function formatShortDate(value: string) {
