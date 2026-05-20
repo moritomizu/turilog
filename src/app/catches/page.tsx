@@ -57,6 +57,7 @@ type Digest = {
   topArea: string;
   activeDays: number;
   averagePerActiveDay: string;
+  digestYear: number;
   averageCatchPace: string;
   latestText: string;
 };
@@ -87,7 +88,7 @@ function CatchDigest({ digest }: { digest: Digest }) {
         <DigestStat label="釣行日数" value={`${digest.activeDays}日`} />
         <DigestStat label="1日平均" value={`${digest.averagePerActiveDay}匹`} />
         <div className="rounded bg-foam p-3">
-          <p className="text-xs font-bold text-slate-500">平均釣速</p>
+          <p className="text-xs font-bold text-slate-500">平均釣速({digest.digestYear})</p>
           <p className="mt-1 text-lg font-black text-ink">{digest.averageCatchPace}</p>
           <p className="mt-1 text-xs leading-5 text-slate-500">はじめと終わりの釣果からその日の釣果までの平均期間を算出しています。</p>
         </div>
@@ -129,6 +130,8 @@ function buildDigest(items: Catch[]): Digest {
   const activeDayGroups = groupByDay(items);
   const activeDays = activeDayGroups.size;
   const averagePerActiveDay = activeDays ? (items.length / activeDays).toFixed(1) : "0.0";
+  const digestYear = now.getFullYear();
+  const yearlyGroups = groupByDay(items.filter((item) => new Date(item.caughtAt).getFullYear() === digestYear));
 
   return {
     total: items.length,
@@ -142,7 +145,8 @@ function buildDigest(items: Catch[]): Digest {
     topArea: topLabel(items, (item) => item.areaName || item.officialCurrentStationName || "未取得"),
     activeDays,
     averagePerActiveDay,
-    averageCatchPace: formatAverageCatchPace(activeDayGroups),
+    digestYear,
+    averageCatchPace: formatAverageCatchPace(yearlyGroups),
     latestText: latest ? `最新は${formatShortDate(latest.caughtAt)}の${latest.fishType} ${latest.sizeCm}cm。次の一匹で記録を伸ばしましょう。` : "まだ釣果がありません。"
   };
 }
