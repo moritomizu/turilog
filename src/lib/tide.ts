@@ -126,8 +126,8 @@ async function fetchStormglass(latitude: number, longitude: number, caughtAt: st
   if (!apiKey) throw new Error("Stormglass APIキーが未設定です。STORMGLASS_API_KEYを確認してください。");
 
   const target = new Date(caughtAt);
-  const start = new Date(target.getTime() - 12 * 60 * 60 * 1000).toISOString();
-  const end = new Date(target.getTime() + 12 * 60 * 60 * 1000).toISOString();
+  const start = new Date(target.getTime() - 36 * 60 * 60 * 1000).toISOString();
+  const end = new Date(target.getTime() + 36 * 60 * 60 * 1000).toISOString();
   const url = new URL("https://api.stormglass.io/v2/tide/extremes/point");
   url.searchParams.set("lat", String(latitude));
   url.searchParams.set("lng", String(longitude));
@@ -170,8 +170,8 @@ async function fetchWorldTides(latitude: number, longitude: number, caughtAt: st
   url.searchParams.set("extremes", "");
   url.searchParams.set("lat", String(latitude));
   url.searchParams.set("lon", String(longitude));
-  url.searchParams.set("start", String(target - 12 * 60 * 60));
-  url.searchParams.set("length", String(24 * 60 * 60));
+  url.searchParams.set("start", String(target - 36 * 60 * 60));
+  url.searchParams.set("length", String(72 * 60 * 60));
   url.searchParams.set("key", apiKey);
 
   const response = await fetch(url.toString());

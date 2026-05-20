@@ -10,6 +10,7 @@ import { getCurrentLocation, formatCoordinate } from "@/lib/location";
 import { getLunarInfo } from "@/lib/lunar";
 import { getOfficialCurrentReference } from "@/lib/officialCurrent";
 import { getOfficialTideReference } from "@/lib/officialTide";
+import { emptySeaTemperatureInfo, fetchSeaTemperatureInfo } from "@/lib/seaTemperature";
 import { fetchTideInfo } from "@/lib/tide";
 import { emptyWeatherInfo, fetchWeatherInfo } from "@/lib/weather";
 import type { Catch, LocationPoint, TackleInfo } from "@/types";
@@ -33,6 +34,7 @@ function PostForm({ userId }: { userId: string }) {
   const [manualLatitude, setManualLatitude] = useState("");
   const [manualLongitude, setManualLongitude] = useState("");
   const [selectedAreaId, setSelectedAreaId] = useState("");
+  const [areaName, setAreaName] = useState("");
   const [fishSuggestions, setFishSuggestions] = useState<string[]>([]);
   const [commentSuggestions, setCommentSuggestions] = useState<string[]>([]);
   const [tackleSuggestions, setTackleSuggestions] = useState<Record<keyof TackleInfo, string[]>>({
@@ -108,6 +110,7 @@ function PostForm({ userId }: { userId: string }) {
     const area = getFishingAreaById(areaId);
     if (!area) return;
     applyLocation(area);
+    setAreaName(`${area.prefecture}・${area.name}`);
     setMessage(`${area.prefecture}・${area.name} の代表地点を設定しました。必要なら地図でピンを微調整してください。`);
   }
 
@@ -130,6 +133,11 @@ function PostForm({ userId }: { userId: string }) {
         return null;
       });
 
+      let seaTemperature = await fetchSeaTemperatureInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch((error) => {
+        setMessage(error instanceof Error ? `水温は未取得で保存します: ${error.message}` : "水温は未取得で保存します。");
+        return null;
+      });
+
       tideInfo ??= {
         tideHeight: null,
         tideDirection: "unknown",
@@ -145,6 +153,7 @@ function PostForm({ userId }: { userId: string }) {
         tideApiProvider: "none"
       };
       weather ??= emptyWeatherInfo();
+      seaTemperature ??= emptySeaTemperatureInfo();
 
       await createCatch({
         userId,
@@ -156,7 +165,9 @@ function PostForm({ userId }: { userId: string }) {
         tackle,
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
+        areaName,
         weather,
+        seaTemperature,
         lunar: getLunarInfo(caughtAtIso),
         ...getOfficialCurrentReference(location?.latitude, location?.longitude, caughtAtIso),
         ...getOfficialTideReference(location?.latitude, location?.longitude, caughtAtIso),
@@ -168,6 +179,8 @@ function PostForm({ userId }: { userId: string }) {
       setComment("");
       setTackle(emptyTackleInfo());
       setFile(null);
+      setAreaName("");
+      setSelectedAreaId("");
       setCaughtAt(toLocalInputValue(new Date()));
       setMessage("投稿しました。");
     } catch (error) {

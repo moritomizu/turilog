@@ -5,8 +5,9 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import { emptyLunarInfo } from "@/lib/lunar";
 import { emptyOfficialCurrentReference } from "@/lib/officialCurrent";
+import { emptySeaTemperatureInfo } from "@/lib/seaTemperature";
 import { emptyWeatherInfo } from "@/lib/weather";
-import type { Catch, LunarInfo, OfficialCurrentReference, OfficialTideReference, TackleInfo, TideInfo, WeatherInfo } from "@/types";
+import type { Catch, LunarInfo, OfficialCurrentReference, OfficialTideReference, SeaTemperatureInfo, TackleInfo, TideInfo, WeatherInfo } from "@/types";
 
 export async function uploadCatchImage(userId: string, file: File) {
   const storageRef = ref(getFirebaseStorage(), `catches/${userId}/${crypto.randomUUID()}-${file.name}`);
@@ -35,8 +36,10 @@ export async function getUserCatches(userId: string): Promise<Catch[]> {
       comment: data.comment ?? "",
       latitude: typeof data.latitude === "number" ? data.latitude : null,
       longitude: typeof data.longitude === "number" ? data.longitude : null,
+      areaName: typeof data.areaName === "string" ? data.areaName : "",
       createdAt: normalizeDate(data.createdAt),
       weather: normalizeWeather(data.weather),
+      seaTemperature: normalizeSeaTemperature(data.seaTemperature),
       lunar: normalizeLunar(data.lunar),
       tackle: normalizeTackle(data.tackle),
       ...normalizeTide(data),
@@ -117,6 +120,20 @@ function normalizeWeather(value: unknown): WeatherInfo {
     weatherSourceName: typeof data.weatherSourceName === "string" ? data.weatherSourceName : null,
     weatherSourceUrl: typeof data.weatherSourceUrl === "string" ? data.weatherSourceUrl : null,
     weatherFetchedAt: typeof data.weatherFetchedAt === "string" ? data.weatherFetchedAt : null
+  };
+}
+
+function normalizeSeaTemperature(value: unknown): SeaTemperatureInfo {
+  if (!value || typeof value !== "object") return emptySeaTemperatureInfo();
+  const data = value as Record<string, unknown>;
+  return {
+    seaTemperatureC: typeof data.seaTemperatureC === "number" ? data.seaTemperatureC : null,
+    seaTemperatureAreaName: typeof data.seaTemperatureAreaName === "string" ? data.seaTemperatureAreaName : null,
+    seaTemperatureAreaCode: typeof data.seaTemperatureAreaCode === "string" ? data.seaTemperatureAreaCode : null,
+    seaTemperatureDate: typeof data.seaTemperatureDate === "string" ? data.seaTemperatureDate : null,
+    seaTemperatureSourceName: typeof data.seaTemperatureSourceName === "string" ? data.seaTemperatureSourceName : null,
+    seaTemperatureSourceUrl: typeof data.seaTemperatureSourceUrl === "string" ? data.seaTemperatureSourceUrl : null,
+    seaTemperatureFetchedAt: typeof data.seaTemperatureFetchedAt === "string" ? data.seaTemperatureFetchedAt : null
   };
 }
 

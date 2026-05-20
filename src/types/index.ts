@@ -58,6 +58,16 @@ export type WeatherInfo = {
   weatherFetchedAt: string | null;
 };
 
+export type SeaTemperatureInfo = {
+  seaTemperatureC: number | null;
+  seaTemperatureAreaName: string | null;
+  seaTemperatureAreaCode: string | null;
+  seaTemperatureDate: string | null;
+  seaTemperatureSourceName: string | null;
+  seaTemperatureSourceUrl: string | null;
+  seaTemperatureFetchedAt: string | null;
+};
+
 export type LunarInfo = {
   lunarDateLabel: string | null;
   lunarYearName: string | null;
@@ -81,6 +91,7 @@ export type Catch = TideInfo &
   OfficialTideReference &
   OfficialCurrentReference & {
   weather: WeatherInfo;
+  seaTemperature: SeaTemperatureInfo;
   lunar: LunarInfo;
   tackle: TackleInfo;
   id: string;
@@ -92,6 +103,7 @@ export type Catch = TideInfo &
   comment: string;
   latitude: number | null;
   longitude: number | null;
+  areaName: string;
   createdAt: string;
 };
 

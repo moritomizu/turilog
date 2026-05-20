@@ -94,6 +94,7 @@ function infoHtml(item: Catch) {
       <p style="margin:4px 0;">${formatDate(item.caughtAt)}</p>
       <p style="margin:4px 0;">潮位: ${item.tideHeight == null ? "未取得" : `${item.tideHeight}m`} / ${escapeHtml(item.tidePhaseLabel)}</p>
       <p style="margin:4px 0;">当時の天候: ${escapeHtml(item.weather.weatherLabel)} / 当時の風: ${formatWindHtml(item)}</p>
+      <p style="margin:4px 0;">当時の水温: ${formatSeaTemperatureHtml(item)}</p>
       <p style="margin:4px 0;">${escapeHtml(item.lunar.lunarDateLabel ?? "旧暦未取得")}${item.lunar.moonAge == null ? "" : ` / 月齢${item.lunar.moonAge}`}</p>
       ${tackle}
       <p style="margin:4px 0;">${escapeHtml(item.comment)}</p>
@@ -103,6 +104,11 @@ function infoHtml(item: Catch) {
       ${officialCurrent}
     </div>
   `;
+}
+
+function formatSeaTemperatureHtml(item: Catch) {
+  if (item.seaTemperature.seaTemperatureC == null) return escapeHtml(item.seaTemperature.seaTemperatureAreaName ?? "未取得");
+  return `${item.seaTemperature.seaTemperatureC}度 (${escapeHtml(item.seaTemperature.seaTemperatureAreaName ?? "海域未取得")})`;
 }
 
 function formatTackleHtml(item: Catch) {

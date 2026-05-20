@@ -17,6 +17,7 @@ MVPでは自分自身の釣果管理と潮位分析に集中しています。�
 - 投稿地点に近い海上保安庁の潮汐曲線ページへのリンク保存
 - 明石海峡、鳴門海峡、友ヶ島水道などの海上保安庁潮流曲線ページへのリンク保存
 - 釣った場所と日時に基づく当時の天候、風速、気温、降水量、雲量、旧暦、月齢の保存
+- 気象庁の沿岸域海面水温情報に基づく当時の水温リンク/値の保存
 - 過去投稿から魚種・コメント候補を表示するクイック投稿UI
 - 任意のタックル情報と過去タックル候補の保存
 - 現在地、釣りエリア選択、地図ピン、過去地点、緯度経度入力による場所指定
@@ -29,6 +30,7 @@ MVPでは自分自身の釣果管理と潮位分析に集中しています。�
 - Google Maps JavaScript API
 - Stormglass Global Tide API または WorldTides API
 - Open-Meteo Weather API
+- 気象庁 沿岸域の海面水温情報
 
 ## Firebaseプロジェクトの作り方
 
@@ -237,6 +239,24 @@ lunar.moonPhaseLabel
 ```
 
 位置情報がない投稿では、当時の天候・風速は未取得として保存されます。旧暦と月齢は日時だけで計算できるため保存されます。
+
+## 当時の水温の保存
+
+位置情報付きで投稿した場合、釣った地点に近い気象庁の沿岸域海面水温情報の海域を選び、当時日付に近い水温値と公式ページリンクを保存します。
+
+保存される項目:
+
+```text
+seaTemperature.seaTemperatureC
+seaTemperature.seaTemperatureAreaName
+seaTemperature.seaTemperatureAreaCode
+seaTemperature.seaTemperatureDate
+seaTemperature.seaTemperatureSourceName
+seaTemperature.seaTemperatureSourceUrl
+seaTemperature.seaTemperatureFetchedAt
+```
+
+気象庁の公開テキストから値を取得できない場合でも、参照海域名と公式ページリンクは保存します。沿岸域の広域データなので、港内やピンポイントの表層水温とは差が出る場合があります。
 
 ## クイック投稿UI
 

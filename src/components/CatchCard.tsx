@@ -35,10 +35,11 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
         <div className="grid grid-cols-2 gap-2 text-sm">
           <Info label="潮位" value={item.tideHeight == null ? "未取得" : `${item.tideHeight}m`} />
           <Info label="潮" value={item.tidePhaseLabel || "未取得"} />
-          <Info label="場所" value={item.latitude == null ? "未取得" : `${item.latitude.toFixed(4)}, ${item.longitude?.toFixed(4)}`} />
+          <Info label="エリア" value={formatArea(item)} />
           <Info label="当時の天候" value={item.weather.weatherLabel} />
           <Info label="当時の風" value={formatWind(item)} />
           <Info label="当時の気温" value={item.weather.temperatureC == null ? "未取得" : `${item.weather.temperatureC}度`} />
+          <Info label="当時の水温" value={formatSeaTemperature(item)} />
           <Info label="旧暦/月齢" value={formatLunar(item)} />
         </div>
         {item.officialTideCurveUrl ? (
@@ -76,6 +77,18 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
       </div>
     </article>
   );
+}
+
+function formatArea(item: Catch) {
+  if (item.areaName) return item.areaName;
+  if (item.officialCurrentStationName) return item.officialCurrentStationName;
+  if (item.latitude != null) return `${item.latitude.toFixed(4)}, ${item.longitude?.toFixed(4)}`;
+  return "未取得";
+}
+
+function formatSeaTemperature(item: Catch) {
+  if (item.seaTemperature.seaTemperatureC == null) return item.seaTemperature.seaTemperatureAreaName ?? "未取得";
+  return `${item.seaTemperature.seaTemperatureC}度 (${item.seaTemperature.seaTemperatureAreaName ?? "海域未取得"})`;
 }
 
 function hasTackle(item: Catch) {
