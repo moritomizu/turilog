@@ -1,6 +1,6 @@
 "use client";
 
-import { addDoc, collection, getDocs, orderBy, query, serverTimestamp, where } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, serverTimestamp, where } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import { emptyLunarInfo } from "@/lib/lunar";
@@ -21,7 +21,7 @@ export async function createCatch(data: Omit<Catch, "id" | "createdAt">) {
 }
 
 export async function getUserCatches(userId: string): Promise<Catch[]> {
-  const snapshot = await getDocs(query(collection(getFirebaseDb(), "catches"), where("userId", "==", userId), orderBy("caughtAt", "desc")));
+  const snapshot = await getDocs(query(collection(getFirebaseDb(), "catches"), where("userId", "==", userId)));
   return snapshot.docs.map((doc) => {
     const data = doc.data();
     return {
@@ -40,7 +40,7 @@ export async function getUserCatches(userId: string): Promise<Catch[]> {
       ...normalizeTide(data),
       ...normalizeOfficialTideReference(data)
     };
-  });
+  }).sort((a, b) => new Date(b.caughtAt).getTime() - new Date(a.caughtAt).getTime());
 }
 
 function normalizeDate(value: unknown) {

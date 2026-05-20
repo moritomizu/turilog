@@ -56,6 +56,10 @@ MVPでは自分自身の釣果管理と潮位分析に集中しています。�
 - `users`
 - `catches`
 
+釣果一覧はFirestoreの複合インデックスがなくても動くように、ユーザー別に取得してアプリ側で新着順に並べ替えています。投稿数が増えてきたら、`firestore.indexes.json` の `userId ASC / caughtAt DESC` インデックスをFirebaseへ反映すると読み込み効率がよくなります。
+
+Firestoreのインデックスエラーが表示された場合は、エラーメッセージ内のリンクを開いて作成してもOKです。
+
 ## Firebase Storageの有効化方法
 
 1. Firebase Consoleで「Storage」を開きます。
