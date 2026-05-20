@@ -41,7 +41,14 @@ export async function getUserCatches(userId: string): Promise<Catch[]> {
       ...normalizeTide(data),
       ...normalizeOfficialTideReference(data)
     };
-  }).sort((a, b) => new Date(b.caughtAt).getTime() - new Date(a.caughtAt).getTime());
+  }).sort((a, b) => getSortableTime(b) - getSortableTime(a));
+}
+
+function getSortableTime(item: Catch) {
+  const caughtAt = new Date(item.caughtAt).getTime();
+  if (Number.isFinite(caughtAt)) return caughtAt;
+  const createdAt = new Date(item.createdAt).getTime();
+  return Number.isFinite(createdAt) ? createdAt : 0;
 }
 
 function normalizeDate(value: unknown) {

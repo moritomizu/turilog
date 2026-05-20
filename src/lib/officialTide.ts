@@ -96,6 +96,7 @@ export function getOfficialTideReference(
 
   const url = new URL(GAUGE_BASE_URL);
   url.searchParams.set("s", nearest.station.code);
+  url.searchParams.set("target_date", toDateLabel(caughtAt) ?? "");
 
   return {
     officialTideStationName: nearest.station.name,

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
+import { geocodePlaceName } from "@/lib/geocoding";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
 import { getLunarInfo } from "@/lib/lunar";
 import { getOfficialTideReference } from "@/lib/officialTide";
@@ -29,6 +30,7 @@ function PostForm({ userId }: { userId: string }) {
   const [location, setLocation] = useState<LocationPoint | null>(null);
   const [manualLatitude, setManualLatitude] = useState("");
   const [manualLongitude, setManualLongitude] = useState("");
+  const [placeName, setPlaceName] = useState("");
   const [fishSuggestions, setFishSuggestions] = useState<string[]>([]);
   const [commentSuggestions, setCommentSuggestions] = useState<string[]>([]);
   const [tackleSuggestions, setTackleSuggestions] = useState<Record<keyof TackleInfo, string[]>>({
@@ -96,6 +98,19 @@ function PostForm({ userId }: { userId: string }) {
     setManualLatitude(String(point.latitude));
     setManualLongitude(String(point.longitude));
     setMessage("過去の釣果地点を設定しました。");
+  }
+
+  async function handleGeocodePlace() {
+    setMessage("地名から場所を検索しています。");
+    try {
+      const point = await geocodePlaceName(placeName);
+      setLocation(point);
+      setManualLatitude(String(Number(point.latitude.toFixed(6))));
+      setManualLongitude(String(Number(point.longitude.toFixed(6))));
+      setMessage("地名から緯度経度を設定しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "地名検索に失敗しました。");
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -214,6 +229,12 @@ function PostForm({ userId }: { userId: string }) {
                   <p className="mt-1 text-sm text-slate-600">
                     緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
                   </p>
+                  <div className="mt-3">
+                    <Field label="地名で検索" value={placeName} onChange={setPlaceName} placeholder="例: 横浜 本牧海づり施設" />
+                    <button type="button" onClick={handleGeocodePlace} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
+                      地名から緯度経度を入れる
+                    </button>
+                  </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <Field label="緯度" type="number" inputMode="decimal" value={manualLatitude} onChange={setManualLatitude} placeholder="35.454" />
                     <Field label="経度" type="number" inputMode="decimal" value={manualLongitude} onChange={setManualLongitude} placeholder="139.644" />

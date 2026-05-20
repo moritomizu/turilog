@@ -49,7 +49,7 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
             rel="noreferrer"
             className="tap-target flex items-center justify-center rounded border border-tide px-4 py-3 text-sm font-black text-tide"
           >
-            海上保安庁の潮汐曲線を見る
+            {item.officialTideDate ? `${item.officialTideDate}の潮汐曲線を見る` : "海上保安庁の潮汐曲線を見る"}
           </a>
         ) : null}
         {item.officialTideStationName ? (

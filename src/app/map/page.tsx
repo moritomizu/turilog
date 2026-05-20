@@ -71,7 +71,7 @@ function CatchMap({ userId }: { userId: string }) {
 function infoHtml(item: Catch) {
   const image = item.imageUrl ? `<img src="${item.imageUrl}" alt="" style="width:220px;height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px;" />` : "";
   const officialLink = item.officialTideCurveUrl
-    ? `<p style="margin:8px 0 0;"><a href="${item.officialTideCurveUrl}" target="_blank" rel="noreferrer">海上保安庁の潮汐曲線を見る</a></p>`
+    ? `<p style="margin:8px 0 0;"><a href="${item.officialTideCurveUrl}" target="_blank" rel="noreferrer">${item.officialTideDate ? `${escapeHtml(item.officialTideDate)}の潮汐曲線を見る` : "海上保安庁の潮汐曲線を見る"}</a></p>`
     : "";
   const officialStation = item.officialTideStationName
     ? `<p style="margin:4px 0;color:#475569;">公式参照地点: ${escapeHtml(item.officialTideStationName)}${
