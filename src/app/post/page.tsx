@@ -15,6 +15,12 @@ import { fetchTideInfo } from "@/lib/tide";
 import { emptyWeatherInfo, fetchWeatherInfo } from "@/lib/weather";
 import type { Catch, LocationPoint, TackleInfo } from "@/types";
 
+type LocationSuggestion = LocationPoint & {
+  label: string;
+  pointName: string;
+  areaName: string;
+};
+
 export default function PostPage() {
   return (
     <AuthGate>
@@ -35,6 +41,7 @@ function PostForm({ userId }: { userId: string }) {
   const [manualLongitude, setManualLongitude] = useState("");
   const [selectedAreaId, setSelectedAreaId] = useState("");
   const [areaName, setAreaName] = useState("");
+  const [pointName, setPointName] = useState("");
   const [fishSuggestions, setFishSuggestions] = useState<string[]>([]);
   const [commentSuggestions, setCommentSuggestions] = useState<string[]>([]);
   const [tackleSuggestions, setTackleSuggestions] = useState<Record<keyof TackleInfo, string[]>>({
@@ -45,7 +52,7 @@ function PostForm({ userId }: { userId: string }) {
     lineName: [],
     leaderName: []
   });
-  const [locationSuggestions, setLocationSuggestions] = useState<Array<{ label: string; latitude: number; longitude: number }>>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [showDetails, setShowDetails] = useState(false);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [message, setMessage] = useState("");
@@ -77,6 +84,7 @@ function PostForm({ userId }: { userId: string }) {
     setMessage("位置情報を取得しています。");
     try {
       setLocation(await getCurrentLocation());
+      setPointName("");
       setMessage("位置情報を取得しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "位置情報を取得できませんでした。");
@@ -98,10 +106,12 @@ function PostForm({ userId }: { userId: string }) {
     setMessage("入力した位置を設定しました。");
   }
 
-  const applyLocation = useCallback((point: LocationPoint) => {
+  const applyLocation = useCallback((point: LocationPoint, nextPointName = "", nextAreaName = "") => {
     setLocation(point);
     setManualLatitude(String(point.latitude));
     setManualLongitude(String(point.longitude));
+    if (nextPointName) setPointName(nextPointName);
+    if (nextAreaName) setAreaName(nextAreaName);
     setMessage("過去の釣果地点を設定しました。");
   }, []);
 
@@ -111,6 +121,7 @@ function PostForm({ userId }: { userId: string }) {
     if (!area) return;
     applyLocation(area);
     setAreaName(`${area.prefecture}・${area.name}`);
+    setPointName("");
     setMessage(`${area.prefecture}・${area.name} の代表地点を設定しました。必要なら地図でピンを微調整してください。`);
   }
 
@@ -166,6 +177,7 @@ function PostForm({ userId }: { userId: string }) {
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
         areaName,
+        pointName: pointName.trim(),
         weather,
         seaTemperature,
         lunar: getLunarInfo(caughtAtIso),
@@ -180,6 +192,7 @@ function PostForm({ userId }: { userId: string }) {
       setTackle(emptyTackleInfo());
       setFile(null);
       setAreaName("");
+      setPointName("");
       setSelectedAreaId("");
       setCaughtAt(toLocalInputValue(new Date()));
       setMessage("投稿しました。");
@@ -259,6 +272,16 @@ function PostForm({ userId }: { userId: string }) {
             <p className="mt-3 text-sm text-slate-600">
               現在位置: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
             </p>
+            <label className="mt-3 block">
+              <span className="text-sm font-bold">ポイント名（任意）</span>
+              <input
+                className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
+                value={pointName}
+                onChange={(event) => setPointName(event.target.value)}
+                placeholder="例: いつもの堤防先端"
+              />
+            </label>
+            <SuggestionLocationChips values={locationSuggestions} onPick={(value) => applyLocation(value, value.pointName, value.areaName)} />
           </section>
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
@@ -283,7 +306,6 @@ function PostForm({ userId }: { userId: string }) {
                   <button type="button" onClick={applyManualLocation} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
                     入力した場所を使う
                   </button>
-                  <SuggestionLocationChips values={locationSuggestions} onPick={applyLocation} />
                 </section>
 
                 <section className="rounded bg-foam p-3">
@@ -490,17 +512,17 @@ function SuggestionLocationChips({
   values,
   onPick
 }: {
-  values: Array<{ label: string; latitude: number; longitude: number }>;
-  onPick: (value: LocationPoint) => void;
+  values: LocationSuggestion[];
+  onPick: (value: LocationSuggestion) => void;
 }) {
   if (!values.length) return null;
   return (
     <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
       {values.map((value) => (
         <button
-          key={value.label}
+          key={`${value.latitude}-${value.longitude}-${value.label}`}
           type="button"
-          onClick={() => onPick({ latitude: value.latitude, longitude: value.longitude })}
+          onClick={() => onPick(value)}
           className="tap-target shrink-0 rounded border border-teal-100 bg-white px-4 py-2 text-sm font-black text-ink"
         >
           {value.label}
@@ -537,29 +559,52 @@ function topValues(values: string[], limit: number) {
 }
 
 function topLocations(items: Catch[], limit: number) {
-  const counts = new Map<string, { latitude: number; longitude: number; count: number }>();
+  const counts = new Map<string, { latitude: number; longitude: number; count: number; pointNames: Map<string, number>; areaNames: Map<string, number> }>();
   items
     .filter((item) => item.latitude != null && item.longitude != null)
     .forEach((item) => {
       const latitude = item.latitude as number;
       const longitude = item.longitude as number;
       const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
-      const current = counts.get(key);
-      counts.set(key, {
+      const current = counts.get(key) ?? {
         latitude,
         longitude,
-        count: (current?.count ?? 0) + 1
-      });
+        count: 0,
+        pointNames: new Map<string, number>(),
+        areaNames: new Map<string, number>()
+      };
+      current.count += 1;
+      if (item.pointName.trim()) current.pointNames.set(item.pointName.trim(), (current.pointNames.get(item.pointName.trim()) ?? 0) + 1);
+      if (item.areaName.trim()) current.areaNames.set(item.areaName.trim(), (current.areaNames.get(item.areaName.trim()) ?? 0) + 1);
+      counts.set(key, current);
     });
 
   return [...counts.values()]
     .sort((a, b) => b.count - a.count)
     .slice(0, limit)
     .map((value, index) => ({
-      label: `過去地点${index + 1} (${value.latitude.toFixed(4)}, ${value.longitude.toFixed(4)})`,
+      label: formatLocationSuggestionLabel(value, index),
+      pointName: topMapValue(value.pointNames),
+      areaName: topMapValue(value.areaNames),
       latitude: value.latitude,
       longitude: value.longitude
     }));
+}
+
+function formatLocationSuggestionLabel(
+  value: { latitude: number; longitude: number; pointNames: Map<string, number>; areaNames: Map<string, number> },
+  index: number
+) {
+  const pointName = topMapValue(value.pointNames);
+  const areaName = topMapValue(value.areaNames);
+  const coordinates = `${value.latitude.toFixed(4)}, ${value.longitude.toFixed(4)}`;
+  if (pointName) return `${pointName} (${coordinates})`;
+  if (areaName) return `${areaName} (${coordinates})`;
+  return `過去地点${index + 1} (${coordinates})`;
+}
+
+function topMapValue(values: Map<string, number>) {
+  return [...values.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"))[0]?.[0] ?? "";
 }
 
 function formatLocalDateTime(value: string) {

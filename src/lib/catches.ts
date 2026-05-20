@@ -37,6 +37,7 @@ export async function getUserCatches(userId: string): Promise<Catch[]> {
       latitude: typeof data.latitude === "number" ? data.latitude : null,
       longitude: typeof data.longitude === "number" ? data.longitude : null,
       areaName: typeof data.areaName === "string" ? data.areaName : "",
+      pointName: typeof data.pointName === "string" ? data.pointName : "",
       createdAt: normalizeDate(data.createdAt),
       weather: normalizeWeather(data.weather),
       seaTemperature: normalizeSeaTemperature(data.seaTemperature),

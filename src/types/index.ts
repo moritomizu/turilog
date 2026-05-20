@@ -104,6 +104,7 @@ export type Catch = TideInfo &
   latitude: number | null;
   longitude: number | null;
   areaName: string;
+  pointName: string;
   createdAt: string;
 };
 
