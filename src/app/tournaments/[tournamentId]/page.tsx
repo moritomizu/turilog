@@ -76,7 +76,7 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
               <p className="mt-3 rounded bg-white/80 p-3 text-xs font-bold leading-5 text-slate-600">
                 {tournament.visibility === "public"
                   ? "公開大会です。ログインしているユーザーなら大会内容とランキングを閲覧でき、誰でも参加できます。"
-                  : "非公開大会です。ランキング・参加者・大会釣果は参加者と作成者だけが閲覧できます。仲間に共有された方は参加名を入力して参加してください。"}
+                  : "非公開大会です。参加者と作成者だけが閲覧できます。招待された方は参加名を入力して参加してください。"}
               </p>
               <p className="mt-3 whitespace-pre-wrap rounded bg-white p-3 text-sm leading-6 text-slate-700">{tournament.rules || "ルール未設定"}</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -163,13 +163,13 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
 function TournamentCatch({ item, userName }: { item: Catch; userName: string }) {
   return (
     <div className="relative">
+      <span className="absolute left-3 top-3 z-10 max-w-[55%] truncate rounded-full bg-black/55 px-3 py-1 text-xs font-black text-white backdrop-blur">
+        {userName}
+      </span>
       <span className={`absolute right-3 top-3 z-10 rounded-full px-3 py-1 text-xs font-black text-white ${getEntryBadgeClass(item.tournamentEntryStatus)}`}>
         {getEntryStatusLabel(item.tournamentEntryStatus)}
       </span>
       <CatchCard item={item} />
-      <div className="rounded-b border-x border-b border-teal-100 bg-white px-4 py-3 text-sm font-black text-water shadow-soft">
-        投稿者: {userName}
-      </div>
     </div>
   );
 }
