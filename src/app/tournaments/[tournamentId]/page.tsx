@@ -246,9 +246,12 @@ function RankingRow({ row, rank, isCurrentUser }: { row: RankingRowValue; rank: 
     <article className={`rounded border p-3 shadow-soft ${isCurrentUser ? "border-coral ring-2 ring-coral/30" : "border-teal-100"} ${medal}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <Avatar src={row.avatarUrl} name={row.userName} size="lg" />
+          <div className="relative">
+            <Avatar src={row.avatarUrl} name={row.userName} size="lg" />
+            {rank <= 3 ? <MedalIcon rank={rank} /> : null}
+          </div>
           <div className="min-w-0">
-            <p className="text-xs font-black">{getMedalLabel(rank)}</p>
+            <p className="text-xs font-black">#{rank}</p>
             <h3 className="truncate text-lg font-black">{row.userName}{isCurrentUser ? "（自分）" : ""}</h3>
             <p className="text-sm font-bold text-slate-700">{row.label}</p>
           </div>
@@ -260,11 +263,17 @@ function RankingRow({ row, rank, isCurrentUser }: { row: RankingRowValue; rank: 
   );
 }
 
-function getMedalLabel(rank: number) {
-  if (rank === 1) return "金メダル #1";
-  if (rank === 2) return "銀メダル #2";
-  if (rank === 3) return "銅メダル #3";
-  return `#${rank}`;
+function MedalIcon({ rank }: { rank: number }) {
+  const styles = {
+    1: "border-yellow-200 bg-yellow-400 text-yellow-950",
+    2: "border-slate-200 bg-slate-300 text-slate-800",
+    3: "border-orange-200 bg-orange-300 text-orange-950"
+  }[rank];
+  return (
+    <span className={`absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 text-[11px] font-black shadow ${styles}`}>
+      {rank}
+    </span>
+  );
 }
 
 type RankingRowValue = { userId: string; userName: string; avatarUrl: string | null; score: number; label: string; bestCatch: Catch | null };
