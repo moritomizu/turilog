@@ -75,10 +75,11 @@ function TournamentForm({ userId }: { userId: string }) {
           <label className="block">
             <span className="text-sm font-bold">公開設定</span>
             <select value={visibility} onChange={(event) => setVisibility(event.target.value as TournamentVisibility)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 font-bold">
-              <option value="public">公開</option>
-              <option value="private">非公開</option>
+              <option value="public">公開大会</option>
+              <option value="private">非公開大会</option>
             </select>
           </label>
+          <VisibilityHelp visibility={visibility} />
           <Field label="参加上限人数" type="number" value={maxParticipants} onChange={setMaxParticipants} placeholder="未入力なら上限なし" />
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
           <button disabled={busy} className="tap-target w-full rounded bg-coral px-5 py-4 text-lg font-black text-white disabled:opacity-60">
@@ -105,5 +106,23 @@ function TextArea({ label, value, onChange }: { label: string; value: string; on
       <span className="text-sm font-bold">{label}</span>
       <textarea value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 min-h-24 w-full rounded border border-slate-300 bg-white p-3 font-bold" />
     </label>
+  );
+}
+
+function VisibilityHelp({ visibility }: { visibility: TournamentVisibility }) {
+  return (
+    <div className="rounded border border-orange-100 bg-orange-50 p-3 text-xs font-bold leading-5 text-slate-700">
+      {visibility === "public" ? (
+        <>
+          <p className="font-black text-coral">公開大会</p>
+          <p className="mt-1">誰でも参加できる公募大会です。大会一覧に表示され、ランキングと大会釣果はログイン中の一般ユーザーも閲覧できます。</p>
+        </>
+      ) : (
+        <>
+          <p className="font-black text-slate-800">非公開大会</p>
+          <p className="mt-1">仲間だけで行うクローズド大会です。大会一覧には表示されず、詳細URLを共有された人が参加できます。ランキング・参加者・大会釣果は参加者と作成者のみ閲覧できます。</p>
+        </>
+      )}
+    </div>
   );
 }

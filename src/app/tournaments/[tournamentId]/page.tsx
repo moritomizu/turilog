@@ -24,26 +24,31 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
   const [joinName, setJoinName] = useState(userName);
   const [message, setMessage] = useState("読み込み中です。");
   const isParticipant = participants.some((item) => item.userId === userId);
+  const isOwner = tournament?.ownerId === userId;
+  const canViewPrivateContent = tournament ? tournament.visibility === "public" || isParticipant || isOwner : false;
   const participantNames = useMemo(() => new Map(participants.map((item) => [item.userId, item.userName])), [participants]);
   const approvedCatches = useMemo(() => catches.filter((item) => isApprovedTournamentCatch(item, tournament)), [catches, tournament]);
   const ranking = useMemo(() => buildRanking(approvedCatches, participants, tournament), [approvedCatches, participants, tournament]);
 
   useEffect(() => {
-    Promise.all([getTournament(tournamentId), getTournamentParticipants(tournamentId), getTournamentCatches(tournamentId)])
-      .then(([nextTournament, nextParticipants, nextCatches]) => {
+    Promise.all([getTournament(tournamentId), getTournamentParticipants(tournamentId)])
+      .then(async ([nextTournament, nextParticipants]) => {
+        const canLoadCatches = nextTournament ? nextTournament.visibility === "public" || nextTournament.ownerId === userId || nextParticipants.some((item) => item.userId === userId) : false;
+        const nextCatches = canLoadCatches ? await getTournamentCatches(tournamentId) : [];
         setTournament(nextTournament);
         setParticipants(nextParticipants);
         setCatches(nextCatches);
         setMessage(nextTournament ? "" : "大会が見つかりません。");
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "大会を読み込めませんでした。"));
-  }, [tournamentId]);
+  }, [tournamentId, userId]);
 
   async function handleJoin() {
     if (!tournament) return;
     try {
       await joinTournament(tournament, userId, joinName.trim() || userName);
       setParticipants(await getTournamentParticipants(tournament.id));
+      setCatches(await getTournamentCatches(tournament.id));
       setMessage("大会に参加しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "参加できませんでした。");
@@ -66,7 +71,13 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                 <p>対象魚種: {tournament.targetFishTypes.join("、") || "指定なし"}</p>
                 <p>方式: {getRankingTypeLabel(tournament.rankingType)}</p>
                 <p>参加人数: {participants.length}{tournament.maxParticipants ? ` / ${tournament.maxParticipants}` : ""}人</p>
+                <p>公開設定: {getVisibilityLabel(tournament.visibility)}</p>
               </div>
+              <p className="mt-3 rounded bg-white/80 p-3 text-xs font-bold leading-5 text-slate-600">
+                {tournament.visibility === "public"
+                  ? "公開大会です。ログインしているユーザーなら大会内容とランキングを閲覧でき、誰でも参加できます。"
+                  : "非公開大会です。ランキング・参加者・大会釣果は参加者と作成者だけが閲覧できます。仲間に共有された方は参加名を入力して参加してください。"}
+              </p>
               <p className="mt-3 whitespace-pre-wrap rounded bg-white p-3 text-sm leading-6 text-slate-700">{tournament.rules || "ルール未設定"}</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {isParticipant ? (
@@ -80,10 +91,12 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                 <button disabled={isParticipant} onClick={handleJoin} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
                   {isParticipant ? "参加済み" : "この名前で参加"}
                 </button>
-                <Link href={`/post?tournamentId=${tournament.id}`} className="tap-target flex items-center justify-center rounded bg-water px-4 py-3 font-black text-white">
-                  大会釣果を投稿
-                </Link>
-                {tournament.ownerId === userId ? (
+                {canViewPrivateContent ? (
+                  <Link href={`/post?tournamentId=${tournament.id}`} className="tap-target flex items-center justify-center rounded bg-water px-4 py-3 font-black text-white">
+                    大会釣果を投稿
+                  </Link>
+                ) : null}
+                {isOwner ? (
                   <>
                     <Link href={`/tournaments/${tournament.id}/admin`} className="tap-target flex items-center justify-center rounded border border-coral px-4 py-3 font-black text-coral">
                       承認画面
@@ -96,39 +109,50 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
               </div>
             </section>
 
-            <section>
-              <h2 className="mb-3 text-xl font-black">参加者</h2>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {participants.length ? (
-                  participants.map((participant) => (
-                    <div key={participant.id} className="rounded border border-teal-100 bg-white p-3 shadow-soft">
-                      <p className="font-black text-ink">{participant.userName}</p>
-                      <p className="mt-1 text-xs font-bold text-slate-500">参加日: {formatDate(participant.joinedAt)}</p>
-                    </div>
-                  ))
-                ) : (
-                  <Empty text="参加者はまだいません。" />
-                )}
-              </div>
-            </section>
+            {canViewPrivateContent ? (
+              <>
+                <section>
+                  <h2 className="mb-3 text-xl font-black">参加者</h2>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {participants.length ? (
+                      participants.map((participant) => (
+                        <div key={participant.id} className="rounded border border-teal-100 bg-white p-3 shadow-soft">
+                          <p className="font-black text-ink">{participant.userName}</p>
+                          <p className="mt-1 text-xs font-bold text-slate-500">参加日: {formatDate(participant.joinedAt)}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <Empty text="参加者はまだいません。" />
+                    )}
+                  </div>
+                </section>
 
-            <section>
-              <h2 className="mb-3 text-xl font-black">大会ランキング</h2>
-              <p className="mb-3 text-sm font-bold leading-6 text-slate-600">
-                承認済みの大会投稿をランキングへ反映します。期間や対象魚種は承認画面で確認します。
-              </p>
-              <div className="space-y-2">
-                {ranking.length ? ranking.map((row, index) => <RankingRow key={row.userId} row={row} rank={index + 1} />) : <Empty text="承認済みの大会釣果がありません。" />}
-              </div>
-            </section>
+                <section>
+                  <h2 className="mb-3 text-xl font-black">大会ランキング</h2>
+                  <p className="mb-3 text-sm font-bold leading-6 text-slate-600">
+                    承認済みの大会投稿をランキングへ反映します。期間や対象魚種は承認画面で確認します。
+                  </p>
+                  <div className="space-y-2">
+                    {ranking.length ? ranking.map((row, index) => <RankingRow key={row.userId} row={row} rank={index + 1} />) : <Empty text="承認済みの大会釣果がありません。" />}
+                  </div>
+                </section>
 
-            <section>
-              <h2 className="mb-3 text-xl font-black">大会釣果一覧</h2>
-              <p className="mb-3 text-sm font-bold leading-6 text-slate-600">承認待ち・承認済み・却下済みを含む、この大会に紐づいた投稿です。ランキングには承認済みのみ反映されます。</p>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {catches.length ? catches.map((item) => <TournamentCatch key={item.id} item={item} userName={participantNames.get(item.userId) ?? "参加者"} />) : <Empty text="大会釣果はまだありません。" />}
-              </div>
-            </section>
+                <section>
+                  <h2 className="mb-3 text-xl font-black">大会釣果一覧</h2>
+                  <p className="mb-3 text-sm font-bold leading-6 text-slate-600">承認待ち・承認済み・却下済みを含む、この大会に紐づいた投稿です。ランキングには承認済みのみ反映されます。</p>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {catches.length ? catches.map((item) => <TournamentCatch key={item.id} item={item} userName={participantNames.get(item.userId) ?? "参加者"} />) : <Empty text="大会釣果はまだありません。" />}
+                  </div>
+                </section>
+              </>
+            ) : (
+              <section className="rounded border border-slate-200 bg-white p-4 shadow-soft">
+                <h2 className="text-xl font-black">参加すると閲覧できます</h2>
+                <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
+                  この大会は仲間向けの非公開大会です。参加者名を入力して参加すると、ランキング・参加者・大会釣果を確認できます。
+                </p>
+              </section>
+            )}
           </>
         ) : null}
       </main>
@@ -201,6 +225,10 @@ function getStatusLabel(status: string) {
   if (status === "active") return "開催中";
   if (status === "upcoming") return "開催予定";
   return "終了";
+}
+
+function getVisibilityLabel(visibility: Tournament["visibility"]) {
+  return visibility === "public" ? "公開大会" : "非公開大会";
 }
 
 function getEntryStatusLabel(status: Catch["tournamentEntryStatus"]) {
