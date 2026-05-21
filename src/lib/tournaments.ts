@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import type { Tournament, TournamentParticipant, TournamentRankingType, TournamentStatus, TournamentVisibility } from "@/types";
@@ -37,6 +37,32 @@ export async function updateTournament(tournamentId: string, ownerId: string, in
     ...input,
     updatedAt: serverTimestamp()
   });
+}
+
+export async function deleteTournament(tournamentId: string, ownerId: string) {
+  const db = getFirebaseDb();
+  const tournamentRef = doc(db, "tournaments", tournamentId);
+  const snapshot = await getDoc(tournamentRef);
+  if (!snapshot.exists()) throw new Error("大会が見つかりません。");
+  if (snapshot.data().ownerId !== ownerId) throw new Error("大会作成者のみ削除できます。");
+
+  const [participantsSnapshot, catchesSnapshot] = await Promise.all([
+    getDocs(query(collection(db, "tournamentParticipants"), where("tournamentId", "==", tournamentId))),
+    getDocs(query(collection(db, "catches"), where("tournamentId", "==", tournamentId)))
+  ]);
+
+  const batch = writeBatch(db);
+  batch.delete(tournamentRef);
+  participantsSnapshot.docs.forEach((item) => batch.delete(item.ref));
+  catchesSnapshot.docs.forEach((item) => {
+    batch.update(item.ref, {
+      tournamentId: null,
+      isTournamentEntry: false,
+      tournamentEntryStatus: "none",
+      tournamentSubmittedAt: null
+    });
+  });
+  await batch.commit();
 }
 
 export async function getTournaments(): Promise<Tournament[]> {
