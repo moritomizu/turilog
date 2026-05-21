@@ -21,8 +21,10 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [participants, setParticipants] = useState<TournamentParticipant[]>([]);
   const [catches, setCatches] = useState<Catch[]>([]);
+  const [joinName, setJoinName] = useState(userName);
   const [message, setMessage] = useState("読み込み中です。");
   const isParticipant = participants.some((item) => item.userId === userId);
+  const participantNames = useMemo(() => new Map(participants.map((item) => [item.userId, item.userName])), [participants]);
   const approvedCatches = useMemo(() => catches.filter((item) => isApprovedTournamentCatch(item, tournament)), [catches, tournament]);
   const ranking = useMemo(() => buildRanking(approvedCatches, participants, tournament), [approvedCatches, participants, tournament]);
 
@@ -40,7 +42,7 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
   async function handleJoin() {
     if (!tournament) return;
     try {
-      await joinTournament(tournament, userId, userName);
+      await joinTournament(tournament, userId, joinName.trim() || userName);
       setParticipants(await getTournamentParticipants(tournament.id));
       setMessage("大会に参加しました。");
     } catch (error) {
@@ -67,8 +69,16 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
               </div>
               <p className="mt-3 whitespace-pre-wrap rounded bg-white p-3 text-sm leading-6 text-slate-700">{tournament.rules || "ルール未設定"}</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {isParticipant ? (
+                  <div className="rounded bg-white p-3 text-sm font-black text-slate-700">参加名: {participantNames.get(userId) ?? userName}</div>
+                ) : (
+                  <label className="block">
+                    <span className="text-xs font-black text-slate-600">参加名</span>
+                    <input value={joinName} onChange={(event) => setJoinName(event.target.value)} className="mt-1 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold" placeholder="ニックネーム" />
+                  </label>
+                )}
                 <button disabled={isParticipant} onClick={handleJoin} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
-                  {isParticipant ? "参加済み" : "参加する"}
+                  {isParticipant ? "参加済み" : "この名前で参加"}
                 </button>
                 <Link href={`/post?tournamentId=${tournament.id}`} className="tap-target flex items-center justify-center rounded bg-water px-4 py-3 font-black text-white">
                   大会釣果を投稿
@@ -116,7 +126,7 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
               <h2 className="mb-3 text-xl font-black">大会釣果一覧</h2>
               <p className="mb-3 text-sm font-bold leading-6 text-slate-600">承認待ち・承認済み・却下済みを含む、この大会に紐づいた投稿です。ランキングには承認済みのみ反映されます。</p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {catches.length ? catches.map((item) => <TournamentCatch key={item.id} item={item} />) : <Empty text="大会釣果はまだありません。" />}
+                {catches.length ? catches.map((item) => <TournamentCatch key={item.id} item={item} userName={participantNames.get(item.userId) ?? "参加者"} />) : <Empty text="大会釣果はまだありません。" />}
               </div>
             </section>
           </>
@@ -126,13 +136,16 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
   );
 }
 
-function TournamentCatch({ item }: { item: Catch }) {
+function TournamentCatch({ item, userName }: { item: Catch; userName: string }) {
   return (
     <div className="relative">
       <span className={`absolute right-3 top-3 z-10 rounded-full px-3 py-1 text-xs font-black text-white ${getEntryBadgeClass(item.tournamentEntryStatus)}`}>
         {getEntryStatusLabel(item.tournamentEntryStatus)}
       </span>
       <CatchCard item={item} />
+      <div className="rounded-b border-x border-b border-teal-100 bg-white px-4 py-3 text-sm font-black text-water shadow-soft">
+        投稿者: {userName}
+      </div>
     </div>
   );
 }
