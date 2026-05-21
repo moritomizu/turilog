@@ -90,14 +90,26 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
 
             <section>
               <h2 className="mb-3 text-xl font-black">大会釣果一覧</h2>
+              <p className="mb-3 text-sm font-bold leading-6 text-slate-600">承認待ち・承認済み・却下済みを含む、この大会に紐づいた投稿です。ランキングには承認済みのみ反映されます。</p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {catches.length ? catches.map((item) => <CatchCard key={item.id} item={item} />) : <Empty text="大会釣果はまだありません。" />}
+                {catches.length ? catches.map((item) => <TournamentCatch key={item.id} item={item} />) : <Empty text="大会釣果はまだありません。" />}
               </div>
             </section>
           </>
         ) : null}
       </main>
     </>
+  );
+}
+
+function TournamentCatch({ item }: { item: Catch }) {
+  return (
+    <div className="relative">
+      <span className={`absolute right-3 top-3 z-10 rounded-full px-3 py-1 text-xs font-black text-white ${getEntryBadgeClass(item.tournamentEntryStatus)}`}>
+        {getEntryStatusLabel(item.tournamentEntryStatus)}
+      </span>
+      <CatchCard item={item} />
+    </div>
   );
 }
 
@@ -155,6 +167,20 @@ function getStatusLabel(status: string) {
   if (status === "active") return "開催中";
   if (status === "upcoming") return "開催予定";
   return "終了";
+}
+
+function getEntryStatusLabel(status: Catch["tournamentEntryStatus"]) {
+  if (status === "approved") return "承認済み";
+  if (status === "rejected") return "却下";
+  if (status === "pending") return "承認待ち";
+  return "通常投稿";
+}
+
+function getEntryBadgeClass(status: Catch["tournamentEntryStatus"]) {
+  if (status === "approved") return "bg-water";
+  if (status === "rejected") return "bg-slate-500";
+  if (status === "pending") return "bg-coral";
+  return "bg-slate-400";
 }
 
 function formatDate(value: string) {

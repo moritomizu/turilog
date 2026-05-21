@@ -54,6 +54,9 @@ function TournamentAdmin({ tournamentId, userId }: { tournamentId: string; userI
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-5">
         {message ? <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
         {tournament ? <h1 className="text-2xl font-black">{tournament.name} 承認待ち</h1> : null}
+        <p className="rounded bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700">
+          承認管理が行えるのは大会作成者のみです。期間、対象魚種、位置情報、サイズ、写真を確認して承認してください。
+        </p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.length ? (
             items.map((item) => (
@@ -64,6 +67,7 @@ function TournamentAdmin({ tournamentId, userId }: { tournamentId: string; userI
                   <p>投稿者: {participants.find((participant) => participant.userId === item.userId)?.userName ?? item.userId}</p>
                   <p>日時: {formatDate(item.caughtAt)}</p>
                   <p>位置情報: {item.latitude != null && item.longitude != null ? "あり" : "なし"}</p>
+                  {tournament ? <CheckList item={item} tournament={tournament} /> : null}
                   <p>潮位: {item.tideHeight == null ? "未取得" : `${item.tideHeight}m`}</p>
                   <p>潮: {item.tidePhaseLabel}</p>
                   <div className="grid grid-cols-2 gap-2 pt-2">
@@ -79,6 +83,22 @@ function TournamentAdmin({ tournamentId, userId }: { tournamentId: string; userI
         </div>
       </main>
     </>
+  );
+}
+
+function CheckList({ item, tournament }: { item: Catch; tournament: Tournament }) {
+  const caught = new Date(item.caughtAt).getTime();
+  const inPeriod = caught >= new Date(tournament.startAt).getTime() && caught <= new Date(tournament.endAt).getTime();
+  const targetMatched = tournament.targetFishTypes.length === 0 || tournament.targetFishTypes.includes(item.fishType);
+  const hasLocation = item.latitude != null && item.longitude != null;
+  const validSize = item.sizeCm > 0;
+  return (
+    <div className="rounded bg-foam p-2 text-xs font-bold leading-5">
+      <p>期間内: {inPeriod ? "OK" : "要確認"}</p>
+      <p>対象魚種: {targetMatched ? "OK" : "要確認"}</p>
+      <p>位置情報: {hasLocation ? "OK" : "要確認"}</p>
+      <p>サイズ: {validSize ? "OK" : "要確認"}</p>
+    </div>
   );
 }
 

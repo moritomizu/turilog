@@ -189,7 +189,7 @@ function PostForm({ userId }: { userId: string }) {
       const tournamentCheck = selectedTournament
         ? isTournamentEntryEligible(selectedTournament, caughtAtIso, fishType, Number(sizeCm), location?.latitude != null && location?.longitude != null)
         : null;
-      const canEnterTournament = Boolean(selectedTournament && tournamentCheck?.ok);
+      const hasTournamentSelection = Boolean(selectedTournament);
 
       await createCatch({
         userId,
@@ -205,10 +205,10 @@ function PostForm({ userId }: { userId: string }) {
         pointName: pointName.trim(),
         isPublic: false,
         publicShareEnabledAt: null,
-        tournamentId: canEnterTournament ? selectedTournamentId : null,
-        isTournamentEntry: canEnterTournament,
-        tournamentEntryStatus: canEnterTournament ? "pending" : "none",
-        tournamentSubmittedAt: canEnterTournament ? new Date().toISOString() : null,
+        tournamentId: hasTournamentSelection ? selectedTournamentId : null,
+        isTournamentEntry: hasTournamentSelection,
+        tournamentEntryStatus: hasTournamentSelection ? "pending" : "none",
+        tournamentSubmittedAt: hasTournamentSelection ? new Date().toISOString() : null,
         weather,
         seaTemperature,
         lunar: getLunarInfo(caughtAtIso),
@@ -227,7 +227,7 @@ function PostForm({ userId }: { userId: string }) {
       setSelectedAreaId("");
       setSelectedTournamentId("");
       setCaughtAt(toLocalInputValue(new Date()));
-      setMessage(selectedTournament ? (canEnterTournament ? "投稿しました。大会投稿は承認待ちです。" : getTournamentSkipMessage(tournamentCheck)) : "投稿しました。");
+      setMessage(selectedTournament ? (tournamentCheck?.ok ? "投稿しました。大会投稿は承認待ちです。" : `${getTournamentSkipMessage(tournamentCheck)} 承認画面で確認できます。`) : "投稿しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "投稿に失敗しました。");
     } finally {
