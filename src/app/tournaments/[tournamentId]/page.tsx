@@ -66,7 +66,7 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                 <p>参加人数: {participants.length}{tournament.maxParticipants ? ` / ${tournament.maxParticipants}` : ""}人</p>
               </div>
               <p className="mt-3 whitespace-pre-wrap rounded bg-white p-3 text-sm leading-6 text-slate-700">{tournament.rules || "ルール未設定"}</p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <button disabled={isParticipant} onClick={handleJoin} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
                   {isParticipant ? "参加済み" : "参加する"}
                 </button>
@@ -74,10 +74,31 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                   大会釣果を投稿
                 </Link>
                 {tournament.ownerId === userId ? (
-                  <Link href={`/tournaments/${tournament.id}/admin`} className="tap-target flex items-center justify-center rounded border border-coral px-4 py-3 font-black text-coral">
-                    承認画面
-                  </Link>
+                  <>
+                    <Link href={`/tournaments/${tournament.id}/admin`} className="tap-target flex items-center justify-center rounded border border-coral px-4 py-3 font-black text-coral">
+                      承認画面
+                    </Link>
+                    <Link href={`/tournaments/${tournament.id}/edit`} className="tap-target flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-3 font-black text-ink">
+                      大会編集
+                    </Link>
+                  </>
                 ) : null}
+              </div>
+            </section>
+
+            <section>
+              <h2 className="mb-3 text-xl font-black">参加者</h2>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {participants.length ? (
+                  participants.map((participant) => (
+                    <div key={participant.id} className="rounded border border-teal-100 bg-white p-3 shadow-soft">
+                      <p className="font-black text-ink">{participant.userName}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-500">参加日: {formatDate(participant.joinedAt)}</p>
+                    </div>
+                  ))
+                ) : (
+                  <Empty text="参加者はまだいません。" />
+                )}
               </div>
             </section>
 
@@ -155,8 +176,13 @@ function isApprovedTournamentCatch(item: Catch, tournament: Tournament | null) {
   if (!tournament || item.tournamentEntryStatus !== "approved") return false;
   const caught = new Date(item.caughtAt).getTime();
   const inPeriod = caught >= new Date(tournament.startAt).getTime() && caught <= new Date(tournament.endAt).getTime();
-  const targetMatched = tournament.targetFishTypes.length === 0 || tournament.targetFishTypes.includes(item.fishType);
+  const fishType = normalizeFishType(item.fishType);
+  const targetMatched = tournament.targetFishTypes.length === 0 || tournament.targetFishTypes.some((target) => normalizeFishType(target) === fishType);
   return inPeriod && targetMatched;
+}
+
+function normalizeFishType(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "");
 }
 
 function Empty({ text }: { text: string }) {

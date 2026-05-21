@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import type { Tournament, TournamentParticipant, TournamentRankingType, TournamentStatus, TournamentVisibility } from "@/types";
 
@@ -25,6 +25,17 @@ export async function createTournament(input: TournamentInput) {
     updatedAt: serverTimestamp()
   });
   return ref.id;
+}
+
+export async function updateTournament(tournamentId: string, ownerId: string, input: Omit<TournamentInput, "ownerId">) {
+  const ref = doc(getFirebaseDb(), "tournaments", tournamentId);
+  const snapshot = await getDoc(ref);
+  if (!snapshot.exists()) throw new Error("大会が見つかりません。");
+  if (snapshot.data().ownerId !== ownerId) throw new Error("大会作成者のみ編集できます。");
+  await updateDoc(ref, {
+    ...input,
+    updatedAt: serverTimestamp()
+  });
 }
 
 export async function getTournaments(): Promise<Tournament[]> {

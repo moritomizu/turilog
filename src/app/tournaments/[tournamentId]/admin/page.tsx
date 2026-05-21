@@ -89,7 +89,8 @@ function TournamentAdmin({ tournamentId, userId }: { tournamentId: string; userI
 function CheckList({ item, tournament }: { item: Catch; tournament: Tournament }) {
   const caught = new Date(item.caughtAt).getTime();
   const inPeriod = caught >= new Date(tournament.startAt).getTime() && caught <= new Date(tournament.endAt).getTime();
-  const targetMatched = tournament.targetFishTypes.length === 0 || tournament.targetFishTypes.includes(item.fishType);
+  const fishType = normalizeFishType(item.fishType);
+  const targetMatched = tournament.targetFishTypes.length === 0 || tournament.targetFishTypes.some((target) => normalizeFishType(target) === fishType);
   const hasLocation = item.latitude != null && item.longitude != null;
   const validSize = item.sizeCm > 0;
   return (
@@ -100,6 +101,10 @@ function CheckList({ item, tournament }: { item: Catch; tournament: Tournament }
       <p>サイズ: {validSize ? "OK" : "要確認"}</p>
     </div>
   );
+}
+
+function normalizeFishType(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "");
 }
 
 function formatDate(value: string) {
