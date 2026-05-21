@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getTournamentCatches } from "@/lib/catches";
-import { deleteTournament, getRankingTypeLabel, getTournament, getTournamentParticipants, getTournamentStatus, joinTournament, leaveTournament, uploadTournamentParticipantIcon } from "@/lib/tournaments";
+import { getRankingTypeLabel, getTournament, getTournamentParticipants, getTournamentStatus, joinTournament, leaveTournament, uploadTournamentParticipantIcon } from "@/lib/tournaments";
 import type { Catch, Tournament, TournamentParticipant } from "@/types";
 
 export default function TournamentDetailPage({ params }: { params: { tournamentId: string } }) {
@@ -19,7 +18,6 @@ export default function TournamentDetailPage({ params }: { params: { tournamentI
 }
 
 function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: string; userId: string; userName: string }) {
-  const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [participants, setParticipants] = useState<TournamentParticipant[]>([]);
   const [catches, setCatches] = useState<Catch[]>([]);
@@ -81,18 +79,6 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
       setMessage("大会から抜けました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "大会から抜けられませんでした。");
-    }
-  }
-
-  async function handleDeleteTournament() {
-    if (!tournament) return;
-    const ok = window.confirm("この大会を削除しますか？参加者データと大会ランキングは削除されます。釣果ログ自体は残ります。");
-    if (!ok) return;
-    try {
-      await deleteTournament(tournament.id, userId);
-      router.push("/tournaments");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "大会を削除できませんでした。");
     }
   }
 
@@ -171,9 +157,6 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                       <Link href={`/tournaments/${tournament.id}/edit`} className="tap-target flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-3 font-black text-ink">
                         大会編集
                       </Link>
-                      <button onClick={handleDeleteTournament} className="tap-target rounded bg-slate-900 px-4 py-3 font-black text-white">
-                        大会削除
-                      </button>
                     </div>
                   </div>
                 ) : null}

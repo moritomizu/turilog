@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
-import { getTournament, parseTargetFishTypes, updateTournament } from "@/lib/tournaments";
+import { deleteTournament, getTournament, parseTargetFishTypes, updateTournament } from "@/lib/tournaments";
 import type { Tournament, TournamentRankingType, TournamentVisibility } from "@/types";
 
 export default function EditTournamentPage({ params }: { params: { tournamentId: string } }) {
@@ -75,6 +75,21 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
     }
   }
 
+  async function handleDeleteTournament() {
+    if (!tournament) return;
+    const ok = window.confirm("この大会を削除しますか？参加者データと大会ランキングは削除されます。釣果ログ自体は残ります。");
+    if (!ok) return;
+    setBusy(true);
+    setMessage("大会を削除しています。");
+    try {
+      await deleteTournament(tournament.id, userId);
+      router.push("/tournaments");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "大会を削除できませんでした。");
+      setBusy(false);
+    }
+  }
+
   if (tournament && tournament.ownerId !== userId) {
     return (
       <>
@@ -119,6 +134,14 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
             {busy ? "保存中..." : "大会を保存する"}
           </button>
         </form>
+        {tournament ? (
+          <section className="mt-6 border-t border-slate-200 pt-4">
+            <p className="text-xs font-bold leading-5 text-slate-500">大会を削除すると、参加者データと大会ランキングは削除されます。釣果ログ自体は削除せず、通常の個人ログとして残します。</p>
+            <button type="button" disabled={busy} onClick={handleDeleteTournament} className="mt-3 rounded border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-500 disabled:opacity-50">
+              大会を削除する
+            </button>
+          </section>
+        ) : null}
       </main>
     </>
   );
