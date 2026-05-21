@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppFooter } from "@/components/AppFooter";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body className="min-h-screen bg-foam">
+        {children}
+        <AppFooter />
+      </body>
     </html>
   );
 }

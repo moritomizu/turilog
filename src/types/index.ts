@@ -9,6 +9,12 @@ export type User = {
   displayName: string | null;
   email: string | null;
   createdAt: Date;
+  termsAccepted?: boolean;
+  privacyAccepted?: boolean;
+  termsAcceptedAt?: Date;
+  privacyAcceptedAt?: Date;
+  termsVersion?: string;
+  privacyVersion?: string;
 };
 
 export type TideInfo = {
