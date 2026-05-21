@@ -104,6 +104,9 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
 
             <section>
               <h2 className="mb-3 text-xl font-black">大会ランキング</h2>
+              <p className="mb-3 text-sm font-bold leading-6 text-slate-600">
+                承認済みの大会投稿をランキングへ反映します。期間や対象魚種は承認画面で確認します。
+              </p>
               <div className="space-y-2">
                 {ranking.length ? ranking.map((row, index) => <RankingRow key={row.userId} row={row} rank={index + 1} />) : <Empty text="承認済みの大会釣果がありません。" />}
               </div>
@@ -174,15 +177,7 @@ function buildRanking(items: Catch[], participants: TournamentParticipant[], tou
 
 function isApprovedTournamentCatch(item: Catch, tournament: Tournament | null) {
   if (!tournament || item.tournamentEntryStatus !== "approved") return false;
-  const caught = new Date(item.caughtAt).getTime();
-  const inPeriod = caught >= new Date(tournament.startAt).getTime() && caught <= new Date(tournament.endAt).getTime();
-  const fishType = normalizeFishType(item.fishType);
-  const targetMatched = tournament.targetFishTypes.length === 0 || tournament.targetFishTypes.some((target) => normalizeFishType(target) === fishType);
-  return inPeriod && targetMatched;
-}
-
-function normalizeFishType(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "");
+  return item.tournamentId === tournament.id;
 }
 
 function Empty({ text }: { text: string }) {

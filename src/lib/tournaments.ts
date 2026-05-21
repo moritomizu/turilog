@@ -94,6 +94,10 @@ export function getRankingTypeLabel(value: TournamentRankingType) {
   return "最大サイズ1匹勝負";
 }
 
+export function parseTargetFishTypes(value: string) {
+  return value.split(/[,、]/).map((item) => item.trim()).filter(Boolean);
+}
+
 export function isTournamentEntryEligible(tournament: Tournament, caughtAt: string, fishType: string, sizeCm: number, hasLocation: boolean) {
   const caughtTime = new Date(caughtAt).getTime();
   const inPeriod = caughtTime >= new Date(tournament.startAt).getTime() && caughtTime <= new Date(tournament.endAt).getTime();

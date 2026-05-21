@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
-import { createTournament } from "@/lib/tournaments";
+import { createTournament, parseTargetFishTypes } from "@/lib/tournaments";
 import type { TournamentRankingType, TournamentVisibility } from "@/types";
 
 export default function NewTournamentPage() {
@@ -40,7 +40,7 @@ function TournamentForm({ userId }: { userId: string }) {
         description,
         startAt: new Date(startAt).toISOString(),
         endAt: new Date(endAt).toISOString(),
-        targetFishTypes: targetFishTypes.split(",").map((item) => item.trim()).filter(Boolean),
+        targetFishTypes: parseTargetFishTypes(targetFishTypes),
         rankingType,
         rules,
         visibility,

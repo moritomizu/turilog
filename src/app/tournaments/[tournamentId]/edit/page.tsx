@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
-import { getTournament, updateTournament } from "@/lib/tournaments";
+import { getTournament, parseTargetFishTypes, updateTournament } from "@/lib/tournaments";
 import type { Tournament, TournamentRankingType, TournamentVisibility } from "@/types";
 
 export default function EditTournamentPage({ params }: { params: { tournamentId: string } }) {
@@ -62,7 +62,7 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
         description,
         startAt: new Date(startAt).toISOString(),
         endAt: new Date(endAt).toISOString(),
-        targetFishTypes: targetFishTypes.split(",").map((item) => item.trim()).filter(Boolean),
+        targetFishTypes: parseTargetFishTypes(targetFishTypes),
         rankingType,
         rules,
         visibility,
