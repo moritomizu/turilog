@@ -94,11 +94,12 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
               <h1 className="mt-1 text-2xl font-black">{tournament.name}</h1>
               <p className="mt-2 text-sm font-bold leading-6 text-slate-700">{tournament.description}</p>
               <div className="mt-3 grid gap-2 text-sm font-bold text-slate-700 sm:grid-cols-2">
-                <p>期間: {formatDate(tournament.startAt)} - {formatDate(tournament.endAt)}</p>
-                <p>対象魚種: {tournament.targetFishTypes.join("、") || "指定なし"}</p>
-                <p>方式: {getRankingTypeLabel(tournament.rankingType)}</p>
-                <p>参加人数: {participants.length}{tournament.maxParticipants ? ` / ${tournament.maxParticipants}` : ""}人</p>
-                <p>公開設定: {getVisibilityLabel(tournament.visibility)}</p>
+                <InfoItem label="期間" value={`${formatDate(tournament.startAt)} - ${formatDate(tournament.endAt)}`} />
+                <InfoItem label="対象魚種" value={tournament.targetFishTypes.join("、") || "指定なし"} />
+                <InfoItem label="方式" value={getRankingTypeLabel(tournament.rankingType)} />
+                <InfoItem label="参加人数" value={`${participants.length}${tournament.maxParticipants ? ` / ${tournament.maxParticipants}` : ""}人`} />
+                <InfoItem label="公開設定" value={getVisibilityLabel(tournament.visibility)} />
+                <InfoItem label="主催者" value={isOwner ? "あなた" : "大会作成者"} />
               </div>
               <p className="mt-3 rounded bg-white/80 p-3 text-xs font-bold leading-5 text-slate-600">
                 {tournament.visibility === "public"
@@ -106,50 +107,58 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                   : "非公開大会です。参加者と作成者だけが閲覧できます。招待された方は参加名を入力して参加してください。"}
               </p>
               <p className="mt-3 whitespace-pre-wrap rounded bg-white p-3 text-sm leading-6 text-slate-700">{tournament.rules || "ルール未設定"}</p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {isParticipant ? (
-                  <div className="flex items-center gap-3 rounded bg-white p-3 text-sm font-black text-slate-700">
-                    <Avatar src={currentParticipant?.avatarUrl} name={participantNames.get(userId) ?? userName} size="md" />
-                    <span className="min-w-0 truncate">参加名: {participantNames.get(userId) ?? userName}</span>
+              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+                <div className="rounded bg-white p-3">
+                  <h2 className="text-sm font-black text-ink">参加メニュー</h2>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {isParticipant ? (
+                      <div className="flex items-center gap-3 rounded border border-teal-100 bg-foam p-3 text-sm font-black text-slate-700">
+                        <Avatar src={currentParticipant?.avatarUrl} name={participantNames.get(userId) ?? userName} size="md" />
+                        <span className="min-w-0 truncate">自分の参加名: {participantNames.get(userId) ?? userName}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <label className="block">
+                          <span className="text-xs font-black text-slate-600">参加名</span>
+                          <input value={joinName} onChange={(event) => setJoinName(event.target.value)} className="mt-1 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold" placeholder="ニックネーム" />
+                        </label>
+                        <label className="flex items-center gap-3 rounded border border-orange-100 bg-white p-3 text-sm font-bold text-slate-700">
+                          <Avatar src={iconPreview} name={joinName || userName} size="md" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-xs font-black text-slate-600">アイコン画像</span>
+                            <span className="block truncate text-xs text-slate-500">{iconFile ? iconFile.name : "任意で設定"}</span>
+                          </span>
+                          <input type="file" accept="image/*" onChange={(event) => setIconFile(event.target.files?.[0] ?? null)} className="hidden" />
+                        </label>
+                      </>
+                    )}
+                    <button disabled={isParticipant} onClick={handleJoin} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
+                      {isParticipant ? "参加済み" : "この名前で参加"}
+                    </button>
+                    {isParticipant ? (
+                      <button onClick={handleLeave} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
+                        大会から抜ける
+                      </button>
+                    ) : null}
+                    {canViewPrivateContent ? (
+                      <Link href={`/post?tournamentId=${tournament.id}`} className="tap-target flex items-center justify-center rounded bg-water px-4 py-3 font-black text-white sm:col-span-2">
+                        大会釣果を投稿
+                      </Link>
+                    ) : null}
                   </div>
-                ) : (
-                  <>
-                    <label className="block">
-                      <span className="text-xs font-black text-slate-600">参加名</span>
-                      <input value={joinName} onChange={(event) => setJoinName(event.target.value)} className="mt-1 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold" placeholder="ニックネーム" />
-                    </label>
-                    <label className="flex items-center gap-3 rounded bg-white p-3 text-sm font-bold text-slate-700">
-                      <Avatar src={iconPreview} name={joinName || userName} size="md" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-xs font-black text-slate-600">アイコン画像</span>
-                        <span className="block truncate text-xs text-slate-500">{iconFile ? iconFile.name : "任意で設定"}</span>
-                      </span>
-                      <input type="file" accept="image/*" onChange={(event) => setIconFile(event.target.files?.[0] ?? null)} className="hidden" />
-                    </label>
-                  </>
-                )}
-                <button disabled={isParticipant} onClick={handleJoin} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
-                  {isParticipant ? "参加済み" : "この名前で参加"}
-                </button>
-                {isParticipant ? (
-                  <button onClick={handleLeave} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
-                    大会から抜ける
-                  </button>
-                ) : null}
-                {canViewPrivateContent ? (
-                  <Link href={`/post?tournamentId=${tournament.id}`} className="tap-target flex items-center justify-center rounded bg-water px-4 py-3 font-black text-white">
-                    大会釣果を投稿
-                  </Link>
-                ) : null}
+                </div>
                 {isOwner ? (
-                  <>
-                    <Link href={`/tournaments/${tournament.id}/admin`} className="tap-target flex items-center justify-center rounded border border-coral px-4 py-3 font-black text-coral">
-                      承認画面
-                    </Link>
-                    <Link href={`/tournaments/${tournament.id}/edit`} className="tap-target flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-3 font-black text-ink">
-                      大会編集
-                    </Link>
-                  </>
+                  <div className="rounded border border-coral/20 bg-white p-3">
+                    <h2 className="text-sm font-black text-ink">主催者メニュー</h2>
+                    <div className="mt-3 grid gap-2">
+                      <Link href={`/tournaments/${tournament.id}/admin`} className="tap-target flex items-center justify-center rounded border border-coral px-4 py-3 font-black text-coral">
+                        承認画面
+                      </Link>
+                      <Link href={`/tournaments/${tournament.id}/edit`} className="tap-target flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-3 font-black text-ink">
+                        大会編集
+                      </Link>
+                    </div>
+                  </div>
                 ) : null}
               </div>
             </section>
@@ -222,6 +231,15 @@ function TournamentCatch({ item, userName }: { item: Catch; userName: string }) 
   );
 }
 
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <p>
+      <span className="mr-1 text-xs font-black text-slate-500">{label}:</span>
+      {value}
+    </p>
+  );
+}
+
 function RankingRow({ row, rank, isCurrentUser }: { row: RankingRowValue; rank: number; isCurrentUser: boolean }) {
   const medal = rank <= 3 ? ["bg-yellow-400", "bg-slate-300", "bg-orange-300"][rank - 1] : "bg-white";
   return (
@@ -230,9 +248,9 @@ function RankingRow({ row, rank, isCurrentUser }: { row: RankingRowValue; rank: 
         <div className="flex min-w-0 items-center gap-3">
           <Avatar src={row.avatarUrl} name={row.userName} size="lg" />
           <div className="min-w-0">
-          <p className="text-xs font-black">#{rank}</p>
+            <p className="text-xs font-black">{getMedalLabel(rank)}</p>
             <h3 className="truncate text-lg font-black">{row.userName}{isCurrentUser ? "（自分）" : ""}</h3>
-          <p className="text-sm font-bold text-slate-700">{row.label}</p>
+            <p className="text-sm font-bold text-slate-700">{row.label}</p>
           </div>
         </div>
         {row.bestCatch?.imageUrl ? <img src={row.bestCatch.imageUrl} alt={row.bestCatch.fishType} className="h-16 w-16 rounded object-cover" /> : null}
@@ -240,6 +258,13 @@ function RankingRow({ row, rank, isCurrentUser }: { row: RankingRowValue; rank: 
       {row.bestCatch ? <p className="mt-2 text-xs font-bold text-slate-700">{row.bestCatch.fishType} / {row.bestCatch.sizeCm}cm / {row.bestCatch.tidePhaseLabel}</p> : null}
     </article>
   );
+}
+
+function getMedalLabel(rank: number) {
+  if (rank === 1) return "金メダル #1";
+  if (rank === 2) return "銀メダル #2";
+  if (rank === 3) return "銅メダル #3";
+  return `#${rank}`;
 }
 
 type RankingRowValue = { userId: string; userName: string; avatarUrl: string | null; score: number; label: string; bestCatch: Catch | null };
