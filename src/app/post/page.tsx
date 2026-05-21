@@ -12,8 +12,9 @@ import { getOfficialCurrentReference } from "@/lib/officialCurrent";
 import { getOfficialTideReference } from "@/lib/officialTide";
 import { emptySeaTemperatureInfo, fetchSeaTemperatureInfo } from "@/lib/seaTemperature";
 import { fetchTideInfo } from "@/lib/tide";
+import { getJoinedTournaments, getTournament, isTournamentEntryEligible } from "@/lib/tournaments";
 import { emptyWeatherInfo, fetchWeatherInfo } from "@/lib/weather";
-import type { Catch, LocationPoint, TackleInfo } from "@/types";
+import type { Catch, LocationPoint, TackleInfo, Tournament } from "@/types";
 
 type LocationSuggestion = LocationPoint & {
   label: string;
@@ -47,6 +48,8 @@ function PostForm({ userId }: { userId: string }) {
   const [selectedAreaId, setSelectedAreaId] = useState("");
   const [areaName, setAreaName] = useState("");
   const [pointName, setPointName] = useState("");
+  const [tournamentOptions, setTournamentOptions] = useState<Tournament[]>([]);
+  const [selectedTournamentId, setSelectedTournamentId] = useState("");
   const [fishSuggestions, setFishSuggestions] = useState<string[]>([]);
   const [commentSuggestions, setCommentSuggestions] = useState<string[]>([]);
   const [tackleSuggestions, setTackleSuggestions] = useState<Record<keyof TackleInfo, string[]>>({
@@ -83,6 +86,18 @@ function PostForm({ userId }: { userId: string }) {
       .catch(() => {
         setFishSuggestions(["シーバス", "アジ", "メバル", "クロダイ", "マダイ", "ヒラメ"]);
       });
+  }, [userId]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tournamentId = params.get("tournamentId") ?? "";
+    Promise.all([getJoinedTournaments(userId), tournamentId ? getTournament(tournamentId) : Promise.resolve(null)])
+      .then(([joined, linked]) => {
+        const options = linked && !joined.some((item) => item.id === linked.id) ? [linked, ...joined] : joined;
+        setTournamentOptions(options);
+        if (tournamentId) setSelectedTournamentId(tournamentId);
+      })
+      .catch(() => setTournamentOptions([]));
   }, [userId]);
 
   async function handleLocation() {
@@ -170,6 +185,11 @@ function PostForm({ userId }: { userId: string }) {
       };
       weather ??= emptyWeatherInfo();
       seaTemperature ??= emptySeaTemperatureInfo();
+      const selectedTournament = tournamentOptions.find((item) => item.id === selectedTournamentId) ?? null;
+      const tournamentCheck = selectedTournament
+        ? isTournamentEntryEligible(selectedTournament, caughtAtIso, fishType, Number(sizeCm), location?.latitude != null && location?.longitude != null)
+        : null;
+      const canEnterTournament = Boolean(selectedTournament && tournamentCheck?.ok);
 
       await createCatch({
         userId,
@@ -185,6 +205,10 @@ function PostForm({ userId }: { userId: string }) {
         pointName: pointName.trim(),
         isPublic: false,
         publicShareEnabledAt: null,
+        tournamentId: canEnterTournament ? selectedTournamentId : null,
+        isTournamentEntry: canEnterTournament,
+        tournamentEntryStatus: canEnterTournament ? "pending" : "none",
+        tournamentSubmittedAt: canEnterTournament ? new Date().toISOString() : null,
         weather,
         seaTemperature,
         lunar: getLunarInfo(caughtAtIso),
@@ -201,8 +225,9 @@ function PostForm({ userId }: { userId: string }) {
       setAreaName("");
       setPointName("");
       setSelectedAreaId("");
+      setSelectedTournamentId("");
       setCaughtAt(toLocalInputValue(new Date()));
-      setMessage("投稿しました。");
+      setMessage(selectedTournament ? (canEnterTournament ? "投稿しました。大会投稿は承認待ちです。" : getTournamentSkipMessage(tournamentCheck)) : "投稿しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "投稿に失敗しました。");
     } finally {
@@ -236,6 +261,25 @@ function PostForm({ userId }: { userId: string }) {
             <Field label="サイズ cm" type="number" inputMode="decimal" value={sizeCm} onChange={setSizeCm} placeholder="例: 62" required />
             <SizeStepper value={sizeCm} onChange={setSizeCm} />
           </section>
+
+          {tournamentOptions.length ? (
+            <section className="rounded border border-coral/30 bg-orange-50 p-4 shadow-soft">
+              <h2 className="text-sm font-black text-coral">大会エントリー</h2>
+              <select
+                value={selectedTournamentId}
+                onChange={(event) => setSelectedTournamentId(event.target.value)}
+                className="mt-3 w-full rounded border border-orange-200 bg-white p-3 text-base font-bold"
+              >
+                <option value="">通常投稿のみ</option>
+                {tournamentOptions.map((tournament) => (
+                  <option key={tournament.id} value={tournament.id}>
+                    {tournament.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs font-bold leading-5 text-slate-600">期間内・対象魚種・位置情報ありの場合、大会投稿として承認待ち保存します。</p>
+            </section>
+          ) : null}
 
           <section className="grid grid-cols-2 gap-3">
             <button type="button" onClick={handleLocation} className="tap-target rounded border border-water bg-white px-4 py-3 text-sm font-black text-water shadow-soft">
@@ -701,6 +745,17 @@ function formatLocationSuggestionLabel(
 
 function topMapValue(values: Map<string, number>) {
   return [...values.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"))[0]?.[0] ?? "";
+}
+
+function getTournamentSkipMessage(check: ReturnType<typeof isTournamentEntryEligible> | null) {
+  if (!check) return "通常の釣果として保存しました。大会エントリー条件を確認できませんでした。";
+  const reasons = [
+    !check.inPeriod ? "大会期間外" : "",
+    !check.targetMatched ? "対象魚種外" : "",
+    !check.hasLocation ? "位置情報なし" : "",
+    !check.validSize ? "サイズ未入力" : ""
+  ].filter(Boolean);
+  return `通常の釣果として保存しました。大会エントリー不可: ${reasons.join("、")}`;
 }
 
 function estimateSizeCm(points: MeasurePoint[], knownCm: number) {

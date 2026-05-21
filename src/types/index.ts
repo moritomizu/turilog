@@ -4,6 +4,11 @@ export type TidePhase = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 export type TideType = "high" | "low" | "unknown";
 
+export type TournamentRankingType = "biggest" | "totalSize" | "count";
+export type TournamentVisibility = "public" | "private";
+export type TournamentStatus = "upcoming" | "active" | "ended";
+export type TournamentEntryStatus = "none" | "pending" | "approved" | "rejected";
+
 export type User = {
   uid: string;
   displayName: string | null;
@@ -113,10 +118,39 @@ export type Catch = TideInfo &
   pointName: string;
   isPublic: boolean;
   publicShareEnabledAt: string | null;
+  tournamentId: string | null;
+  isTournamentEntry: boolean;
+  tournamentEntryStatus: TournamentEntryStatus;
+  tournamentSubmittedAt: string | null;
   createdAt: string;
 };
 
 export type LocationPoint = {
   latitude: number;
   longitude: number;
+};
+
+export type Tournament = {
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string;
+  startAt: string;
+  endAt: string;
+  targetFishTypes: string[];
+  rankingType: TournamentRankingType;
+  rules: string;
+  visibility: TournamentVisibility;
+  maxParticipants: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TournamentParticipant = {
+  id: string;
+  tournamentId: string;
+  userId: string;
+  userName: string;
+  joinedAt: string;
+  status: "active";
 };

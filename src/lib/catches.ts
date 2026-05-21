@@ -27,6 +27,17 @@ export async function getUserCatches(userId: string): Promise<Catch[]> {
   return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
 }
 
+export async function getTournamentCatches(tournamentId: string): Promise<Catch[]> {
+  const snapshot = await getDocs(query(collection(getFirebaseDb(), "catches"), where("tournamentId", "==", tournamentId)));
+  return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
+}
+
+export async function updateTournamentEntryStatus(catchId: string, status: Catch["tournamentEntryStatus"]) {
+  await updateDoc(doc(getFirebaseDb(), "catches", catchId), {
+    tournamentEntryStatus: status
+  });
+}
+
 export async function getPublicCatch(catchId: string): Promise<Catch | null> {
   const snapshot = await getDoc(doc(getFirebaseDb(), "publicCatches", catchId));
   if (!snapshot.exists()) return null;
@@ -66,6 +77,13 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
     pointName: typeof data.pointName === "string" ? data.pointName : "",
     isPublic: data.isPublic === true,
     publicShareEnabledAt: typeof data.publicShareEnabledAt === "string" ? data.publicShareEnabledAt : null,
+    tournamentId: typeof data.tournamentId === "string" ? data.tournamentId : null,
+    isTournamentEntry: data.isTournamentEntry === true,
+    tournamentEntryStatus:
+      data.tournamentEntryStatus === "pending" || data.tournamentEntryStatus === "approved" || data.tournamentEntryStatus === "rejected"
+        ? data.tournamentEntryStatus
+        : "none",
+    tournamentSubmittedAt: typeof data.tournamentSubmittedAt === "string" ? data.tournamentSubmittedAt : null,
     createdAt: normalizeDate(data.createdAt),
     weather: normalizeWeather(data.weather),
     seaTemperature: normalizeSeaTemperature(data.seaTemperature),

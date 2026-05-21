@@ -20,6 +20,7 @@ MVPでは自分自身の釣果管理と潮位分析に集中しています。�
 - 過去投稿から魚種・コメント候補を表示するクイック投稿UI
 - 任意のタックル情報と過去タックル候補の保存
 - 現在地、釣りエリア選択、地図ピン、過去地点、緯度経度入力による場所指定
+- 釣り大会の作成、参加、大会投稿、承認、ランキング表示
 
 ## 必要なサービス
 
@@ -256,6 +257,107 @@ seaTemperature.seaTemperatureFetchedAt
 ```
 
 気象庁の公開テキストから値を取得できない場合でも、参照海域名と公式ページリンクは保存します。沿岸域の広域データなので、港内やピンポイントの表層水温とは差が出る場合があります。
+
+## 釣り大会機能
+
+複数ユーザーが大会に参加し、開催期間中の釣果でランキングを競えるMVP機能です。大会投稿は通常の個人釣果ログとしても保存されるため、釣果一覧、個人ランキング、分析にも反映されます。
+
+### 大会作成方法
+
+`/tournaments/new` から大会を作成します。
+
+入力項目:
+
+```text
+大会名
+説明
+開始日時
+終了日時
+対象魚種
+ランキング方式
+ルール説明
+公開/非公開
+参加上限人数
+```
+
+ランキング方式:
+
+```text
+最大サイズ1匹勝負
+合計サイズ
+匹数勝負
+```
+
+### 大会参加方法
+
+`/tournaments` から大会一覧を開き、大会詳細ページで「参加する」を押します。同じユーザーが同じ大会に重複参加しないよう、`tournamentParticipants` は `tournamentId_userId` の固定IDで保存します。
+
+### 大会投稿方法
+
+大会詳細ページの「大会釣果を投稿」から投稿すると、投稿画面に大会が自動選択されます。通常の投稿画面からも、参加中の大会を選択できます。
+
+大会エントリー条件:
+
+```text
+caughtAt が大会期間内
+位置情報あり
+サイズが0より大きい
+対象魚種に一致
+```
+
+条件を満たさない場合は大会エントリーせず、通常の個人ログとして保存します。
+
+### 承認フロー
+
+大会投稿は最初 `tournamentEntryStatus: pending` で保存されます。大会作成者は `/tournaments/[tournamentId]/admin` から承認または却下できます。
+
+承認済みの投稿のみ、大会ランキングに反映されます。
+
+### Firestore構造
+
+```text
+tournaments
+- ownerId
+- name
+- description
+- startAt
+- endAt
+- targetFishTypes
+- rankingType
+- rules
+- visibility
+- maxParticipants
+- createdAt
+- updatedAt
+
+tournamentParticipants
+- tournamentId
+- userId
+- userName
+- joinedAt
+- status
+
+catches 追加項目
+- tournamentId
+- isTournamentEntry
+- tournamentEntryStatus
+- tournamentSubmittedAt
+```
+
+### 将来的な拡張予定
+
+```text
+EXIF撮影日時チェック
+EXIF GPSチェック
+画像重複チェック
+大会エリア外判定
+AI魚種判定
+メジャー画像確認
+投稿の詳細審査
+参加者招待
+非公開大会の招待コード
+賞品/スポンサー表示
+```
 
 ## クイック投稿UI
 
