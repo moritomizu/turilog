@@ -305,7 +305,9 @@ seaTemperature.seaTemperatureFetchedAt
 
 ### 大会参加方法
 
-公開大会は `/tournaments` から大会一覧を開き、大会詳細ページで参加名を入力して参加します。非公開大会は作成者から共有された大会詳細URLを開き、参加名を入力して参加します。同じユーザーが同じ大会に重複参加しないよう、`tournamentParticipants` は `tournamentId_userId` の固定IDで保存します。
+公開大会は `/tournaments` から大会一覧を開き、大会詳細ページで参加名を入力して参加します。非公開大会は作成者から共有された大会詳細URLを開き、参加名を入力して参加します。参加時には任意でアイコン画像を設定できます。同じユーザーが同じ大会に重複参加しないよう、`tournamentParticipants` は `tournamentId_userId` の固定IDで保存します。
+
+参加後は大会詳細ページから大会を抜けられます。大会を抜けると参加者一覧から外れますが、すでに投稿した個人釣果ログ自体は削除されません。
 
 ### 大会投稿方法
 
@@ -349,6 +351,7 @@ tournamentParticipants
 - tournamentId
 - userId
 - userName
+- avatarUrl
 - joinedAt
 - status
 

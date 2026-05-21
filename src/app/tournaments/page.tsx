@@ -50,10 +50,6 @@ function TournamentList({ userId }: { userId: string }) {
           <p className="text-xs font-black text-coral">TOURNAMENT</p>
           <h1 className="mt-1 text-2xl font-black">釣り大会</h1>
           <p className="mt-2 text-sm font-bold leading-6 text-slate-700">期間中の釣果で競えるMVP大会機能です。公開大会は誰でも参加でき、非公開大会は仲間から共有された人だけが中身を見られます。</p>
-          <div className="mt-3 grid gap-2 text-xs font-bold leading-5 text-slate-700 sm:grid-cols-2">
-            <p className="rounded bg-white/80 p-3">公開大会: 大会一覧に表示され、ランキングも一般のログインユーザーが閲覧できます。</p>
-            <p className="rounded bg-white/80 p-3">非公開大会: 一覧には表示されず、参加者と作成者だけがランキング・釣果を閲覧できます。</p>
-          </div>
         </section>
         {message ? <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
         <TournamentSection title="開催中の大会" items={groups.active} />

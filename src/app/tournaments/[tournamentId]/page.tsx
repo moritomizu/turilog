@@ -6,7 +6,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getTournamentCatches } from "@/lib/catches";
-import { getRankingTypeLabel, getTournament, getTournamentParticipants, getTournamentStatus, joinTournament } from "@/lib/tournaments";
+import { getRankingTypeLabel, getTournament, getTournamentParticipants, getTournamentStatus, joinTournament, leaveTournament, uploadTournamentParticipantIcon } from "@/lib/tournaments";
 import type { Catch, Tournament, TournamentParticipant } from "@/types";
 
 export default function TournamentDetailPage({ params }: { params: { tournamentId: string } }) {
@@ -22,8 +22,11 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
   const [participants, setParticipants] = useState<TournamentParticipant[]>([]);
   const [catches, setCatches] = useState<Catch[]>([]);
   const [joinName, setJoinName] = useState(userName);
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [message, setMessage] = useState("読み込み中です。");
   const isParticipant = participants.some((item) => item.userId === userId);
+  const currentParticipant = participants.find((item) => item.userId === userId);
   const isOwner = tournament?.ownerId === userId;
   const canViewPrivateContent = tournament ? tournament.visibility === "public" || isParticipant || isOwner : false;
   const participantNames = useMemo(() => new Map(participants.map((item) => [item.userId, item.userName])), [participants]);
@@ -43,15 +46,39 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
       .catch((error) => setMessage(error instanceof Error ? error.message : "大会を読み込めませんでした。"));
   }, [tournamentId, userId]);
 
+  useEffect(() => {
+    if (!iconFile) {
+      setIconPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(iconFile);
+    setIconPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [iconFile]);
+
   async function handleJoin() {
     if (!tournament) return;
     try {
-      await joinTournament(tournament, userId, joinName.trim() || userName);
+      const avatarUrl = iconFile ? await uploadTournamentParticipantIcon(userId, iconFile) : null;
+      await joinTournament(tournament, userId, joinName.trim() || userName, avatarUrl);
       setParticipants(await getTournamentParticipants(tournament.id));
       setCatches(await getTournamentCatches(tournament.id));
+      setIconFile(null);
       setMessage("大会に参加しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "参加できませんでした。");
+    }
+  }
+
+  async function handleLeave() {
+    if (!tournament || !window.confirm("この大会から抜けますか？")) return;
+    try {
+      await leaveTournament(tournament.id, userId);
+      setParticipants(await getTournamentParticipants(tournament.id));
+      setCatches(tournament.visibility === "public" || tournament.ownerId === userId ? await getTournamentCatches(tournament.id) : []);
+      setMessage("大会から抜けました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "大会から抜けられませんでした。");
     }
   }
 
@@ -81,16 +108,34 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
               <p className="mt-3 whitespace-pre-wrap rounded bg-white p-3 text-sm leading-6 text-slate-700">{tournament.rules || "ルール未設定"}</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {isParticipant ? (
-                  <div className="rounded bg-white p-3 text-sm font-black text-slate-700">参加名: {participantNames.get(userId) ?? userName}</div>
+                  <div className="flex items-center gap-3 rounded bg-white p-3 text-sm font-black text-slate-700">
+                    <Avatar src={currentParticipant?.avatarUrl} name={participantNames.get(userId) ?? userName} size="md" />
+                    <span className="min-w-0 truncate">参加名: {participantNames.get(userId) ?? userName}</span>
+                  </div>
                 ) : (
-                  <label className="block">
-                    <span className="text-xs font-black text-slate-600">参加名</span>
-                    <input value={joinName} onChange={(event) => setJoinName(event.target.value)} className="mt-1 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold" placeholder="ニックネーム" />
-                  </label>
+                  <>
+                    <label className="block">
+                      <span className="text-xs font-black text-slate-600">参加名</span>
+                      <input value={joinName} onChange={(event) => setJoinName(event.target.value)} className="mt-1 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold" placeholder="ニックネーム" />
+                    </label>
+                    <label className="flex items-center gap-3 rounded bg-white p-3 text-sm font-bold text-slate-700">
+                      <Avatar src={iconPreview} name={joinName || userName} size="md" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-black text-slate-600">アイコン画像</span>
+                        <span className="block truncate text-xs text-slate-500">{iconFile ? iconFile.name : "任意で設定"}</span>
+                      </span>
+                      <input type="file" accept="image/*" onChange={(event) => setIconFile(event.target.files?.[0] ?? null)} className="hidden" />
+                    </label>
+                  </>
                 )}
                 <button disabled={isParticipant} onClick={handleJoin} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
                   {isParticipant ? "参加済み" : "この名前で参加"}
                 </button>
+                {isParticipant ? (
+                  <button onClick={handleLeave} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
+                    大会から抜ける
+                  </button>
+                ) : null}
                 {canViewPrivateContent ? (
                   <Link href={`/post?tournamentId=${tournament.id}`} className="tap-target flex items-center justify-center rounded bg-water px-4 py-3 font-black text-white">
                     大会釣果を投稿
@@ -116,9 +161,12 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {participants.length ? (
                       participants.map((participant) => (
-                        <div key={participant.id} className="rounded border border-teal-100 bg-white p-3 shadow-soft">
-                          <p className="font-black text-ink">{participant.userName}</p>
-                          <p className="mt-1 text-xs font-bold text-slate-500">参加日: {formatDate(participant.joinedAt)}</p>
+                        <div key={participant.id} className="flex items-center gap-3 rounded border border-teal-100 bg-white p-3 shadow-soft">
+                          <Avatar src={participant.avatarUrl} name={participant.userName} size="md" />
+                          <div className="min-w-0">
+                            <p className="truncate font-black text-ink">{participant.userName}</p>
+                            <p className="mt-1 text-xs font-bold text-slate-500">参加日: {formatDate(participant.joinedAt)}</p>
+                          </div>
                         </div>
                       ))
                     ) : (
@@ -133,7 +181,7 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                     承認済みの大会投稿をランキングへ反映します。期間や対象魚種は承認画面で確認します。
                   </p>
                   <div className="space-y-2">
-                    {ranking.length ? ranking.map((row, index) => <RankingRow key={row.userId} row={row} rank={index + 1} />) : <Empty text="承認済みの大会釣果がありません。" />}
+                    {ranking.length ? ranking.map((row, index) => <RankingRow key={row.userId} row={row} rank={index + 1} isCurrentUser={row.userId === userId} />) : <Empty text="承認済みの大会釣果がありません。" />}
                   </div>
                 </section>
 
@@ -174,15 +222,18 @@ function TournamentCatch({ item, userName }: { item: Catch; userName: string }) 
   );
 }
 
-function RankingRow({ row, rank }: { row: RankingRowValue; rank: number }) {
+function RankingRow({ row, rank, isCurrentUser }: { row: RankingRowValue; rank: number; isCurrentUser: boolean }) {
   const medal = rank <= 3 ? ["bg-yellow-400", "bg-slate-300", "bg-orange-300"][rank - 1] : "bg-white";
   return (
-    <article className={`rounded border border-teal-100 p-3 shadow-soft ${medal}`}>
+    <article className={`rounded border p-3 shadow-soft ${isCurrentUser ? "border-coral ring-2 ring-coral/30" : "border-teal-100"} ${medal}`}>
       <div className="flex items-center justify-between gap-3">
-        <div>
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar src={row.avatarUrl} name={row.userName} size="lg" />
+          <div className="min-w-0">
           <p className="text-xs font-black">#{rank}</p>
-          <h3 className="text-lg font-black">{row.userName}</h3>
+            <h3 className="truncate text-lg font-black">{row.userName}{isCurrentUser ? "（自分）" : ""}</h3>
           <p className="text-sm font-bold text-slate-700">{row.label}</p>
+          </div>
         </div>
         {row.bestCatch?.imageUrl ? <img src={row.bestCatch.imageUrl} alt={row.bestCatch.fishType} className="h-16 w-16 rounded object-cover" /> : null}
       </div>
@@ -191,25 +242,38 @@ function RankingRow({ row, rank }: { row: RankingRowValue; rank: number }) {
   );
 }
 
-type RankingRowValue = { userId: string; userName: string; score: number; label: string; bestCatch: Catch | null };
+type RankingRowValue = { userId: string; userName: string; avatarUrl: string | null; score: number; label: string; bestCatch: Catch | null };
 
 function buildRanking(items: Catch[], participants: TournamentParticipant[], tournament: Tournament | null): RankingRowValue[] {
   if (!tournament) return [];
   const names = new Map(participants.map((item) => [item.userId, item.userName]));
+  const avatars = new Map(participants.map((item) => [item.userId, item.avatarUrl]));
   const groups = new Map<string, Catch[]>();
   for (const item of items) groups.set(item.userId, [...(groups.get(item.userId) ?? []), item]);
 
   return [...groups.entries()]
     .map(([userId, userItems]) => {
       const bestCatch = [...userItems].sort((a, b) => b.sizeCm - a.sizeCm)[0] ?? null;
-      if (tournament.rankingType === "count") return { userId, userName: names.get(userId) ?? "参加者", score: userItems.length, label: `${userItems.length}匹`, bestCatch };
+      const userName = names.get(userId) ?? "参加者";
+      const avatarUrl = avatars.get(userId) ?? null;
+      if (tournament.rankingType === "count") return { userId, userName, avatarUrl, score: userItems.length, label: `${userItems.length}匹`, bestCatch };
       if (tournament.rankingType === "totalSize") {
         const score = userItems.reduce((sum, item) => sum + item.sizeCm, 0);
-        return { userId, userName: names.get(userId) ?? "参加者", score, label: `合計${score.toFixed(1)}cm`, bestCatch };
+        return { userId, userName, avatarUrl, score, label: `合計${score.toFixed(1)}cm`, bestCatch };
       }
-      return { userId, userName: names.get(userId) ?? "参加者", score: bestCatch?.sizeCm ?? 0, label: `${bestCatch?.sizeCm ?? 0}cm`, bestCatch };
+      return { userId, userName, avatarUrl, score: bestCatch?.sizeCm ?? 0, label: `${bestCatch?.sizeCm ?? 0}cm`, bestCatch };
     })
     .sort((a, b) => b.score - a.score);
+}
+
+function Avatar({ src, name, size }: { src: string | null | undefined; name: string; size: "md" | "lg" }) {
+  const className = size === "lg" ? "h-14 w-14 text-lg" : "h-11 w-11 text-sm";
+  if (src) return <img src={src} alt={name} className={`${className} shrink-0 rounded-full object-cover ring-2 ring-white`} />;
+  return (
+    <div className={`${className} flex shrink-0 items-center justify-center rounded-full bg-water text-center font-black text-white ring-2 ring-white`}>
+      {name.trim().slice(0, 1) || "参"}
+    </div>
+  );
 }
 
 function isApprovedTournamentCatch(item: Catch, tournament: Tournament | null) {

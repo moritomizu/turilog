@@ -151,6 +151,7 @@ export type TournamentParticipant = {
   tournamentId: string;
   userId: string;
   userName: string;
+  avatarUrl: string | null;
   joinedAt: string;
   status: "active";
 };

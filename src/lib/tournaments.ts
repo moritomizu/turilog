@@ -1,7 +1,8 @@
 "use client";
 
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import type { Tournament, TournamentParticipant, TournamentRankingType, TournamentStatus, TournamentVisibility } from "@/types";
 
 export type TournamentInput = {
@@ -53,7 +54,13 @@ export async function getTournamentParticipants(tournamentId: string): Promise<T
   return snapshot.docs.map((item) => normalizeParticipant(item.id, item.data()));
 }
 
-export async function joinTournament(tournament: Tournament, userId: string, userName: string) {
+export async function uploadTournamentParticipantIcon(userId: string, file: File) {
+  const storageRef = ref(getFirebaseStorage(), `tournamentParticipants/${userId}/${crypto.randomUUID()}-${file.name}`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
+}
+
+export async function joinTournament(tournament: Tournament, userId: string, userName: string, avatarUrl: string | null = null) {
   const participantRef = doc(getFirebaseDb(), "tournamentParticipants", `${tournament.id}_${userId}`);
   const existing = await getDoc(participantRef);
   if (existing.exists()) return;
@@ -67,9 +74,14 @@ export async function joinTournament(tournament: Tournament, userId: string, use
     tournamentId: tournament.id,
     userId,
     userName,
+    avatarUrl,
     joinedAt: serverTimestamp(),
     status: "active"
   });
+}
+
+export async function leaveTournament(tournamentId: string, userId: string) {
+  await deleteDoc(doc(getFirebaseDb(), "tournamentParticipants", `${tournamentId}_${userId}`));
 }
 
 export async function getJoinedTournaments(userId: string): Promise<Tournament[]> {
@@ -135,6 +147,7 @@ function normalizeParticipant(id: string, data: Record<string, unknown>): Tourna
     tournamentId: typeof data.tournamentId === "string" ? data.tournamentId : "",
     userId: typeof data.userId === "string" ? data.userId : "",
     userName: typeof data.userName === "string" ? data.userName : "参加者",
+    avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : null,
     joinedAt: normalizeDate(data.joinedAt),
     status: "active"
   };
