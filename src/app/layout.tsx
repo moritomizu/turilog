@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className="min-h-screen bg-foam">
+      <body className="min-h-screen bg-foam dark:bg-slate-950 dark:text-slate-100">
         {children}
         <AppFooter />
       </body>
