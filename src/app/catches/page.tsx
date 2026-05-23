@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
-import { getUserCatches, updateCatchPublicStatus } from "@/lib/catches";
+import { getUserCatches, updateCatch, updateCatchPublicStatus } from "@/lib/catches";
+import { canEditCatchLog } from "@/lib/catchPermissions";
 import type { Catch } from "@/types";
 
 export default function CatchesPage() {
@@ -19,6 +20,7 @@ function CatchList({ userId }: { userId: string }) {
   const [items, setItems] = useState<Catch[]>([]);
   const [message, setMessage] = useState("読み込み中です。");
   const digest = useMemo(() => buildDigest(items), [items]);
+  const canEdit = canEditCatchLog(userId);
 
   useEffect(() => {
     getUserCatches(userId)
@@ -44,11 +46,110 @@ function CatchList({ userId }: { userId: string }) {
                 userId={userId}
                 onChange={(nextItem) => setItems((current) => current.map((value) => (value.id === nextItem.id ? nextItem : value)))}
               />
+              {canEdit ? (
+                <EditCatchControls
+                  item={item}
+                  onChange={(nextItem) => setItems((current) => current.map((value) => (value.id === nextItem.id ? nextItem : value)))}
+                />
+              ) : null}
             </div>
           ))}
         </div>
       </main>
     </>
+  );
+}
+
+function EditCatchControls({ item, onChange }: { item: Catch; onChange: (item: Catch) => void }) {
+  const [open, setOpen] = useState(false);
+  const [fishType, setFishType] = useState(item.fishType);
+  const [sizeCm, setSizeCm] = useState(String(item.sizeCm));
+  const [caughtAt, setCaughtAt] = useState(toLocalInputValue(new Date(item.caughtAt)));
+  const [comment, setComment] = useState(item.comment);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function handleSave() {
+    const nextSize = Number(sizeCm);
+    const nextCaughtAt = new Date(caughtAt);
+    if (!fishType.trim()) {
+      setMessage("魚種を入力してください。");
+      return;
+    }
+    if (!Number.isFinite(nextSize) || nextSize <= 0) {
+      setMessage("サイズを正しく入力してください。");
+      return;
+    }
+    if (!Number.isFinite(nextCaughtAt.getTime())) {
+      setMessage("釣った日時を正しく入力してください。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("保存しています。");
+    try {
+      const patch = {
+        fishType: fishType.trim(),
+        sizeCm: nextSize,
+        caughtAt: nextCaughtAt.toISOString(),
+        comment
+      };
+      await updateCatch(item.id, patch);
+      onChange({ ...item, ...patch });
+      setMessage("編集内容を保存しました。");
+      setOpen(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "編集内容を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        title="釣果を編集"
+        aria-label="釣果を編集"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="tap-target absolute left-3 top-3 z-10 rounded-full border border-white/80 bg-white/95 px-3 py-2 text-xs font-black text-ink shadow-soft"
+      >
+        編集
+      </button>
+      {open ? (
+        <section className="absolute left-3 right-3 top-16 z-30 rounded border border-teal-100 bg-white p-3 shadow-soft">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-black text-ink">釣果編集</p>
+            <button type="button" onClick={() => setOpen(false)} className="rounded border border-slate-300 px-2 py-1 text-xs font-black text-slate-600">
+              閉じる
+            </button>
+          </div>
+          <div className="mt-3 space-y-3">
+            <EditField label="魚種" value={fishType} onChange={setFishType} />
+            <EditField label="サイズ cm" type="number" value={sizeCm} onChange={setSizeCm} />
+            <EditField label="釣った日時" type="datetime-local" value={caughtAt} onChange={setCaughtAt} />
+            <label className="block">
+              <span className="text-xs font-black text-slate-600">コメント</span>
+              <textarea value={comment} onChange={(event) => setComment(event.target.value)} className="mt-1 min-h-20 w-full rounded border border-slate-300 bg-white p-2 text-sm" />
+            </label>
+            <button type="button" disabled={busy} onClick={handleSave} className="tap-target w-full rounded bg-water px-4 py-3 text-sm font-black text-white disabled:opacity-60">
+              {busy ? "保存中..." : "保存する"}
+            </button>
+            {message ? <p className="text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
+          </div>
+        </section>
+      ) : null}
+    </>
+  );
+}
+
+function EditField({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black text-slate-600">{label}</span>
+      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold" />
+    </label>
   );
 }
 
@@ -265,6 +366,11 @@ function topLabel(items: Catch[], getKey: (item: Catch) => string) {
 function getMonthKey(value: string) {
   const date = new Date(value);
   return `${date.getFullYear()}-${date.getMonth()}`;
+}
+
+function toLocalInputValue(date: Date) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
 }
 
 function getStreakDays(items: Catch[]) {
