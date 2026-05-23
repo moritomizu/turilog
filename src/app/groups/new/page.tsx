@@ -40,7 +40,16 @@ function GroupForm({ userId, userName, email }: { userId: string; userName: stri
         <form onSubmit={handleSubmit} className="space-y-4 rounded border border-teal-100 bg-white p-4 shadow-soft">
           <Field label="グループ名" value={name} onChange={setName} required />
           <TextArea label="説明" value={description} onChange={setDescription} />
-          <Select label="公開範囲" value={visibility} onChange={(value) => setVisibility(value as GroupVisibility)} options={[["private", "private"], ["inviteOnly", "inviteOnly"], ["public", "public"]]} />
+          <Select
+            label="公開範囲"
+            value={visibility}
+            onChange={(value) => setVisibility(value as GroupVisibility)}
+            options={[
+              ["private", "非公開"],
+              ["inviteOnly", "招待制"],
+              ["public", "公開"]
+            ]}
+          />
           <Select
             label="位置情報表示設定"
             value={locationVisibilityDefault}

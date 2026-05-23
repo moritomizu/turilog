@@ -7,6 +7,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getTournamentCatches } from "@/lib/catches";
+import { getPreferredParticipantName, rememberParticipantName } from "@/lib/participantName";
 import { canManageApprovals, canManageMembers, canSeeExactLocation, canSeePrivateCatchDetails, findParticipant } from "@/lib/tournamentPermissions";
 import { getRankingTypeLabel, getTournament, getTournamentParticipants, getTournamentStatus, joinTournament, leaveTournament, uploadTournamentParticipantIcon } from "@/lib/tournaments";
 import type { Catch, Tournament, TournamentParticipant } from "@/types";
@@ -41,6 +42,10 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
   const ranking = useMemo(() => buildRanking(approvedCatches, participants, tournament), [approvedCatches, participants, tournament]);
 
   useEffect(() => {
+    setJoinName(getPreferredParticipantName(userName));
+  }, [userName]);
+
+  useEffect(() => {
     Promise.all([getTournament(tournamentId), getTournamentParticipants(tournamentId)])
       .then(async ([nextTournament, nextParticipants]) => {
         const canLoadCatches = nextTournament ? nextTournament.visibility === "public" || nextTournament.ownerId === userId || nextParticipants.some((item) => item.userId === userId) : false;
@@ -69,7 +74,9 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
     if (!tournament) return;
     try {
       const avatarUrl = iconFile ? await uploadTournamentParticipantIcon(userId, iconFile) : null;
-      await joinTournament(tournament, userId, joinName.trim() || userName, avatarUrl, email);
+      const nextName = joinName.trim() || userName;
+      await joinTournament(tournament, userId, nextName, avatarUrl, email);
+      rememberParticipantName(nextName);
       setParticipants(await getTournamentParticipants(tournament.id));
       setCatches((await getTournamentCatches(tournament.id)).map(maskExactLocation));
       setIconFile(null);
