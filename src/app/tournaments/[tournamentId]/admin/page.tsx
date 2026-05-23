@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { getTournamentCatches, updateTournamentEntryStatus } from "@/lib/catches";
+import { canManageApprovals, findParticipant } from "@/lib/tournamentPermissions";
 import { getTournament, getTournamentParticipants } from "@/lib/tournaments";
 import type { Catch, Tournament, TournamentParticipant } from "@/types";
 
@@ -37,12 +38,15 @@ function TournamentAdmin({ tournamentId, userId }: { tournamentId: string; userI
     setItems((current) => current.filter((item) => item.id !== catchId));
   }
 
-  if (tournament && tournament.ownerId !== userId) {
+  const currentParticipant = tournament ? findParticipant(participants, userId, tournament.ownerId) : null;
+  const canApprove = canManageApprovals(currentParticipant);
+
+  if (tournament && !canApprove) {
     return (
       <>
         <PageHeader title="大会承認" actionHref={`/tournaments/${tournamentId}`} actionLabel="詳細" />
         <main className="mx-auto max-w-xl px-4 py-5">
-          <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">大会作成者のみアクセスできます。</p>
+          <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">承認権限のあるユーザーのみアクセスできます。</p>
         </main>
       </>
     );
@@ -55,7 +59,7 @@ function TournamentAdmin({ tournamentId, userId }: { tournamentId: string; userI
         {message ? <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
         {tournament ? <h1 className="text-2xl font-black">{tournament.name} 承認待ち</h1> : null}
         <p className="rounded bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700">
-          承認管理が行えるのは大会作成者のみです。期間、対象魚種、位置情報、サイズ、写真を確認して承認してください。
+          承認権限のあるユーザーが操作できます。期間、対象魚種、位置情報、サイズ、写真を確認して承認してください。
         </p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.length ? (

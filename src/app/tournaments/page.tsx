@@ -70,9 +70,16 @@ function TournamentSection({ title, items }: { title: string; items: TournamentL
           <Link key={item.id} href={`/tournaments/${item.id}`} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
             <div className="flex items-start justify-between gap-2">
               <h3 className="text-lg font-black text-ink">{item.name}</h3>
-              <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-black ${item.visibility === "public" ? "bg-water/10 text-water" : "bg-slate-100 text-slate-600"}`}>
-                {item.visibility === "public" ? "公開" : "非公開"}
-              </span>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                {item.isParticipant ? (
+                  <span className="rounded-full bg-coral px-3 py-1 text-[11px] font-black text-white shadow-sm">
+                    参加中
+                  </span>
+                ) : null}
+                <span className={`rounded-full px-2 py-1 text-[11px] font-black ${item.visibility === "public" ? "bg-water/10 text-water" : "bg-slate-100 text-slate-600"}`}>
+                  {item.visibility === "public" ? "公開" : "非公開"}
+                </span>
+              </div>
             </div>
             <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{item.description}</p>
             <div className="mt-3 space-y-1 text-xs font-bold text-slate-600">

@@ -8,6 +8,8 @@ export type TournamentRankingType = "biggest" | "totalSize" | "count";
 export type TournamentVisibility = "public" | "private";
 export type TournamentStatus = "upcoming" | "active" | "ended";
 export type TournamentEntryStatus = "none" | "pending" | "approved" | "rejected";
+export type TournamentRole = "owner" | "admin" | "subAdmin" | "participant" | "viewer";
+export type LocationVisibility = "exact" | "public" | "hidden";
 
 export type User = {
   uid: string;
@@ -114,6 +116,9 @@ export type Catch = TideInfo &
   comment: string;
   latitude: number | null;
   longitude: number | null;
+  publicLatitude: number | null;
+  publicLongitude: number | null;
+  locationVisibility: LocationVisibility;
   areaName: string;
   pointName: string;
   isPublic: boolean;
@@ -151,7 +156,13 @@ export type TournamentParticipant = {
   tournamentId: string;
   userId: string;
   userName: string;
+  email: string | null;
   avatarUrl: string | null;
+  role: TournamentRole;
+  canViewExactLocation: boolean;
+  canViewPrivateCatchDetails: boolean;
+  canApproveEntries: boolean;
   joinedAt: string;
+  updatedAt: string | null;
   status: "active";
 };

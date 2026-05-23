@@ -10,12 +10,12 @@ import type { TournamentRankingType, TournamentVisibility } from "@/types";
 export default function NewTournamentPage() {
   return (
     <AuthGate>
-      {(user) => <TournamentForm userId={user.uid} />}
+      {(user) => <TournamentForm userId={user.uid} userName={user.displayName ?? user.email ?? "主催者"} email={user.email ?? null} />}
     </AuthGate>
   );
 }
 
-function TournamentForm({ userId }: { userId: string }) {
+function TournamentForm({ userId, userName, email }: { userId: string; userName: string; email: string | null }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -44,7 +44,9 @@ function TournamentForm({ userId }: { userId: string }) {
         rankingType,
         rules,
         visibility,
-        maxParticipants: maxParticipants ? Number(maxParticipants) : null
+        maxParticipants: maxParticipants ? Number(maxParticipants) : null,
+        ownerUserName: userName,
+        ownerEmail: email
       });
       router.push(`/tournaments/${id}`);
     } catch (error) {

@@ -326,13 +326,48 @@ caughtAt が大会期間内
 
 ### 承認フロー
 
-大会投稿は最初 `tournamentEntryStatus: pending` で保存されます。大会作成者は `/tournaments/[tournamentId]/admin` から承認または却下できます。
+大会投稿は最初 `tournamentEntryStatus: pending` で保存されます。大会作成者、admin、subAdmin、または `canApproveEntries: true` の参加者は `/tournaments/[tournamentId]/admin` から承認または却下できます。
 
 承認済みの投稿のみ、大会ランキングに反映されます。
 
+### 大会権限と釣果ポイント保護
+
+釣果ポイントはセンシティブな情報として扱います。大会参加者には `role` と権限フラグを保存し、正確な緯度経度は許可されたユーザーだけに表示します。
+
+```text
+owner
+- 大会作成者
+- 権限変更、承認/却下、詳細位置マップを利用できます。
+
+admin
+- ownerに近い管理権限です。
+- 参加者管理、承認/却下、詳細位置マップを利用できます。
+
+subAdmin
+- 補助管理者です。
+- 承認/却下、詳細位置マップ、詳細釣果情報を利用できます。
+
+participant
+- 一般参加者です。
+- ランキングと公開釣果一覧を閲覧できます。
+- 他人の正確な緯度経度は表示されません。
+
+viewer
+- 閲覧専用です。
+- ランキングと公開情報のみ閲覧でき、投稿はできません。
+```
+
+大会詳細ページには、権限があるユーザーだけ「釣果ポイントマップ」が表示されます。一般参加者には以下の文言を表示します。
+
+```text
+釣果ポイントマップは、主催者または許可されたユーザーのみ閲覧できます。
+```
+
+参加者権限は `/tournaments/[tournamentId]/members` で owner/admin が変更できます。owner の role は変更できません。
+
 ### 大会削除
 
-大会作成者のみ、大会詳細ページの主催者メニューから大会を削除できます。削除すると大会データ、参加者データ、大会ランキングは削除されます。大会に紐づいていた釣果は削除せず、通常の個人釣果ログとして残します。
+大会作成者のみ、大会編集ページの最下部から大会を削除できます。削除すると大会データ、参加者データ、大会ランキングは削除されます。大会に紐づいていた釣果は削除せず、通常の個人釣果ログとして残します。
 
 ### Firestore構造
 
@@ -355,16 +390,41 @@ tournamentParticipants
 - tournamentId
 - userId
 - userName
+- email
 - avatarUrl
+- role
+- canViewExactLocation
+- canViewPrivateCatchDetails
+- canApproveEntries
 - joinedAt
+- updatedAt
 - status
 
 catches 追加項目
+- latitude
+- longitude
+- publicLatitude
+- publicLongitude
+- locationVisibility
 - tournamentId
 - isTournamentEntry
 - tournamentEntryStatus
 - tournamentSubmittedAt
 ```
+
+### Firestore Security Rules方針
+
+現状のMVPではアプリ側で表示制御を行っています。本番で大会機能を広く使う場合は、Firestore Security Rulesでも以下を守る設計にしてください。
+
+```text
+- 非公開大会は参加者のみ read 可能にする
+- tournamentParticipants の権限変更は owner/admin のみにする
+- owner の role はクライアントから変更不可にする
+- catches の正確な latitude / longitude は権限者だけが読める構造に分離する
+- 一般参加者向けには publicLatitude / publicLongitude または位置情報なしの公開データを返す
+```
+
+Firestoreはフィールド単位の秘匿が難しいため、正確位置を完全に保護する場合は `tournamentPrivateCatchLocations` のような別コレクションへ分離する設計が安全です。
 
 ### 将来的な拡張予定
 

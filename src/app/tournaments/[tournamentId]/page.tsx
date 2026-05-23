@@ -1,23 +1,25 @@
 "use client";
 
+import { Loader } from "@googlemaps/js-api-loader";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getTournamentCatches } from "@/lib/catches";
+import { canManageApprovals, canManageMembers, canSeeExactLocation, canSeePrivateCatchDetails, findParticipant } from "@/lib/tournamentPermissions";
 import { getRankingTypeLabel, getTournament, getTournamentParticipants, getTournamentStatus, joinTournament, leaveTournament, uploadTournamentParticipantIcon } from "@/lib/tournaments";
 import type { Catch, Tournament, TournamentParticipant } from "@/types";
 
 export default function TournamentDetailPage({ params }: { params: { tournamentId: string } }) {
   return (
     <AuthGate>
-      {(user) => <TournamentDetail tournamentId={params.tournamentId} userId={user.uid} userName={user.displayName ?? user.email ?? "参加者"} />}
+      {(user) => <TournamentDetail tournamentId={params.tournamentId} userId={user.uid} userName={user.displayName ?? user.email ?? "参加者"} email={user.email ?? null} />}
     </AuthGate>
   );
 }
 
-function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: string; userId: string; userName: string }) {
+function TournamentDetail({ tournamentId, userId, userName, email }: { tournamentId: string; userId: string; userName: string; email: string | null }) {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [participants, setParticipants] = useState<TournamentParticipant[]>([]);
   const [catches, setCatches] = useState<Catch[]>([]);
@@ -26,8 +28,13 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [message, setMessage] = useState("読み込み中です。");
   const isParticipant = participants.some((item) => item.userId === userId);
-  const currentParticipant = participants.find((item) => item.userId === userId);
   const isOwner = tournament?.ownerId === userId;
+  const currentParticipant = tournament ? findParticipant(participants, userId, tournament.ownerId) : null;
+  const canApproveEntries = canManageApprovals(currentParticipant);
+  const canOpenMembers = canManageMembers(currentParticipant);
+  const canOpenExactLocation = canSeeExactLocation(currentParticipant);
+  const canOpenPrivateDetails = canSeePrivateCatchDetails(currentParticipant);
+  const canSubmitTournamentEntry = currentParticipant?.role !== "viewer";
   const canViewPrivateContent = tournament ? tournament.visibility === "public" || isParticipant || isOwner : false;
   const participantNames = useMemo(() => new Map(participants.map((item) => [item.userId, item.userName])), [participants]);
   const approvedCatches = useMemo(() => catches.filter((item) => isApprovedTournamentCatch(item, tournament)), [catches, tournament]);
@@ -38,9 +45,11 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
       .then(async ([nextTournament, nextParticipants]) => {
         const canLoadCatches = nextTournament ? nextTournament.visibility === "public" || nextTournament.ownerId === userId || nextParticipants.some((item) => item.userId === userId) : false;
         const nextCatches = canLoadCatches ? await getTournamentCatches(tournamentId) : [];
+        const nextParticipant = nextTournament ? findParticipant(nextParticipants, userId, nextTournament.ownerId) : null;
+        const visibleCatches = canSeeExactLocation(nextParticipant) ? nextCatches : nextCatches.map(maskExactLocation);
         setTournament(nextTournament);
         setParticipants(nextParticipants);
-        setCatches(nextCatches);
+        setCatches(visibleCatches);
         setMessage(nextTournament ? "" : "大会が見つかりません。");
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "大会を読み込めませんでした。"));
@@ -60,9 +69,9 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
     if (!tournament) return;
     try {
       const avatarUrl = iconFile ? await uploadTournamentParticipantIcon(userId, iconFile) : null;
-      await joinTournament(tournament, userId, joinName.trim() || userName, avatarUrl);
+      await joinTournament(tournament, userId, joinName.trim() || userName, avatarUrl, email);
       setParticipants(await getTournamentParticipants(tournament.id));
-      setCatches(await getTournamentCatches(tournament.id));
+      setCatches((await getTournamentCatches(tournament.id)).map(maskExactLocation));
       setIconFile(null);
       setMessage("大会に参加しました。");
     } catch (error) {
@@ -75,7 +84,8 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
     try {
       await leaveTournament(tournament.id, userId);
       setParticipants(await getTournamentParticipants(tournament.id));
-      setCatches(tournament.visibility === "public" || tournament.ownerId === userId ? await getTournamentCatches(tournament.id) : []);
+      const nextCatches = tournament.visibility === "public" || tournament.ownerId === userId ? await getTournamentCatches(tournament.id) : [];
+      setCatches(tournament.ownerId === userId ? nextCatches : nextCatches.map(maskExactLocation));
       setMessage("大会から抜けました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "大会から抜けられませんでした。");
@@ -140,23 +150,37 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                         大会から抜ける
                       </button>
                     ) : null}
-                    {canViewPrivateContent ? (
+                    {canViewPrivateContent && canSubmitTournamentEntry ? (
                       <Link href={`/post?tournamentId=${tournament.id}`} className="tap-target flex items-center justify-center rounded bg-water px-4 py-3 font-black text-white sm:col-span-2">
                         大会釣果を投稿
                       </Link>
                     ) : null}
                   </div>
                 </div>
-                {isOwner ? (
+                {canApproveEntries || canOpenMembers || canOpenExactLocation ? (
                   <div className="rounded border border-coral/20 bg-white p-3">
                     <h2 className="text-sm font-black text-ink">主催者メニュー</h2>
                     <div className="mt-3 grid gap-2">
-                      <Link href={`/tournaments/${tournament.id}/admin`} className="tap-target flex items-center justify-center rounded border border-coral px-4 py-3 font-black text-coral">
-                        承認画面
-                      </Link>
-                      <Link href={`/tournaments/${tournament.id}/edit`} className="tap-target flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-3 font-black text-ink">
-                        大会編集
-                      </Link>
+                      {canApproveEntries ? (
+                        <Link href={`/tournaments/${tournament.id}/admin`} className="tap-target flex items-center justify-center rounded border border-coral px-4 py-3 font-black text-coral">
+                          投稿承認管理
+                        </Link>
+                      ) : null}
+                      {canOpenMembers ? (
+                        <Link href={`/tournaments/${tournament.id}/members`} className="tap-target flex items-center justify-center rounded border border-water px-4 py-3 font-black text-water">
+                          参加者管理
+                        </Link>
+                      ) : null}
+                      {canOpenExactLocation ? (
+                        <a href="#tournament-catch-map" className="tap-target flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-3 font-black text-ink">
+                          釣果ポイントマップ
+                        </a>
+                      ) : null}
+                      {isOwner ? (
+                        <Link href={`/tournaments/${tournament.id}/edit`} className="tap-target flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-3 font-black text-ink">
+                          大会編集
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
                 ) : null}
@@ -194,11 +218,27 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
                   </div>
                 </section>
 
+                <section id="tournament-catch-map">
+                  <h2 className="mb-3 text-xl font-black">釣果ポイントマップ</h2>
+                  {canOpenExactLocation ? (
+                    <TournamentCatchMap items={getMapItems(catches, canApproveEntries)} participantNames={participantNames} />
+                  ) : (
+                    <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">釣果ポイントマップは、主催者または許可されたユーザーのみ閲覧できます。</p>
+                  )}
+                </section>
+
                 <section>
                   <h2 className="mb-3 text-xl font-black">大会釣果一覧</h2>
                   <p className="mb-3 text-sm font-bold leading-6 text-slate-600">承認待ち・承認済み・却下済みを含む、この大会に紐づいた投稿です。ランキングには承認済みのみ反映されます。</p>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {catches.length ? catches.map((item) => <TournamentCatch key={item.id} item={item} userName={participantNames.get(item.userId) ?? "参加者"} />) : <Empty text="大会釣果はまだありません。" />}
+                    {catches.length ? catches.map((item) => (
+                      <TournamentCatch
+                        key={item.id}
+                        item={item}
+                        userName={participantNames.get(item.userId) ?? "参加者"}
+                        showPrivateDetails={canOpenPrivateDetails}
+                      />
+                    )) : <Empty text="大会釣果はまだありません。" />}
                   </div>
                 </section>
               </>
@@ -217,18 +257,103 @@ function TournamentDetail({ tournamentId, userId, userName }: { tournamentId: st
   );
 }
 
-function TournamentCatch({ item, userName }: { item: Catch; userName: string }) {
+function TournamentCatch({ item, userName, showPrivateDetails }: { item: Catch; userName: string; showPrivateDetails: boolean }) {
+  const displayItem = showPrivateDetails ? item : { ...item, latitude: null, longitude: null, pointName: "", locationVisibility: "hidden" as const };
   return (
     <div className="relative">
       <span className="absolute left-3 top-3 z-10 max-w-[55%] truncate rounded-full bg-black/55 px-3 py-1 text-xs font-black text-white backdrop-blur">
         {userName}
       </span>
-      <span className={`absolute right-3 top-3 z-10 rounded-full px-3 py-1 text-xs font-black text-white ${getEntryBadgeClass(item.tournamentEntryStatus)}`}>
-        {getEntryStatusLabel(item.tournamentEntryStatus)}
-      </span>
-      <CatchCard item={item} />
+      {showPrivateDetails ? (
+        <span className={`absolute right-3 top-3 z-10 rounded-full px-3 py-1 text-xs font-black text-white ${getEntryBadgeClass(item.tournamentEntryStatus)}`}>
+          {getEntryStatusLabel(item.tournamentEntryStatus)}
+        </span>
+      ) : null}
+      <CatchCard item={displayItem} />
+      {showPrivateDetails ? (
+        <div className="rounded-b border-x border-b border-teal-100 bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
+          <p>位置情報: {item.latitude != null && item.longitude != null ? "取得済み" : "未取得"}</p>
+          <p>緯度経度: {item.latitude != null && item.longitude != null ? `${item.latitude.toFixed(5)}, ${item.longitude.toFixed(5)}` : "非表示"}</p>
+          <p>大会ステータス: {getEntryStatusLabel(item.tournamentEntryStatus)}</p>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function TournamentCatchMap({ items, participantNames }: { items: Catch[]; participantNames: Map<string, string> }) {
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const [message, setMessage] = useState("地図を準備しています。");
+
+  useEffect(() => {
+    async function load() {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        setMessage("Google Maps APIキーが未設定です。NEXT_PUBLIC_GOOGLE_MAPS_API_KEYを確認してください。");
+        return;
+      }
+      const positioned = items.filter((item) => item.latitude != null && item.longitude != null);
+      if (!positioned.length) {
+        setMessage("位置情報付きの大会釣果がありません。");
+        return;
+      }
+      const loader = new Loader({ apiKey, version: "weekly" });
+      const google = await loader.load();
+      const center = { lat: positioned[0].latitude as number, lng: positioned[0].longitude as number };
+      const map = new google.maps.Map(mapRef.current as HTMLDivElement, { center, zoom: 11 });
+      const info = new google.maps.InfoWindow();
+      positioned.forEach((item) => {
+        const marker = new google.maps.Marker({
+          position: { lat: item.latitude as number, lng: item.longitude as number },
+          map,
+          title: `${item.fishType} ${item.sizeCm}cm`
+        });
+        marker.addListener("click", () => {
+          info.setContent(tournamentMapInfoHtml(item, participantNames.get(item.userId) ?? "参加者"));
+          info.open({ map, anchor: marker });
+        });
+      });
+      setMessage("");
+    }
+    load().catch((error) => setMessage(error instanceof Error ? error.message : "地図を表示できませんでした。"));
+  }, [items, participantNames]);
+
+  return (
+    <div>
+      {message ? <p className="mb-3 rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
+      <div ref={mapRef} className="h-[56vh] min-h-[360px] w-full rounded border border-teal-100 bg-white shadow-soft" />
+    </div>
+  );
+}
+
+function getMapItems(items: Catch[], canApproveEntries: boolean) {
+  return items.filter((item) => item.tournamentEntryStatus === "approved" || (canApproveEntries && item.tournamentEntryStatus === "pending"));
+}
+
+function maskExactLocation(item: Catch): Catch {
+  return {
+    ...item,
+    latitude: null,
+    longitude: null,
+    pointName: "",
+    locationVisibility: "hidden"
+  };
+}
+
+function tournamentMapInfoHtml(item: Catch, userName: string) {
+  const image = item.imageUrl ? `<img src="${item.imageUrl}" alt="" style="width:220px;height:140px;object-fit:cover;border-radius:6px;margin-bottom:8px;" />` : "";
+  return `
+    <div style="max-width:240px;font-family:sans-serif;color:#17201d;">
+      ${image}
+      <strong style="font-size:16px;">${escapeHtml(item.fishType)} ${item.sizeCm}cm</strong>
+      <p style="margin:4px 0;">投稿者: ${escapeHtml(userName)}</p>
+      <p style="margin:4px 0;">日時: ${formatDate(item.caughtAt)}</p>
+      <p style="margin:4px 0;">潮位: ${item.tideHeight == null ? "未取得" : `${item.tideHeight}m`}</p>
+      <p style="margin:4px 0;">潮: ${escapeHtml(item.tidePhaseLabel)}</p>
+      <p style="margin:4px 0;">コメント: ${escapeHtml(item.comment || "なし")}</p>
+      <p style="margin:4px 0;">ステータス: ${escapeHtml(getEntryStatusLabel(item.tournamentEntryStatus))}</p>
+    </div>
+  `;
 }
 
 function InfoItem({ label, value }: { label: string; value: string }) {
@@ -345,4 +470,9 @@ function getEntryBadgeClass(status: Catch["tournamentEntryStatus"]) {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
+function escapeHtml(value: string) {
+  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+  return value.replace(/[&<>"']/g, (char) => entities[char] ?? char);
 }
