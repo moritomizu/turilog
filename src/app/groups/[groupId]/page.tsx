@@ -8,7 +8,7 @@ import { CatchCard, formatDate } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
 import { deleteCatch, getGroupCatches, updateCatch } from "@/lib/catches";
 import { canDeleteGroupCatchSync, canEditGroupCatchSync, canManageGroupMembersSync, canViewGroupExactLocationSync, findGroupMember } from "@/lib/groupPermissions";
-import { getGroup, getGroupMembers } from "@/lib/groups";
+import { deleteGroup, getGroup, getGroupMembers } from "@/lib/groups";
 import type { Catch, Group, GroupMember } from "@/types";
 
 export default function GroupDetailPage({ params }: { params: { groupId: string } }) {
@@ -24,6 +24,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   const canView = Boolean(currentMember);
   const canViewExact = canViewGroupExactLocationSync(group, currentMember);
   const canManageMembers = canManageGroupMembersSync(currentMember);
+  const canDeleteGroup = currentMember?.role === "owner" || currentMember?.role === "admin";
   const memberNames = useMemo(() => new Map(members.map((member) => [member.userId, member.userName])), [members]);
   const digest = useMemo(() => buildDigest(items), [items]);
   const ranking = useMemo(() => buildRanking(items, memberNames), [items, memberNames]);
@@ -54,6 +55,19 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
     const url = `${origin}/groups/invite/${inviteCode}`;
     await navigator.clipboard.writeText(url);
     setMessage("招待リンクをコピーしました。LINEやSNSで仲間に送れます。");
+  }
+
+  async function handleDeleteGroup() {
+    if (!group || !canDeleteGroup) return;
+    const confirmation = window.prompt(`グループ「${group.name}」を削除します。\n個人の釣果ログは削除されませんが、グループとメンバー情報は削除されます。\n削除する場合は「削除」と入力してください。`);
+    if (confirmation !== "削除") return;
+    try {
+      setMessage("グループを削除しています。");
+      await deleteGroup(group.id);
+      window.location.href = "/groups";
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "グループを削除できませんでした。");
+    }
   }
 
   useEffect(() => {
@@ -161,6 +175,16 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
                 )) : <Empty text="釣果がありません。" />}
               </div>
             </section>
+
+            {canDeleteGroup ? (
+              <section className="rounded border border-red-100 bg-white p-4 shadow-soft">
+                <h2 className="text-base font-black text-red-700">危険な操作</h2>
+                <p className="mt-2 text-xs font-bold leading-5 text-slate-600">グループを削除すると、グループページとメンバー情報は削除されます。個人の釣果ログ自体は削除されません。</p>
+                <button onClick={handleDeleteGroup} className="mt-3 rounded border border-red-200 px-3 py-2 text-sm font-black text-red-700">
+                  グループを削除
+                </button>
+              </section>
+            ) : null}
           </>
         ) : null}
       </main>

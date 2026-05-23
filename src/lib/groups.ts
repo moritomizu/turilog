@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import type { Group, GroupLocationVisibility, GroupMember, GroupRole, GroupVisibility } from "@/types";
 
@@ -102,6 +102,15 @@ export async function updateGroupMemberPermissions(member: GroupMember, input: P
     ...input,
     updatedAt: serverTimestamp()
   });
+}
+
+export async function deleteGroup(groupId: string) {
+  const db = getFirebaseDb();
+  const members = await getDocs(query(collection(db, "groupMembers"), where("groupId", "==", groupId)));
+  const batch = writeBatch(db);
+  members.docs.forEach((member) => batch.delete(doc(db, "groupMembers", member.id)));
+  await batch.commit();
+  await deleteDoc(doc(db, "groups", groupId));
 }
 
 export function getGroupRoleDefaults(role: GroupRole, locationDefault: GroupLocationVisibility = "exactForAdminsOnly") {
