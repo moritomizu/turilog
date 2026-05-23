@@ -33,14 +33,8 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
     setItems(await getGroupCatches(groupId));
   }
 
-  async function handleEditCatch(item: Catch) {
-    const fishType = window.prompt("魚種", item.fishType);
-    if (fishType == null) return;
-    const sizeText = window.prompt("サイズ cm", String(item.sizeCm));
-    if (sizeText == null) return;
-    const comment = window.prompt("コメント", item.comment);
-    if (comment == null) return;
-    await updateCatch(item.id, { fishType, sizeCm: Number(sizeText), comment });
+  async function handleSaveCatch(item: Catch, patch: Partial<Pick<Catch, "fishType" | "sizeCm" | "comment" | "caughtAt" | "actualAnglerUserId">>) {
+    await updateCatch(item.id, patch);
     await reloadItems();
   }
 
@@ -164,11 +158,12 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
                   <GroupCatch
                     key={item.id}
                     item={maskLocation(item, canViewExact)}
+                    members={members}
                     memberNames={memberNames}
                     showExact={canViewExact}
                     canEdit={canEditGroupCatchSync(currentMember, item, userId)}
                     canDelete={canDeleteGroupCatchSync(currentMember, item, userId)}
-                    onEdit={() => handleEditCatch(item)}
+                    onSave={(patch) => handleSaveCatch(item, patch)}
                     onDelete={() => handleDeleteCatch(item)}
                   />
                 )) : <Empty text="釣果がありません。" />}
@@ -191,7 +186,68 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   );
 }
 
-function GroupCatch({ item, memberNames, showExact, canEdit, canDelete, onEdit, onDelete }: { item: Catch; memberNames: Map<string, string>; showExact: boolean; canEdit: boolean; canDelete: boolean; onEdit: () => void; onDelete: () => void }) {
+function GroupCatch({
+  item,
+  members,
+  memberNames,
+  showExact,
+  canEdit,
+  canDelete,
+  onSave,
+  onDelete
+}: {
+  item: Catch;
+  members: GroupMember[];
+  memberNames: Map<string, string>;
+  showExact: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  onSave: (patch: Partial<Pick<Catch, "fishType" | "sizeCm" | "comment" | "caughtAt" | "actualAnglerUserId">>) => Promise<void>;
+  onDelete: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [fishType, setFishType] = useState(item.fishType);
+  const [sizeCm, setSizeCm] = useState(String(item.sizeCm));
+  const [caughtAt, setCaughtAt] = useState(toLocalInputValue(new Date(item.caughtAt)));
+  const [comment, setComment] = useState(item.comment);
+  const [actualAnglerUserId, setActualAnglerUserId] = useState(item.actualAnglerUserId);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function handleSave() {
+    const nextSize = Number(sizeCm);
+    const nextCaughtAt = new Date(caughtAt);
+    if (!fishType.trim()) {
+      setMessage("魚種を入力してください。");
+      return;
+    }
+    if (!Number.isFinite(nextSize) || nextSize <= 0) {
+      setMessage("サイズを正しく入力してください。");
+      return;
+    }
+    if (!Number.isFinite(nextCaughtAt.getTime())) {
+      setMessage("釣った日時を正しく入力してください。");
+      return;
+    }
+    setBusy(true);
+    setMessage("保存しています。");
+    try {
+      await onSave({
+        fishType: fishType.trim(),
+        sizeCm: nextSize,
+        caughtAt: nextCaughtAt.toISOString(),
+        comment,
+        actualAnglerUserId
+      });
+      setMessage("編集内容を保存しました。");
+      setEditing(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "編集できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       <CatchCard item={item} />
@@ -201,12 +257,46 @@ function GroupCatch({ item, memberNames, showExact, canEdit, canDelete, onEdit, 
         {showExact ? <p>緯度経度: {item.latitude != null ? `${item.latitude.toFixed(5)}, ${item.longitude?.toFixed(5)}` : "未取得"}</p> : <p>位置情報: 非表示</p>}
         {(canEdit || canDelete) ? (
           <div className="mt-2 grid grid-cols-2 gap-2">
-            {canEdit ? <button onClick={onEdit} className="rounded border border-water px-3 py-2 font-black text-water">簡易編集</button> : null}
+            {canEdit ? <button onClick={() => setEditing((value) => !value)} className="rounded border border-water px-3 py-2 font-black text-water">{editing ? "編集を閉じる" : "編集"}</button> : null}
             {canDelete ? <button onClick={onDelete} className="rounded border border-coral px-3 py-2 font-black text-coral">削除</button> : null}
+          </div>
+        ) : null}
+        {editing ? (
+          <div className="mt-3 space-y-3 rounded bg-foam p-3">
+            <EditField label="魚種" value={fishType} onChange={setFishType} />
+            <EditField label="サイズ cm" type="number" value={sizeCm} onChange={setSizeCm} />
+            <EditField label="釣った日時" type="datetime-local" value={caughtAt} onChange={setCaughtAt} />
+            <label className="block">
+              <span className="text-xs font-black text-slate-600">釣った人</span>
+              <select value={actualAnglerUserId} onChange={(event) => setActualAnglerUserId(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold">
+                {members.map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {member.userName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-black text-slate-600">コメント</span>
+              <textarea value={comment} onChange={(event) => setComment(event.target.value)} className="mt-1 min-h-20 w-full rounded border border-slate-300 bg-white p-2 text-sm" />
+            </label>
+            <button type="button" disabled={busy} onClick={handleSave} className="tap-target w-full rounded bg-water px-4 py-3 text-sm font-black text-white disabled:opacity-60">
+              {busy ? "保存中..." : "編集内容を保存"}
+            </button>
+            {message ? <p className="text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
           </div>
         ) : null}
       </div>
     </div>
+  );
+}
+
+function EditField({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black text-slate-600">{label}</span>
+      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold" />
+    </label>
   );
 }
 
@@ -297,6 +387,11 @@ function getLocationLabel(value: Group["locationVisibilityDefault"]) {
   if (value === "blurredForMembers") return "メンバーにはぼかし位置";
   if (value === "hidden") return "非表示";
   return "管理者のみ正確位置";
+}
+
+function toLocalInputValue(date: Date) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
 }
 
 function escapeHtml(value: string) {
