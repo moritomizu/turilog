@@ -32,11 +32,11 @@ function GroupMembers({ groupId, userId }: { groupId: string; userId: string }) 
   async function updateMember(member: GroupMember, patch: Partial<Pick<GroupMember, "role" | "canViewExactLocation" | "canPost" | "canProxyPost" | "canEditGroupCatches" | "canDeleteGroupCatches">>) {
     if (!requester) return;
     if (member.role === "owner") {
-      setMessage("ownerは変更できません。");
+      setMessage("オーナーは変更できません。");
       return;
     }
     if (patch.role === "admin" && requester.role !== "owner") {
-      setMessage("adminを設定できるのはownerのみです。");
+      setMessage("管理者を設定できるのはオーナーのみです。");
       return;
     }
     await updateGroupMemberPermissions(member, {
@@ -52,7 +52,7 @@ function GroupMembers({ groupId, userId }: { groupId: string; userId: string }) 
   }
 
   if (group && !canManage) {
-    return <><PageHeader title="メンバー管理" actionHref={`/groups/${groupId}`} actionLabel="詳細" /><main className="mx-auto max-w-xl px-4 py-5"><p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">owner/adminのみアクセスできます。</p></main></>;
+    return <><PageHeader title="メンバー管理" actionHref={`/groups/${groupId}`} actionLabel="詳細" /><main className="mx-auto max-w-xl px-4 py-5"><p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">オーナーまたは管理者のみアクセスできます。</p></main></>;
   }
 
   return (
@@ -68,7 +68,7 @@ function GroupMembers({ groupId, userId }: { groupId: string; userId: string }) 
               <article key={member.id} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div><h2 className="text-lg font-black">{member.userName}</h2><p className="text-xs font-bold text-slate-500">{member.email ?? "メール未取得"}</p><p className="mt-1 text-xs font-bold text-slate-500">参加日: {formatDate(member.joinedAt)}</p></div>
-                  <label className="block min-w-44"><span className="text-xs font-black text-slate-600">role</span><select disabled={locked} value={member.role} onChange={(event) => updateMember(member, { role: event.target.value as GroupRole })} className="mt-1 w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold disabled:opacity-50">{member.role === "owner" ? <option value="owner">owner</option> : null}<option value="admin">admin</option><option value="moderator">moderator</option><option value="member">member</option><option value="viewer">viewer</option></select></label>
+                  <label className="block min-w-44"><span className="text-xs font-black text-slate-600">権限</span><select disabled={locked} value={member.role} onChange={(event) => updateMember(member, { role: event.target.value as GroupRole })} className="mt-1 w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold disabled:opacity-50">{member.role === "owner" ? <option value="owner">{getGroupRoleLabel("owner")}</option> : null}<option value="admin">{getGroupRoleLabel("admin")}</option><option value="moderator">{getGroupRoleLabel("moderator")}</option><option value="member">{getGroupRoleLabel("member")}</option><option value="viewer">{getGroupRoleLabel("viewer")}</option></select></label>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm font-bold text-slate-700 sm:grid-cols-2 lg:grid-cols-5">
                   <Toggle label="正確位置" checked={member.canViewExactLocation} disabled={locked} onChange={(value) => updateMember(member, { canViewExactLocation: value })} />
@@ -92,4 +92,12 @@ function Toggle({ label, checked, disabled, onChange }: { label: string; checked
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
+}
+
+function getGroupRoleLabel(role: GroupRole) {
+  if (role === "owner") return "オーナー";
+  if (role === "admin") return "管理者";
+  if (role === "moderator") return "サポート管理者";
+  if (role === "viewer") return "閲覧のみ";
+  return "メンバー";
 }
