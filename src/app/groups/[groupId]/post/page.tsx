@@ -11,6 +11,7 @@ import { getCurrentLocation } from "@/lib/location";
 import { getLunarInfo } from "@/lib/lunar";
 import { getOfficialCurrentReference } from "@/lib/officialCurrent";
 import { getOfficialTideReference } from "@/lib/officialTide";
+import { rememberLastPostGroupId } from "@/lib/postPreferences";
 import { emptySeaTemperatureInfo } from "@/lib/seaTemperature";
 import { emptyWeatherInfo } from "@/lib/weather";
 import type { Group, GroupMember } from "@/types";
@@ -98,6 +99,7 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
         tideStationDistance: null,
         tideApiProvider: "none"
       });
+      rememberLastPostGroupId(group.id);
       router.push(`/groups/${group.id}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "投稿できませんでした。");

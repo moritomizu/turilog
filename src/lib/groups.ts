@@ -58,6 +58,16 @@ export async function getGroupsForUser(userId: string): Promise<Group[]> {
   return groups.filter((item): item is Group => Boolean(item)).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+export async function getPostableGroupsForUser(userId: string): Promise<Group[]> {
+  const snapshot = await getDocs(query(collection(getFirebaseDb(), "groupMembers"), where("userId", "==", userId), where("status", "==", "active")));
+  const ids = snapshot.docs
+    .filter((item) => item.data().canPost !== false)
+    .map((item) => item.data().groupId)
+    .filter((value): value is string => typeof value === "string");
+  const groups = await Promise.all(ids.map((id) => getGroup(id)));
+  return groups.filter((item): item is Group => Boolean(item)).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
 export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
   const snapshot = await getDocs(query(collection(getFirebaseDb(), "groupMembers"), where("groupId", "==", groupId), where("status", "==", "active")));
   return snapshot.docs.map((item) => normalizeGroupMember(item.id, item.data()));

@@ -6,15 +6,17 @@ import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
 import { getFishingAreaById, groupedFishingAreas } from "@/lib/fishingAreas";
+import { getPostableGroupsForUser } from "@/lib/groups";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
 import { getLunarInfo } from "@/lib/lunar";
 import { getOfficialCurrentReference } from "@/lib/officialCurrent";
 import { getOfficialTideReference } from "@/lib/officialTide";
+import { getLastPostGroupId, rememberLastPostGroupId } from "@/lib/postPreferences";
 import { emptySeaTemperatureInfo, fetchSeaTemperatureInfo } from "@/lib/seaTemperature";
 import { fetchTideInfo } from "@/lib/tide";
 import { getJoinedTournaments, getTournament, isTournamentEntryEligible } from "@/lib/tournaments";
 import { emptyWeatherInfo, fetchWeatherInfo } from "@/lib/weather";
-import type { Catch, LocationPoint, TackleInfo, Tournament } from "@/types";
+import type { Catch, Group, LocationPoint, TackleInfo, Tournament } from "@/types";
 
 type LocationSuggestion = LocationPoint & {
   label: string;
@@ -50,6 +52,8 @@ function PostForm({ userId }: { userId: string }) {
   const [pointName, setPointName] = useState("");
   const [tournamentOptions, setTournamentOptions] = useState<Tournament[]>([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState("");
+  const [groupOptions, setGroupOptions] = useState<Group[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState("");
   const [fishSuggestions, setFishSuggestions] = useState<string[]>([]);
   const [commentSuggestions, setCommentSuggestions] = useState<string[]>([]);
   const [tackleSuggestions, setTackleSuggestions] = useState<Record<keyof TackleInfo, string[]>>({
@@ -98,6 +102,18 @@ function PostForm({ userId }: { userId: string }) {
         if (tournamentId) setSelectedTournamentId(tournamentId);
       })
       .catch(() => setTournamentOptions([]));
+  }, [userId]);
+
+  useEffect(() => {
+    getPostableGroupsForUser(userId)
+      .then((groups) => {
+        setGroupOptions(groups);
+        const lastGroupId = getLastPostGroupId();
+        if (lastGroupId && groups.some((group) => group.id === lastGroupId)) {
+          setSelectedGroupId(lastGroupId);
+        }
+      })
+      .catch(() => setGroupOptions([]));
   }, [userId]);
 
   async function handleLocation() {
@@ -190,6 +206,8 @@ function PostForm({ userId }: { userId: string }) {
         ? isTournamentEntryEligible(selectedTournament, caughtAtIso, fishType, Number(sizeCm), location?.latitude != null && location?.longitude != null)
         : null;
       const hasTournamentSelection = Boolean(selectedTournament);
+      const selectedGroup = groupOptions.find((item) => item.id === selectedGroupId) ?? null;
+      const selectedGroupIds = selectedGroup ? [selectedGroup.id] : [];
 
       await createCatch({
         userId,
@@ -212,8 +230,8 @@ function PostForm({ userId }: { userId: string }) {
         isTournamentEntry: hasTournamentSelection,
         tournamentEntryStatus: hasTournamentSelection ? "pending" : "none",
         tournamentSubmittedAt: hasTournamentSelection ? new Date().toISOString() : null,
-        groupIds: [],
-        primaryGroupId: null,
+        groupIds: selectedGroupIds,
+        primaryGroupId: selectedGroup?.id ?? null,
         postedByUserId: userId,
         actualAnglerUserId: userId,
         isProxyPost: false,
@@ -226,6 +244,8 @@ function PostForm({ userId }: { userId: string }) {
         ...tideInfo
       });
 
+      rememberLastPostGroupId(selectedGroup?.id ?? "");
+
       setFishType("");
       setSizeCm("");
       setComment("");
@@ -236,7 +256,7 @@ function PostForm({ userId }: { userId: string }) {
       setSelectedAreaId("");
       setSelectedTournamentId("");
       setCaughtAt(toLocalInputValue(new Date()));
-      setMessage(selectedTournament ? (tournamentCheck?.ok ? "投稿しました。大会投稿は承認待ちです。" : `${getTournamentSkipMessage(tournamentCheck)} 承認画面で確認できます。`) : "投稿しました。");
+      setMessage(buildPostMessage(selectedTournament, tournamentCheck, selectedGroup));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "投稿に失敗しました。");
     } finally {
@@ -287,6 +307,25 @@ function PostForm({ userId }: { userId: string }) {
                 ))}
               </select>
               <p className="mt-2 text-xs font-bold leading-5 text-slate-600">期間内・対象魚種・位置情報ありの場合、大会投稿として承認待ち保存します。</p>
+            </section>
+          ) : null}
+
+          {groupOptions.length ? (
+            <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
+              <h2 className="text-sm font-black text-water">共有先グループ</h2>
+              <select
+                value={selectedGroupId}
+                onChange={(event) => setSelectedGroupId(event.target.value)}
+                className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
+              >
+                <option value="">自分だけの釣果ログ</option>
+                {groupOptions.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs font-bold leading-5 text-slate-600">前回選んだ共有先を次回も自動で選択します。秘密にしたい釣果は「自分だけ」を選んでください。</p>
             </section>
           ) : null}
 
@@ -765,6 +804,13 @@ function getTournamentSkipMessage(check: ReturnType<typeof isTournamentEntryElig
     !check.validSize ? "サイズ未入力" : ""
   ].filter(Boolean);
   return `通常の釣果として保存しました。大会エントリー不可: ${reasons.join("、")}`;
+}
+
+function buildPostMessage(selectedTournament: Tournament | null, tournamentCheck: ReturnType<typeof isTournamentEntryEligible> | null, selectedGroup: Group | null) {
+  const groupText = selectedGroup ? ` ${selectedGroup.name}にも共有しました。` : "";
+  if (!selectedTournament) return `投稿しました。${groupText}`.trim();
+  const tournamentText = tournamentCheck?.ok ? "大会投稿は承認待ちです。" : `${getTournamentSkipMessage(tournamentCheck)} 承認画面で確認できます。`;
+  return `投稿しました。${tournamentText}${groupText}`;
 }
 
 function estimateSizeCm(points: MeasurePoint[], knownCm: number) {
