@@ -6,31 +6,33 @@ import { getRoleDefaults, getTournament, getTournamentParticipants } from "@/lib
 import type { TournamentParticipant, TournamentRole } from "@/types";
 
 export async function getTournamentRole(userId: string, tournamentId: string): Promise<TournamentRole | null> {
-  const participant = await getParticipant(userId, tournamentId);
-  if (participant) return participant.role;
   const tournament = await getTournament(tournamentId);
-  return tournament?.ownerId === userId ? "owner" : null;
+  if (tournament?.ownerId === userId) return "owner";
+  return (await getParticipant(userId, tournamentId))?.role ?? null;
 }
 
 export async function canViewExactLocation(userId: string, tournamentId: string) {
+  const tournament = await getTournament(tournamentId);
+  if (tournament?.ownerId === userId) return true;
   const participant = await getParticipant(userId, tournamentId);
   if (participant?.canViewExactLocation) return true;
-  const tournament = await getTournament(tournamentId);
-  return tournament?.ownerId === userId;
+  return false;
 }
 
 export async function canViewPrivateCatchDetails(userId: string, tournamentId: string) {
+  const tournament = await getTournament(tournamentId);
+  if (tournament?.ownerId === userId) return true;
   const participant = await getParticipant(userId, tournamentId);
   if (participant?.canViewPrivateCatchDetails) return true;
-  const tournament = await getTournament(tournamentId);
-  return tournament?.ownerId === userId;
+  return false;
 }
 
 export async function canApproveTournamentEntries(userId: string, tournamentId: string) {
+  const tournament = await getTournament(tournamentId);
+  if (tournament?.ownerId === userId) return true;
   const participant = await getParticipant(userId, tournamentId);
   if (participant?.canApproveEntries) return true;
-  const tournament = await getTournament(tournamentId);
-  return tournament?.ownerId === userId;
+  return false;
 }
 
 export async function isTournamentOwner(userId: string, tournamentId: string) {
@@ -83,7 +85,11 @@ export async function updateTournamentParticipantPermissions(
 }
 
 export function findParticipant(participants: TournamentParticipant[], userId: string, ownerId?: string) {
-  return participants.find((item) => item.userId === userId) ?? (ownerId === userId ? makeOwnerFallback(userId) : null);
+  if (ownerId === userId) {
+    const existing = participants.find((item) => item.userId === userId);
+    return { ...makeOwnerFallback(userId), ...existing, role: "owner" as const, canViewExactLocation: true, canViewPrivateCatchDetails: true, canApproveEntries: true };
+  }
+  return participants.find((item) => item.userId === userId) ?? null;
 }
 
 async function getParticipant(userId: string, tournamentId: string) {

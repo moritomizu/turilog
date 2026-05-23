@@ -157,7 +157,7 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
                     ) : null}
                   </div>
                 </div>
-                {canApproveEntries || canOpenMembers || canOpenExactLocation ? (
+                {isOwner || canApproveEntries || canOpenMembers || canOpenExactLocation ? (
                   <div className="rounded border border-coral/20 bg-white p-3">
                     <h2 className="text-sm font-black text-ink">主催者メニュー</h2>
                     <div className="mt-3 grid gap-2">
