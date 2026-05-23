@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type Poin
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
-import { getFishingAreaById, groupedFishingAreas } from "@/lib/fishingAreas";
+import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { getPostableGroupsForUser } from "@/lib/groups";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
 import { getLunarInfo } from "@/lib/lunar";
@@ -119,9 +119,9 @@ function PostForm({ userId }: { userId: string }) {
   async function handleLocation() {
     setMessage("位置情報を取得しています。");
     try {
-      setLocation(await getCurrentLocation());
+      const point = await getCurrentLocation();
+      applyLocation(point, "", "", { inferArea: true, message: "位置情報を取得しました。" });
       setPointName("");
-      setMessage("位置情報を取得しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "位置情報を取得できませんでした。");
     }
@@ -138,17 +138,28 @@ function PostForm({ userId }: { userId: string }) {
       setMessage("緯度は-90〜90、経度は-180〜180の範囲で入力してください。");
       return;
     }
-    setLocation({ latitude, longitude });
-    setMessage("入力した位置を設定しました。");
+    applyLocation({ latitude, longitude }, "", "", { inferArea: true, message: "入力した位置を設定しました。" });
   }
 
-  const applyLocation = useCallback((point: LocationPoint, nextPointName = "", nextAreaName = "") => {
+  const applyLocation = useCallback((point: LocationPoint, nextPointName = "", nextAreaName = "", options: { inferArea?: boolean; message?: string } = {}) => {
     setLocation(point);
     setManualLatitude(String(point.latitude));
     setManualLongitude(String(point.longitude));
     if (nextPointName) setPointName(nextPointName);
-    if (nextAreaName) setAreaName(nextAreaName);
-    setMessage("過去の釣果地点を設定しました。");
+    if (nextAreaName) {
+      setAreaName(nextAreaName);
+      const area = getNearestFishingArea(point);
+      if (area && area.area.name === nextAreaName.replace(/^.+・/, "")) setSelectedAreaId(area.area.id);
+    } else if (options.inferArea) {
+      const nearest = getNearestFishingArea(point);
+      if (nearest) {
+        setSelectedAreaId(nearest.area.id);
+        setAreaName(`${nearest.area.prefecture}・${nearest.area.name}`);
+        setMessage(`${options.message ?? "位置を設定しました。"} 近くのエリアとして ${nearest.area.prefecture}・${nearest.area.name} を自動選択しました。`);
+        return;
+      }
+    }
+    setMessage(options.message ?? "過去の釣果地点を設定しました。");
   }, []);
 
   function handleAreaChange(areaId: string) {
@@ -367,7 +378,7 @@ function PostForm({ userId }: { userId: string }) {
             <button type="button" onClick={() => setShowMapPicker((value) => !value)} className="tap-target mt-3 w-full rounded bg-water px-4 py-3 text-sm font-black text-white">
               {showMapPicker ? "地図を閉じる" : "地図でピン指定"}
             </button>
-            {showMapPicker ? <MapPicker location={location} onPick={applyLocation} /> : null}
+            {showMapPicker ? <MapPicker location={location} onPick={(point) => applyLocation(point, "", "", { inferArea: true, message: "ピンの場所を投稿位置に設定しました。" })} /> : null}
             <p className="mt-3 text-sm text-slate-600">
               現在位置: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
             </p>
