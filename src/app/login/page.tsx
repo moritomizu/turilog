@@ -1,14 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithPopup, signOut, onAuthStateChanged, type User } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { getFirebaseAuth, getFirebaseDb, googleProvider, isFirebaseConfigured, missingFirebaseEnv } from "@/lib/firebase";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 import { PageHeader } from "@/components/PageHeader";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginShell message="ログイン画面を準備しています。" />}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [message, setMessage] = useState("");
@@ -46,6 +57,8 @@ export default function LoginPage() {
         { merge: true }
       );
       setMessage("ログインしました。");
+      const next = searchParams.get("next");
+      if (next?.startsWith("/")) router.push(next);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "ログインに失敗しました。");
     } finally {
@@ -68,8 +81,8 @@ export default function LoginPage() {
           ) : user ? (
             <div className="mt-5 space-y-3">
               <p className="rounded bg-foam p-3 text-sm font-bold">{user.displayName ?? user.email} でログイン中です。</p>
-              <Link href="/post" className="tap-target flex items-center justify-center rounded bg-water px-5 py-3 font-bold text-white">
-                釣果を投稿する
+              <Link href={searchParams.get("next") ?? "/post"} className="tap-target flex items-center justify-center rounded bg-water px-5 py-3 font-bold text-white">
+                {searchParams.get("next") ? "招待ページへ戻る" : "釣果を投稿する"}
               </Link>
               <button className="tap-target w-full rounded border border-slate-300 px-5 py-3 font-bold" onClick={() => signOut(getFirebaseAuth())}>
                 ログアウト
@@ -102,6 +115,19 @@ export default function LoginPage() {
           )}
 
           {message ? <p className="mt-4 rounded bg-foam p-3 text-sm text-slate-700">{message}</p> : null}
+        </section>
+      </main>
+    </>
+  );
+}
+
+function LoginShell({ message }: { message: string }) {
+  return (
+    <>
+      <PageHeader title="ログイン" />
+      <main className="mx-auto max-w-xl px-4 py-6">
+        <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
+          <p className="text-sm font-bold text-slate-700">{message}</p>
         </section>
       </main>
     </>

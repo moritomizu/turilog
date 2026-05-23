@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { joinGroupByInviteCode } from "@/lib/groups";
@@ -12,7 +12,8 @@ export default function JoinGroupPage() {
 
 function JoinForm({ userId, userName, email }: { userId: string; userName: string; email: string | null }) {
   const router = useRouter();
-  const [inviteCode, setInviteCode] = useState("");
+  const searchParams = useSearchParams();
+  const [inviteCode, setInviteCode] = useState(searchParams.get("code")?.toUpperCase() ?? "");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -34,6 +35,9 @@ function JoinForm({ userId, userName, email }: { userId: string; userName: strin
       <PageHeader title="グループ参加" actionHref="/groups" actionLabel="一覧" />
       <main className="mx-auto max-w-xl px-4 py-5">
         <form onSubmit={handleSubmit} className="space-y-4 rounded border border-teal-100 bg-white p-4 shadow-soft">
+          <div className="rounded bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700">
+            招待コードを入力すると、釣り仲間のグループに参加できます。参加後はグループ釣果・ランキング・マップ・分析を共有できます。
+          </div>
           <label className="block">
             <span className="text-sm font-bold">招待コード</span>
             <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value.toUpperCase())} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-lg font-black tracking-widest" placeholder="ABC123" />

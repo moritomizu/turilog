@@ -49,6 +49,13 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
     await reloadItems();
   }
 
+  async function copyInviteLink(inviteCode: string) {
+    const origin = window.location.origin;
+    const url = `${origin}/groups/invite/${inviteCode}`;
+    await navigator.clipboard.writeText(url);
+    setMessage("招待リンクをコピーしました。LINEやSNSで仲間に送れます。");
+  }
+
   useEffect(() => {
     Promise.all([getGroup(groupId), getGroupMembers(groupId), getGroupCatches(groupId)])
       .then(([nextGroup, nextMembers, nextItems]) => {
@@ -92,6 +99,28 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
                 {currentMember?.canPost ? <Link href={`/groups/${group.id}/post`} className="tap-target rounded bg-coral px-4 py-3 text-center font-black text-white">釣果投稿</Link> : null}
                 <Link href={`/groups/${group.id}/analysis`} className="tap-target rounded border border-water px-4 py-3 text-center font-black text-water">分析</Link>
                 {canManageMembers ? <Link href={`/groups/${group.id}/members`} className="tap-target rounded border border-slate-300 px-4 py-3 text-center font-black text-ink">メンバー管理</Link> : null}
+              </div>
+            </section>
+
+            <section className="rounded border border-coral/20 bg-orange-50 p-4 shadow-soft">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-black text-coral">INVITE</p>
+                  <h2 className="mt-1 text-xl font-black">仲間を招待</h2>
+                  <p className="mt-1 text-sm font-bold leading-6 text-slate-700">招待リンクを送ると、未ログインの人にも参加案内ページが表示されます。</p>
+                </div>
+                <div className="rounded bg-white px-4 py-3 text-center">
+                  <p className="text-xs font-bold text-slate-500">招待コード</p>
+                  <p className="text-xl font-black tracking-widest text-coral">{group.inviteCode}</p>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <button onClick={() => copyInviteLink(group.inviteCode)} className="tap-target rounded bg-coral px-4 py-3 font-black text-white">
+                  招待リンクをコピー
+                </button>
+                <Link href={`/groups/invite/${group.inviteCode}`} className="tap-target rounded border border-coral bg-white px-4 py-3 text-center font-black text-coral">
+                  招待ページを確認
+                </Link>
               </div>
             </section>
 
