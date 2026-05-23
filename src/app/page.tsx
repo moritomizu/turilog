@@ -4,6 +4,7 @@ const links = [
   { href: "/post", label: "釣果を投稿", body: "写真・魚種・サイズ・場所・潮位を記録" },
   { href: "/catches", label: "釣果一覧", body: "新着順で自分の釣果を確認" },
   { href: "/tournaments", label: "釣り大会", body: "大会に参加してランキングを競う" },
+  { href: "/groups", label: "グループ", body: "釣り仲間と釣果・ランキング・マップを共有" },
   { href: "/ranking", label: "ランキング", body: "年間・魚種別・月別の最大サイズ" },
   { href: "/map", label: "マップ", body: "釣れた地点を地図で振り返る" },
   { href: "/analysis", label: "潮位分析", body: "上げ潮・下げ潮・何分目の傾向" }
