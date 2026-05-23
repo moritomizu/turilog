@@ -10,6 +10,9 @@ export type TournamentStatus = "upcoming" | "active" | "ended";
 export type TournamentEntryStatus = "none" | "pending" | "approved" | "rejected";
 export type TournamentRole = "owner" | "admin" | "subAdmin" | "participant" | "viewer";
 export type LocationVisibility = "exact" | "public" | "hidden";
+export type GroupRole = "owner" | "admin" | "moderator" | "member" | "viewer";
+export type GroupVisibility = "private" | "inviteOnly" | "public";
+export type GroupLocationVisibility = "exactForAdminsOnly" | "exactForAllMembers" | "blurredForMembers" | "hidden";
 
 export type User = {
   uid: string;
@@ -127,6 +130,12 @@ export type Catch = TideInfo &
   isTournamentEntry: boolean;
   tournamentEntryStatus: TournamentEntryStatus;
   tournamentSubmittedAt: string | null;
+  groupIds: string[];
+  primaryGroupId: string | null;
+  postedByUserId: string;
+  actualAnglerUserId: string;
+  isProxyPost: boolean;
+  proxyPostReason: string;
   createdAt: string;
 };
 
@@ -165,4 +174,35 @@ export type TournamentParticipant = {
   joinedAt: string;
   updatedAt: string | null;
   status: "active";
+};
+
+export type Group = {
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string;
+  visibility: GroupVisibility;
+  locationVisibilityDefault: GroupLocationVisibility;
+  inviteCode: string;
+  createdAt: string;
+  updatedAt: string | null;
+  memberCount: number;
+  catchCount: number;
+};
+
+export type GroupMember = {
+  id: string;
+  groupId: string;
+  userId: string;
+  userName: string;
+  email: string | null;
+  role: GroupRole;
+  canViewExactLocation: boolean;
+  canPost: boolean;
+  canProxyPost: boolean;
+  canEditGroupCatches: boolean;
+  canDeleteGroupCatches: boolean;
+  joinedAt: string;
+  updatedAt: string | null;
+  status: "active" | "invited" | "removed";
 };

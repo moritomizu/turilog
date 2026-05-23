@@ -445,6 +445,137 @@ AI魚種判定
 
 釣り中でも短時間で投稿できるように、投稿画面は以下の操作を優先しています。
 
+## グループ機能
+
+グループ機能は、日常的な釣り仲間コミュニティとして釣果を共有するための機能です。大会が期間限定イベントであるのに対し、グループは継続的に釣果一覧、ランキング、マップ、分析を共有します。
+
+### グループ作成方法
+
+`/groups/new` からグループを作成します。作成者は自動的に `owner` として `groupMembers` に登録されます。
+
+入力項目:
+
+```text
+グループ名
+説明
+公開範囲 private / inviteOnly / public
+位置情報表示設定
+```
+
+### 招待コード参加
+
+グループ作成時に `inviteCode` が発行されます。仲間は `/groups/join` で招待コードを入力して参加できます。
+
+### グループ釣果投稿
+
+`/groups/[groupId]/post` からグループに紐づく釣果を投稿できます。投稿された釣果は通常の個人ログとしても残り、`groupIds` と `primaryGroupId` によってグループにも紐づきます。
+
+### 代理投稿
+
+owner / admin / moderator / `canProxyPost` が true のメンバーは、釣った人を選択して代理投稿できます。
+
+```text
+postedByUserId: 投稿したユーザー
+actualAnglerUserId: 実際に釣ったユーザー
+isProxyPost: 代理投稿かどうか
+```
+
+### グループ分析
+
+`/groups/[groupId]/analysis` で以下を表形式で確認できます。
+
+```text
+今日の釣果数
+今月の釣果数
+今月最大サイズ
+最多魚種
+最多エリア
+日別/月別/エリア別分析
+```
+
+### グループ権限設計
+
+```text
+owner
+- 全権限を持ちます。
+
+admin
+- ownerに近い管理権限を持ちます。
+
+moderator
+- 代理投稿や釣果編集を行える補助管理者です。
+
+member
+- 通常メンバーです。自分の釣果投稿と自分の投稿編集ができます。
+
+viewer
+- 閲覧専用です。
+```
+
+### 位置情報表示制御
+
+グループごとに位置情報表示設定を持ちます。
+
+```text
+exactForAdminsOnly: 正確位置は管理者のみ
+exactForAllMembers: 全メンバーに正確位置
+blurredForMembers: メンバーにはぼかし位置
+hidden: 位置情報非表示
+```
+
+MVPでは、正確位置を見られないユーザーには `publicLatitude/publicLongitude` がある場合のみマップ表示し、それ以外はマップに表示しません。
+
+### Firestore構造
+
+```text
+groups
+- ownerId
+- name
+- description
+- visibility
+- locationVisibilityDefault
+- inviteCode
+- createdAt
+- updatedAt
+- memberCount
+- catchCount
+
+groupMembers
+- groupId
+- userId
+- userName
+- email
+- role
+- canViewExactLocation
+- canPost
+- canProxyPost
+- canEditGroupCatches
+- canDeleteGroupCatches
+- joinedAt
+- updatedAt
+- status
+
+catches 追加項目
+- groupIds
+- primaryGroupId
+- postedByUserId
+- actualAnglerUserId
+- isProxyPost
+- proxyPostReason
+```
+
+### 今後の拡張予定
+
+```text
+招待URL
+メンバー削除
+釣果編集専用画面
+位置ぼかし自動生成
+グループ内コメント
+グループ内通知
+グラフ分析
+```
+
 - 写真、魚種、サイズ、投稿ボタンを中心に配置
 - 魚種は過去投稿から頻出順に候補を表示
 - コメントも過去入力から候補を表示

@@ -32,6 +32,19 @@ export async function getTournamentCatches(tournamentId: string): Promise<Catch[
   return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
 }
 
+export async function getGroupCatches(groupId: string): Promise<Catch[]> {
+  const snapshot = await getDocs(query(collection(getFirebaseDb(), "catches"), where("groupIds", "array-contains", groupId)));
+  return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
+}
+
+export async function updateCatch(catchId: string, data: Partial<Pick<Catch, "fishType" | "sizeCm" | "comment" | "caughtAt" | "actualAnglerUserId" | "groupIds" | "primaryGroupId">>) {
+  await updateDoc(doc(getFirebaseDb(), "catches", catchId), data);
+}
+
+export async function deleteCatch(catchId: string) {
+  await deleteDoc(doc(getFirebaseDb(), "catches", catchId));
+}
+
 export async function updateTournamentEntryStatus(catchId: string, status: Catch["tournamentEntryStatus"]) {
   await updateDoc(doc(getFirebaseDb(), "catches", catchId), {
     tournamentEntryStatus: status
@@ -87,6 +100,12 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
         ? data.tournamentEntryStatus
         : "none",
     tournamentSubmittedAt: typeof data.tournamentSubmittedAt === "string" ? data.tournamentSubmittedAt : null,
+    groupIds: Array.isArray(data.groupIds) ? data.groupIds.filter((item): item is string => typeof item === "string") : [],
+    primaryGroupId: typeof data.primaryGroupId === "string" ? data.primaryGroupId : null,
+    postedByUserId: typeof data.postedByUserId === "string" ? data.postedByUserId : typeof data.userId === "string" ? data.userId : "",
+    actualAnglerUserId: typeof data.actualAnglerUserId === "string" ? data.actualAnglerUserId : typeof data.userId === "string" ? data.userId : "",
+    isProxyPost: data.isProxyPost === true,
+    proxyPostReason: typeof data.proxyPostReason === "string" ? data.proxyPostReason : "",
     createdAt: normalizeDate(data.createdAt),
     weather: normalizeWeather(data.weather),
     seaTemperature: normalizeSeaTemperature(data.seaTemperature),
