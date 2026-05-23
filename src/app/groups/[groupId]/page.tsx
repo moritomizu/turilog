@@ -59,8 +59,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
 
   async function handleDeleteGroup() {
     if (!group || !canDeleteGroup) return;
-    const confirmation = window.prompt(`グループ「${group.name}」を削除します。\n個人の釣果ログは削除されませんが、グループとメンバー情報は削除されます。\n削除する場合は「削除」と入力してください。`);
-    if (confirmation !== "削除") return;
+    if (!window.confirm(`グループ「${group.name}」を削除しますか？\n個人の釣果ログは削除されません。`)) return;
     try {
       setMessage("グループを削除しています。");
       await deleteGroup(group.id);
