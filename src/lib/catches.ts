@@ -38,11 +38,18 @@ export async function getGroupCatches(groupId: string): Promise<Catch[]> {
 }
 
 export async function updateCatch(catchId: string, data: Partial<Pick<Catch, "fishType" | "sizeCm" | "comment" | "caughtAt" | "actualAnglerUserId" | "groupIds" | "primaryGroupId">>) {
-  await updateDoc(doc(getFirebaseDb(), "catches", catchId), data);
+  const db = getFirebaseDb();
+  await updateDoc(doc(db, "catches", catchId), data);
+  const publicRef = doc(db, "publicCatches", catchId);
+  const publicSnapshot = await getDoc(publicRef);
+  if (publicSnapshot.exists()) {
+    await updateDoc(publicRef, data);
+  }
 }
 
 export async function deleteCatch(catchId: string) {
-  await deleteDoc(doc(getFirebaseDb(), "catches", catchId));
+  const db = getFirebaseDb();
+  await Promise.all([deleteDoc(doc(db, "catches", catchId)), deleteDoc(doc(db, "publicCatches", catchId))]);
 }
 
 export async function updateTournamentEntryStatus(catchId: string, status: Catch["tournamentEntryStatus"]) {

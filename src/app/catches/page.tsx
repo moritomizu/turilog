@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
-import { getUserCatches, updateCatch, updateCatchPublicStatus } from "@/lib/catches";
-import { canEditCatchLog } from "@/lib/catchPermissions";
+import { deleteCatch, getUserCatches, updateCatch, updateCatchPublicStatus } from "@/lib/catches";
 import type { Catch } from "@/types";
 
 export default function CatchesPage() {
@@ -20,7 +19,6 @@ function CatchList({ userId }: { userId: string }) {
   const [items, setItems] = useState<Catch[]>([]);
   const [message, setMessage] = useState("読み込み中です。");
   const digest = useMemo(() => buildDigest(items), [items]);
-  const canEdit = canEditCatchLog(userId);
 
   useEffect(() => {
     getUserCatches(userId)
@@ -46,12 +44,11 @@ function CatchList({ userId }: { userId: string }) {
                 userId={userId}
                 onChange={(nextItem) => setItems((current) => current.map((value) => (value.id === nextItem.id ? nextItem : value)))}
               />
-              {canEdit ? (
-                <EditCatchControls
-                  item={item}
-                  onChange={(nextItem) => setItems((current) => current.map((value) => (value.id === nextItem.id ? nextItem : value)))}
-                />
-              ) : null}
+              <EditCatchControls
+                item={item}
+                onChange={(nextItem) => setItems((current) => current.map((value) => (value.id === nextItem.id ? nextItem : value)))}
+                onDelete={(deletedId) => setItems((current) => current.filter((value) => value.id !== deletedId))}
+              />
             </div>
           ))}
         </div>
@@ -60,7 +57,7 @@ function CatchList({ userId }: { userId: string }) {
   );
 }
 
-function EditCatchControls({ item, onChange }: { item: Catch; onChange: (item: Catch) => void }) {
+function EditCatchControls({ item, onChange, onDelete }: { item: Catch; onChange: (item: Catch) => void; onDelete: (catchId: string) => void }) {
   const [open, setOpen] = useState(false);
   const [fishType, setFishType] = useState(item.fishType);
   const [sizeCm, setSizeCm] = useState(String(item.sizeCm));
@@ -105,6 +102,20 @@ function EditCatchControls({ item, onChange }: { item: Catch; onChange: (item: C
     }
   }
 
+  async function handleDelete() {
+    if (!window.confirm("この釣果を削除しますか？削除すると元に戻せません。")) return;
+    setBusy(true);
+    setMessage("削除しています。");
+    try {
+      await deleteCatch(item.id);
+      onDelete(item.id);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "釣果を削除できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <button
@@ -135,6 +146,9 @@ function EditCatchControls({ item, onChange }: { item: Catch; onChange: (item: C
             </label>
             <button type="button" disabled={busy} onClick={handleSave} className="tap-target w-full rounded bg-water px-4 py-3 text-sm font-black text-white disabled:opacity-60">
               {busy ? "保存中..." : "保存する"}
+            </button>
+            <button type="button" disabled={busy} onClick={handleDelete} className="tap-target w-full rounded border border-red-200 bg-white px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60">
+              削除する
             </button>
             {message ? <p className="text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
           </div>
