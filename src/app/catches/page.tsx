@@ -56,6 +56,7 @@ function CatchList({ userId }: { userId: string }) {
 
 function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; userId: string; onChange: (item: Catch) => void; onDelete: (catchId: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/embed/catches/${item.id}`;
@@ -110,10 +111,28 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
         title="釣果メニュー"
         aria-label="釣果メニュー"
         aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          setOpen((value) => !value);
+          setShareOpen(false);
+        }}
         className="tap-target absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/80 bg-white/95 text-ink shadow-soft"
       >
         <DotsIcon />
+      </button>
+      <button
+        type="button"
+        title="共有・埋め込み"
+        aria-label="共有・埋め込み"
+        aria-expanded={shareOpen}
+        onClick={() => {
+          setShareOpen((value) => !value);
+          setOpen(false);
+        }}
+        className={`tap-target absolute right-16 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border shadow-soft ${
+          item.isPublic ? "border-sky-200 bg-sky-600 text-white" : "border-white/80 bg-white/95 text-water"
+        }`}
+      >
+        <ShareIcon />
         {item.isPublic ? <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-lime-300 ring-2 ring-white" /> : null}
       </button>
       {open ? (
@@ -127,12 +146,21 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
           <Link href={`/catches/${item.id}/edit`} className="tap-target mt-3 flex w-full items-center justify-center rounded bg-water px-4 py-2 text-sm font-black text-white">
             編集する
           </Link>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={togglePublic}
-            className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-2 text-sm font-black text-water disabled:opacity-60"
-          >
+          <button type="button" disabled={busy} onClick={handleDelete} className="tap-target mt-3 w-full rounded border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-700 disabled:opacity-60">
+            削除する
+          </button>
+          {message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
+        </section>
+      ) : null}
+      {shareOpen ? (
+        <section className="absolute left-3 right-3 top-16 z-20 rounded border border-teal-100 bg-white p-3 shadow-soft">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-black text-ink">共有・埋め込み</p>
+            <span className={`rounded-full px-2 py-1 text-xs font-black ${item.isPublic ? "bg-sky-100 text-sky-800" : "bg-slate-100 text-slate-600"}`}>
+              {item.isPublic ? "公開中" : "非公開"}
+            </span>
+          </div>
+          <button type="button" disabled={busy} onClick={togglePublic} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-2 text-sm font-black text-water disabled:opacity-60">
             {item.isPublic ? "公開を停止" : "埋め込みを有効化"}
           </button>
           {item.isPublic ? (
@@ -145,9 +173,6 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
               </a>
             </div>
           ) : null}
-          <button type="button" disabled={busy} onClick={handleDelete} className="tap-target mt-3 w-full rounded border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-700 disabled:opacity-60">
-            削除する
-          </button>
           {message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
         </section>
       ) : null}
@@ -161,6 +186,17 @@ function DotsIcon() {
       <circle cx="12" cy="5" r="1.8" fill="currentColor" />
       <circle cx="12" cy="12" r="1.8" fill="currentColor" />
       <circle cx="12" cy="19" r="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+      <path d="M8.7 10.7 15.3 7M8.7 13.3l6.6 3.7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+      <circle cx="18" cy="5.5" r="3" stroke="currentColor" strokeWidth="2" />
+      <circle cx="18" cy="18.5" r="3" stroke="currentColor" strokeWidth="2" />
     </svg>
   );
 }
