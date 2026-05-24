@@ -8,6 +8,7 @@ import { createCatch, emptyTackleInfo, uploadCatchImage } from "@/lib/catches";
 import { canProxyPostToGroup } from "@/lib/groupPermissions";
 import { getGroup, getGroupMembers } from "@/lib/groups";
 import { getCurrentLocation } from "@/lib/location";
+import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
 import { getLunarInfo } from "@/lib/lunar";
 import { getOfficialCurrentReference } from "@/lib/officialCurrent";
 import { getOfficialTideReference } from "@/lib/officialTide";
@@ -54,6 +55,9 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
       const caughtAtIso = new Date(caughtAt).toISOString();
       const imageUrl = file ? await uploadCatchImage(userId, file) : null;
       const isProxyPost = actualAnglerUserId !== userId;
+      const blurRadiusMeters = location ? getDefaultBlurRadius() : null;
+      const blurredLocation = location && blurRadiusMeters ? generateBlurredLocation(location.latitude, location.longitude, blurRadiusMeters) : null;
+      const inferredArea = location ? getAreaFromLocation(location.latitude, location.longitude) : { areaName: "", areaCode: "" };
       await createCatch({
         userId: actualAnglerUserId,
         imageUrl,
@@ -64,11 +68,15 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
         tackle: emptyTackleInfo(),
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
-        publicLatitude: null,
-        publicLongitude: null,
+        publicLatitude: blurredLocation?.latitude ?? null,
+        publicLongitude: blurredLocation?.longitude ?? null,
         locationVisibility: location ? "exact" : "hidden",
-        areaName: "",
+        areaName: inferredArea.areaName,
+        areaCode: inferredArea.areaCode,
         pointName: "",
+        blurRadiusMeters,
+        locationCreatedAt: location ? new Date().toISOString() : null,
+        locationUpdatedAt: location ? new Date().toISOString() : null,
         isPublic: false,
         publicShareEnabledAt: null,
         tournamentId: null,

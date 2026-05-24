@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { deleteTournament, getTournament, parseTargetFishTypes, updateTournament } from "@/lib/tournaments";
-import type { Tournament, TournamentRankingType, TournamentVisibility } from "@/types";
+import type { Tournament, TournamentLocationVisibility, TournamentRankingType, TournamentVisibility } from "@/types";
 
 export default function EditTournamentPage({ params }: { params: { tournamentId: string } }) {
   return (
@@ -26,6 +26,7 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
   const [rankingType, setRankingType] = useState<TournamentRankingType>("biggest");
   const [rules, setRules] = useState("");
   const [visibility, setVisibility] = useState<TournamentVisibility>("public");
+  const [locationVisibilityDefault, setLocationVisibilityDefault] = useState<TournamentLocationVisibility>("exactForOrganizersOnly");
   const [maxParticipants, setMaxParticipants] = useState("");
   const [message, setMessage] = useState("読み込み中です。");
   const [busy, setBusy] = useState(false);
@@ -46,6 +47,7 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
         setRankingType(result.rankingType);
         setRules(result.rules);
         setVisibility(result.visibility);
+        setLocationVisibilityDefault(result.locationVisibilityDefault);
         setMaxParticipants(result.maxParticipants == null ? "" : String(result.maxParticipants));
         setMessage("");
       })
@@ -66,6 +68,7 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
         rankingType,
         rules,
         visibility,
+        locationVisibilityDefault,
         maxParticipants: maxParticipants ? Number(maxParticipants) : null
       });
       router.push(`/tournaments/${tournamentId}`);
@@ -128,6 +131,15 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
             </select>
           </label>
           <VisibilityHelp visibility={visibility} />
+          <label className="block">
+            <span className="text-sm font-bold">大会内の位置情報表示</span>
+            <select value={locationVisibilityDefault} onChange={(event) => setLocationVisibilityDefault(event.target.value as TournamentLocationVisibility)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 font-bold">
+              <option value="exactForOrganizersOnly">主催者のみ正確位置を表示</option>
+              <option value="blurredForParticipants">参加者にはぼかして表示</option>
+              <option value="areaOnlyForParticipants">参加者にはエリア名のみ表示</option>
+              <option value="hiddenForParticipants">参加者には表示しない</option>
+            </select>
+          </label>
           <Field label="参加上限人数" type="number" value={maxParticipants} onChange={setMaxParticipants} />
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
           <button disabled={busy || !tournament} className="tap-target w-full rounded bg-coral px-5 py-4 text-lg font-black text-white disabled:opacity-60">

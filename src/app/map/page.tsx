@@ -6,7 +6,8 @@ import { AuthGate } from "@/components/AuthGate";
 import { formatDate } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getUserCatches } from "@/lib/catches";
-import type { Catch } from "@/types";
+import { getDisplayLocation } from "@/lib/locationBlur";
+import type { Catch, DisplayLocation } from "@/types";
 
 export default function MapPage() {
   return (
@@ -28,7 +29,9 @@ function CatchMap({ userId }: { userId: string }) {
         return;
       }
 
-      const items = (await getUserCatches(userId)).filter((item) => item.latitude != null && item.longitude != null);
+      const items = (await getUserCatches(userId))
+        .map((item) => ({ item, displayLocation: getDisplayLocation(userId, item, { type: "personal" }) }))
+        .filter((entry): entry is { item: Catch; displayLocation: DisplayLocation & { latitude: number; longitude: number } } => entry.displayLocation.latitude != null && entry.displayLocation.longitude != null);
       if (!items.length) {
         setMessage("位置情報付きの釣果がありません。");
         return;
@@ -36,13 +39,13 @@ function CatchMap({ userId }: { userId: string }) {
 
       const loader = new Loader({ apiKey, version: "weekly" });
       const google = await loader.load();
-      const center = { lat: items[0].latitude as number, lng: items[0].longitude as number };
+      const center = { lat: items[0].displayLocation.latitude, lng: items[0].displayLocation.longitude };
       const map = new google.maps.Map(mapRef.current as HTMLDivElement, { center, zoom: 11 });
       const info = new google.maps.InfoWindow();
 
-      items.forEach((item) => {
+      items.forEach(({ item, displayLocation }) => {
         const marker = new google.maps.Marker({
-          position: { lat: item.latitude as number, lng: item.longitude as number },
+          position: { lat: displayLocation.latitude, lng: displayLocation.longitude },
           map,
           title: `${item.fishType} ${item.sizeCm}cm`
         });

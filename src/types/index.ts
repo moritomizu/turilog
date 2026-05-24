@@ -13,6 +13,17 @@ export type LocationVisibility = "exact" | "public" | "hidden";
 export type GroupRole = "owner" | "admin" | "moderator" | "member" | "viewer";
 export type GroupVisibility = "private" | "inviteOnly" | "public";
 export type GroupLocationVisibility = "exactForAdminsOnly" | "exactForAllMembers" | "blurredForMembers" | "hidden";
+export type TournamentLocationVisibility = "exactForOrganizersOnly" | "blurredForParticipants" | "areaOnlyForParticipants" | "hiddenForParticipants";
+export type DisplayLocationType = "exact" | "blurred" | "areaOnly" | "hidden";
+
+export type DisplayLocation = {
+  type: DisplayLocationType;
+  latitude?: number;
+  longitude?: number;
+  areaName?: string;
+  areaCode?: string;
+  message: string;
+};
 
 export type User = {
   uid: string;
@@ -123,7 +134,11 @@ export type Catch = TideInfo &
   publicLongitude: number | null;
   locationVisibility: LocationVisibility;
   areaName: string;
+  areaCode: string;
   pointName: string;
+  blurRadiusMeters: number | null;
+  locationCreatedAt: string | null;
+  locationUpdatedAt: string | null;
   isPublic: boolean;
   publicShareEnabledAt: string | null;
   tournamentId: string | null;
@@ -156,6 +171,7 @@ export type Tournament = {
   rules: string;
   visibility: TournamentVisibility;
   maxParticipants: number | null;
+  locationVisibilityDefault: TournamentLocationVisibility;
   createdAt: string;
   updatedAt: string;
 };

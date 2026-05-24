@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import type { Catch } from "@/types";
+import type { Catch, DisplayLocation } from "@/types";
 
-export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
+export function CatchCard({ item, rank, displayLocation }: { item: Catch; rank?: number; displayLocation?: DisplayLocation }) {
   const [showTideHelp, setShowTideHelp] = useState(false);
 
   return (
@@ -37,6 +37,7 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
         ) : null}
         <div className="grid grid-cols-2 gap-2 text-sm">
           <Info label="エリア" value={formatArea(item)} />
+          {displayLocation ? <Info label="位置情報" value={formatDisplayLocation(displayLocation)} /> : null}
           <Info label="当時の天候" value={item.weather.weatherLabel} />
           <Info label="当時の風" value={formatWind(item)} />
           <Info label="当時の気温" value={item.weather.temperatureC == null ? "未取得" : `${item.weather.temperatureC}度`} />
@@ -77,6 +78,13 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
       </div>
     </article>
   );
+}
+
+function formatDisplayLocation(displayLocation: DisplayLocation) {
+  if (displayLocation.type === "exact") return "正確位置を表示中";
+  if (displayLocation.type === "blurred") return "周辺エリアをぼかして表示";
+  if (displayLocation.type === "areaOnly") return `エリア: ${displayLocation.areaName ?? "未分類エリア"}`;
+  return "位置情報: 非公開";
 }
 
 function TideHelp() {

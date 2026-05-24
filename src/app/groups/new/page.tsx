@@ -60,14 +60,14 @@ function GroupForm({ userId, userName, email }: { userId: string; userName: stri
             ]}
           />
           <Select
-            label="位置情報表示設定"
+            label="グループ内の位置情報表示"
             value={locationVisibilityDefault}
             onChange={(value) => setLocationVisibilityDefault(value as GroupLocationVisibility)}
             options={[
-              ["exactForAdminsOnly", "管理者のみ正確位置"],
-              ["exactForAllMembers", "全メンバーに正確位置"],
-              ["blurredForMembers", "メンバーにはぼかし位置"],
-              ["hidden", "位置情報非表示"]
+              ["exactForAdminsOnly", "管理者のみ正確位置を表示"],
+              ["exactForAllMembers", "メンバー全員に正確位置を表示"],
+              ["blurredForMembers", "メンバーにはぼかして表示"],
+              ["hidden", "メンバーには表示しない"]
             ]}
           />
           <p className="rounded bg-foam p-3 text-xs font-bold leading-5 text-slate-600">作成後に招待コードが発行されます。仲間には /groups/join から招待コードを入力して参加してもらえます。</p>

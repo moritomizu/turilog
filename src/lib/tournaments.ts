@@ -3,7 +3,7 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
-import type { Tournament, TournamentParticipant, TournamentRankingType, TournamentRole, TournamentStatus, TournamentVisibility } from "@/types";
+import type { Tournament, TournamentLocationVisibility, TournamentParticipant, TournamentRankingType, TournamentRole, TournamentStatus, TournamentVisibility } from "@/types";
 
 export type TournamentInput = {
   ownerId: string;
@@ -16,6 +16,7 @@ export type TournamentInput = {
   rules: string;
   visibility: TournamentVisibility;
   maxParticipants: number | null;
+  locationVisibilityDefault?: TournamentLocationVisibility;
   ownerUserName?: string;
   ownerEmail?: string | null;
 };
@@ -186,6 +187,10 @@ function normalizeTournament(id: string, data: Record<string, unknown>): Tournam
     rules: typeof data.rules === "string" ? data.rules : "",
     visibility: data.visibility === "private" ? "private" : "public",
     maxParticipants: typeof data.maxParticipants === "number" ? data.maxParticipants : null,
+    locationVisibilityDefault:
+      data.locationVisibilityDefault === "blurredForParticipants" || data.locationVisibilityDefault === "areaOnlyForParticipants" || data.locationVisibilityDefault === "hiddenForParticipants"
+        ? data.locationVisibilityDefault
+        : "exactForOrganizersOnly",
     createdAt: normalizeDate(data.createdAt),
     updatedAt: normalizeDate(data.updatedAt)
   };

@@ -10,7 +10,8 @@ import { deleteCatch, getGroupCatches, updateCatch } from "@/lib/catches";
 import { addGroupCatchComment, getGroupCatchComments } from "@/lib/groupCatchComments";
 import { canDeleteGroupCatchSync, canEditGroupCatchSync, canManageGroupMembersSync, canViewGroupExactLocationSync, findGroupMember } from "@/lib/groupPermissions";
 import { deleteGroup, getGroup, getGroupMembers } from "@/lib/groups";
-import type { Catch, Group, GroupCatchComment, GroupMember } from "@/types";
+import { getDisplayLocation } from "@/lib/locationBlur";
+import type { Catch, DisplayLocation, Group, GroupCatchComment, GroupMember } from "@/types";
 
 export default function GroupDetailPage({ params }: { params: { groupId: string } }) {
   return <AuthGate>{(user) => <GroupDetail groupId={params.groupId} userId={user.uid} />}</AuthGate>;
@@ -126,6 +127,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
                 {currentMember?.canPost ? <Link href={`/groups/${group.id}/post`} className="tap-target rounded bg-coral px-4 py-3 text-center font-black text-white">釣果投稿</Link> : null}
                 <Link href={`/groups/${group.id}/analysis`} className="tap-target rounded border border-water px-4 py-3 text-center font-black text-water">分析</Link>
                 {canManageMembers ? <Link href={`/groups/${group.id}/members`} className="tap-target rounded border border-slate-300 px-4 py-3 text-center font-black text-ink">メンバー管理</Link> : null}
+                {canManageMembers ? <Link href={`/groups/${group.id}/edit`} className="tap-target rounded border border-slate-300 px-4 py-3 text-center font-black text-ink">グループ編集</Link> : null}
               </div>
             </section>
 
@@ -168,7 +170,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
 
             <section>
               <h2 className="mb-3 text-xl font-black">グループ釣果マップ</h2>
-              <GroupCatchMap items={items} memberNames={memberNames} canViewExact={canViewExact} />
+              <GroupCatchMap items={items} memberNames={memberNames} group={group} member={currentMember} userId={userId} />
             </section>
 
             <section>
@@ -177,10 +179,10 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
                 {items.length ? items.map((item) => (
                   <GroupCatch
                     key={item.id}
-                    item={maskLocation(item, canViewExact)}
+                    item={maskLocation(item, getDisplayLocation(userId, item, { type: "group", group, member: currentMember }))}
+                    displayLocation={getDisplayLocation(userId, item, { type: "group", group, member: currentMember })}
                     members={members}
                     memberNames={memberNames}
-                    showExact={canViewExact}
                     comments={commentsByCatch.get(item.id) ?? []}
                     canEdit={canEditGroupCatchSync(currentMember, item, userId)}
                     canDelete={canDeleteGroupCatchSync(currentMember, item, userId)}
@@ -210,9 +212,9 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
 
 function GroupCatch({
   item,
+  displayLocation,
   members,
   memberNames,
-  showExact,
   comments,
   canEdit,
   canDelete,
@@ -221,9 +223,9 @@ function GroupCatch({
   onAddComment
 }: {
   item: Catch;
+  displayLocation: DisplayLocation;
   members: GroupMember[];
   memberNames: Map<string, string>;
-  showExact: boolean;
   comments: GroupCatchComment[];
   canEdit: boolean;
   canDelete: boolean;
@@ -296,11 +298,12 @@ function GroupCatch({
 
   return (
     <div>
-      <CatchCard item={item} />
+      <CatchCard item={item} displayLocation={displayLocation} />
       <div className="rounded-b border-x border-b border-teal-100 bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
         <p>釣った人: {memberNames.get(item.actualAnglerUserId) ?? "メンバー"}</p>
         <p>投稿者: {memberNames.get(item.postedByUserId) ?? "メンバー"}{item.isProxyPost ? " / 代理投稿" : ""}</p>
-        {showExact ? <p>緯度経度: {item.latitude != null ? `${item.latitude.toFixed(5)}, ${item.longitude?.toFixed(5)}` : "未取得"}</p> : <p>位置情報: 非表示</p>}
+        <p>{displayLocation.message}</p>
+        {displayLocation.type === "exact" ? <p>緯度経度: {displayLocation.latitude != null ? `${displayLocation.latitude.toFixed(5)}, ${displayLocation.longitude?.toFixed(5)}` : "未取得"}</p> : null}
         {(canEdit || canDelete) ? (
           <div className="mt-2 grid grid-cols-2 gap-2">
             {canEdit ? <button onClick={() => setEditing((value) => !value)} className="rounded border border-water px-3 py-2 font-black text-water">{editing ? "編集を閉じる" : "編集"}</button> : null}
@@ -379,7 +382,7 @@ function EditField({ label, value, onChange, type = "text" }: { label: string; v
   );
 }
 
-function GroupCatchMap({ items, memberNames, canViewExact }: { items: Catch[]; memberNames: Map<string, string>; canViewExact: boolean }) {
+function GroupCatchMap({ items, memberNames, group, member, userId }: { items: Catch[]; memberNames: Map<string, string>; group: Group; member: GroupMember | null; userId: string }) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [message, setMessage] = useState("地図を準備しています。");
   useEffect(() => {
@@ -389,25 +392,27 @@ function GroupCatchMap({ items, memberNames, canViewExact }: { items: Catch[]; m
         setMessage("Google Maps APIキーが未設定です。");
         return;
       }
-      const positioned = items.map((item) => ({ item, point: getMapPoint(item, canViewExact) })).filter((entry): entry is { item: Catch; point: { lat: number; lng: number } } => Boolean(entry.point));
+      const positioned = items
+        .map((item) => ({ item, displayLocation: getDisplayLocation(userId, item, { type: "group", group, member }) }))
+        .filter((entry): entry is { item: Catch; displayLocation: DisplayLocation & { latitude: number; longitude: number } } => entry.displayLocation.latitude != null && entry.displayLocation.longitude != null);
       if (!positioned.length) {
         setMessage("表示できる位置情報付き釣果がありません。");
         return;
       }
       const google = await new Loader({ apiKey, version: "weekly" }).load();
-      const map = new google.maps.Map(mapRef.current as HTMLDivElement, { center: positioned[0].point, zoom: 10 });
+      const map = new google.maps.Map(mapRef.current as HTMLDivElement, { center: { lat: positioned[0].displayLocation.latitude, lng: positioned[0].displayLocation.longitude }, zoom: 10 });
       const info = new google.maps.InfoWindow();
-      positioned.forEach(({ item, point }) => {
-        const marker = new google.maps.Marker({ position: point, map, title: `${item.fishType} ${item.sizeCm}cm` });
+      positioned.forEach(({ item, displayLocation }) => {
+        const marker = new google.maps.Marker({ position: { lat: displayLocation.latitude, lng: displayLocation.longitude }, map, title: `${item.fishType} ${item.sizeCm}cm` });
         marker.addListener("click", () => {
-          info.setContent(`<strong>${escapeHtml(item.fishType)} ${item.sizeCm}cm</strong><p>${formatDate(item.caughtAt)}</p><p>釣った人: ${escapeHtml(memberNames.get(item.actualAnglerUserId) ?? "メンバー")}</p><p>${escapeHtml(item.comment || "")}</p><p>${item.isProxyPost ? "代理投稿" : "本人投稿"}</p>`);
+          info.setContent(`<strong>${escapeHtml(item.fishType)} ${item.sizeCm}cm</strong><p>${formatDate(item.caughtAt)}</p><p>釣った人: ${escapeHtml(memberNames.get(item.actualAnglerUserId) ?? "メンバー")}</p><p>${escapeHtml(item.comment || "")}</p><p>${item.isProxyPost ? "代理投稿" : "本人投稿"}</p><p>${escapeHtml(displayLocation.message)}</p>`);
           info.open({ map, anchor: marker });
         });
       });
       setMessage("");
     }
     load().catch((error) => setMessage(error instanceof Error ? error.message : "地図を表示できませんでした。"));
-  }, [items, memberNames, canViewExact]);
+  }, [items, memberNames, group, member, userId]);
   return <div>{message ? <p className="mb-3 rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}<div ref={mapRef} className="h-[52vh] min-h-[340px] rounded border border-teal-100 bg-white shadow-soft" /></div>;
 }
 
@@ -450,15 +455,9 @@ function Empty({ text }: { text: string }) {
   return <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{text}</p>;
 }
 
-function maskLocation(item: Catch, canViewExact: boolean): Catch {
-  if (canViewExact) return item;
+function maskLocation(item: Catch, displayLocation: DisplayLocation): Catch {
+  if (displayLocation.type === "exact") return item;
   return { ...item, latitude: null, longitude: null, pointName: "" };
-}
-
-function getMapPoint(item: Catch, canViewExact: boolean) {
-  if (canViewExact && item.latitude != null && item.longitude != null) return { lat: item.latitude, lng: item.longitude };
-  if (item.publicLatitude != null && item.publicLongitude != null) return { lat: item.publicLatitude, lng: item.publicLongitude };
-  return null;
 }
 
 function topValue(values: string[]) {

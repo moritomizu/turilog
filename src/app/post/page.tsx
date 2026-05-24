@@ -8,6 +8,7 @@ import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { getPostableGroupsForUser } from "@/lib/groups";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
+import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
 import { getLunarInfo } from "@/lib/lunar";
 import { getOfficialCurrentReference } from "@/lib/officialCurrent";
 import { getOfficialTideReference } from "@/lib/officialTide";
@@ -219,6 +220,10 @@ function PostForm({ userId }: { userId: string }) {
       const hasTournamentSelection = Boolean(selectedTournament);
       const selectedGroup = groupOptions.find((item) => item.id === selectedGroupId) ?? null;
       const selectedGroupIds = selectedGroup ? [selectedGroup.id] : [];
+      const blurRadiusMeters = location ? getDefaultBlurRadius() : null;
+      const blurredLocation = location && blurRadiusMeters ? generateBlurredLocation(location.latitude, location.longitude, blurRadiusMeters) : null;
+      const inferredArea = location ? getAreaFromLocation(location.latitude, location.longitude) : { areaName: "", areaCode: "" };
+      const savedAreaName = areaName || inferredArea.areaName;
 
       await createCatch({
         userId,
@@ -230,11 +235,15 @@ function PostForm({ userId }: { userId: string }) {
         tackle,
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
-        publicLatitude: null,
-        publicLongitude: null,
+        publicLatitude: blurredLocation?.latitude ?? null,
+        publicLongitude: blurredLocation?.longitude ?? null,
         locationVisibility: location?.latitude != null && location?.longitude != null ? "exact" : "hidden",
-        areaName,
+        areaName: savedAreaName,
+        areaCode: inferredArea.areaCode,
         pointName: pointName.trim(),
+        blurRadiusMeters,
+        locationCreatedAt: location ? new Date().toISOString() : null,
+        locationUpdatedAt: location ? new Date().toISOString() : null,
         isPublic: false,
         publicShareEnabledAt: null,
         tournamentId: hasTournamentSelection ? selectedTournamentId : null,
@@ -447,6 +456,9 @@ function PostForm({ userId }: { userId: string }) {
           </section>
 
           {location ? <p className="rounded bg-foam p-3 text-sm font-bold leading-6 text-slate-700">釣った場所と日時をもとに、潮位、公式潮汐曲線リンク、当時の天候、当時の風速を自動保存します。</p> : null}
+          <p className="rounded bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
+            位置情報は釣果記録・潮位取得・マップ表示のために保存されます。グループや大会での表示範囲は、それぞれの設定に従います。
+          </p>
 
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
 

@@ -51,6 +51,21 @@ export async function getGroup(groupId: string): Promise<Group | null> {
   return snapshot.exists() ? normalizeGroup(snapshot.id, snapshot.data()) : null;
 }
 
+export async function updateGroup(groupId: string, requesterUserId: string, input: Pick<Group, "name" | "description" | "visibility" | "locationVisibilityDefault">) {
+  const db = getFirebaseDb();
+  const [group, members] = await Promise.all([getGroup(groupId), getGroupMembers(groupId)]);
+  const requester = members.find((member) => member.userId === requesterUserId && member.status === "active");
+  if (!group) throw new Error("グループが見つかりません。");
+  if (requester?.role !== "owner" && requester?.role !== "admin") throw new Error("グループ管理者のみ編集できます。");
+  await updateDoc(doc(db, "groups", groupId), {
+    name: input.name,
+    description: input.description,
+    visibility: input.visibility,
+    locationVisibilityDefault: input.locationVisibilityDefault,
+    updatedAt: serverTimestamp()
+  });
+}
+
 export async function getGroupsForUser(userId: string): Promise<Group[]> {
   const snapshot = await getDocs(query(collection(getFirebaseDb(), "groupMembers"), where("userId", "==", userId), where("status", "==", "active")));
   const ids = snapshot.docs.map((item) => item.data().groupId).filter((value): value is string => typeof value === "string");
