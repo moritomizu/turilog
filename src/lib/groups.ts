@@ -2,7 +2,7 @@
 
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
-import type { Group, GroupLocationVisibility, GroupMember, GroupRole, GroupVisibility } from "@/types";
+import type { Group, GroupJoinRequest, GroupJoinRequestStatus, GroupLocationVisibility, GroupMember, GroupRole, GroupVisibility } from "@/types";
 
 export type GroupInput = {
   ownerId: string;
@@ -58,6 +58,11 @@ export async function getGroupsForUser(userId: string): Promise<Group[]> {
   return groups.filter((item): item is Group => Boolean(item)).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+export async function getDiscoverableGroups(): Promise<Group[]> {
+  const snapshot = await getDocs(query(collection(getFirebaseDb(), "groups"), where("visibility", "in", ["public", "inviteOnly"])));
+  return snapshot.docs.map((item) => normalizeGroup(item.id, item.data())).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
 export async function getPostableGroupsForUser(userId: string): Promise<Group[]> {
   const snapshot = await getDocs(query(collection(getFirebaseDb(), "groupMembers"), where("userId", "==", userId), where("status", "==", "active")));
   const ids = snapshot.docs
@@ -105,6 +110,47 @@ export async function joinGroup(group: Group, userId: string, userName: string, 
     memberCount: (await getGroupMembers(group.id)).length + (existing.exists() ? 0 : 1),
     updatedAt: serverTimestamp()
   });
+}
+
+export async function requestJoinGroup(group: Group, userId: string, userName: string, email: string | null, message: string) {
+  if (group.visibility !== "inviteOnly") throw new Error("参加申請が必要なグループではありません。");
+  const db = getFirebaseDb();
+  const memberRef = doc(db, "groupMembers", `${group.id}_${userId}`);
+  const member = await getDoc(memberRef);
+  if (member.exists() && member.data().status === "active") throw new Error("すでに参加しています。");
+  const requestRef = doc(db, "groupJoinRequests", `${group.id}_${userId}`);
+  const existing = await getDoc(requestRef);
+  if (existing.exists() && existing.data().status === "pending") throw new Error("すでに参加申請中です。");
+  await setDoc(requestRef, {
+    groupId: group.id,
+    userId,
+    userName,
+    email,
+    message: message.trim(),
+    status: "pending",
+    requestedAt: serverTimestamp(),
+    reviewedAt: null,
+    reviewedBy: null
+  });
+}
+
+export async function getGroupJoinRequests(groupId: string): Promise<GroupJoinRequest[]> {
+  const snapshot = await getDocs(query(collection(getFirebaseDb(), "groupJoinRequests"), where("groupId", "==", groupId)));
+  return snapshot.docs.map((item) => normalizeGroupJoinRequest(item.id, item.data())).sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+}
+
+export async function reviewGroupJoinRequest(request: GroupJoinRequest, status: Exclude<GroupJoinRequestStatus, "pending">, reviewedBy: string) {
+  const db = getFirebaseDb();
+  const requestRef = doc(db, "groupJoinRequests", request.id);
+  await updateDoc(requestRef, {
+    status,
+    reviewedAt: serverTimestamp(),
+    reviewedBy
+  });
+  if (status !== "approved") return;
+  const group = await getGroup(request.groupId);
+  if (!group) throw new Error("グループが見つかりません。");
+  await joinGroup(group, request.userId, request.userName, request.email);
 }
 
 export async function updateGroupMemberPermissions(member: GroupMember, input: Pick<GroupMember, "role" | "canViewExactLocation" | "canPost" | "canProxyPost" | "canEditGroupCatches" | "canDeleteGroupCatches">) {
@@ -173,6 +219,21 @@ function normalizeGroupMember(id: string, data: Record<string, unknown>): GroupM
     joinedAt: normalizeDate(data.joinedAt),
     updatedAt: data.updatedAt == null ? null : normalizeDate(data.updatedAt),
     status: data.status === "invited" || data.status === "removed" ? data.status : "active"
+  };
+}
+
+function normalizeGroupJoinRequest(id: string, data: Record<string, unknown>): GroupJoinRequest {
+  return {
+    id,
+    groupId: typeof data.groupId === "string" ? data.groupId : "",
+    userId: typeof data.userId === "string" ? data.userId : "",
+    userName: typeof data.userName === "string" ? data.userName : "参加希望者",
+    email: typeof data.email === "string" ? data.email : null,
+    message: typeof data.message === "string" ? data.message : "",
+    status: data.status === "approved" || data.status === "rejected" ? data.status : "pending",
+    requestedAt: normalizeDate(data.requestedAt),
+    reviewedAt: data.reviewedAt == null ? null : normalizeDate(data.reviewedAt),
+    reviewedBy: typeof data.reviewedBy === "string" ? data.reviewedBy : null
   };
 }
 

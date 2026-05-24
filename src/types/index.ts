@@ -216,3 +216,18 @@ export type GroupCatchComment = {
   body: string;
   createdAt: string;
 };
+
+export type GroupJoinRequestStatus = "pending" | "approved" | "rejected";
+
+export type GroupJoinRequest = {
+  id: string;
+  groupId: string;
+  userId: string;
+  userName: string;
+  email: string | null;
+  message: string;
+  status: GroupJoinRequestStatus;
+  requestedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+};

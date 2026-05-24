@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { canManageGroupMembersSync, findGroupMember } from "@/lib/groupPermissions";
-import { getGroup, getGroupMembers, updateGroupMemberPermissions } from "@/lib/groups";
-import type { Group, GroupMember, GroupRole } from "@/types";
+import { getGroup, getGroupJoinRequests, getGroupMembers, reviewGroupJoinRequest, updateGroupMemberPermissions } from "@/lib/groups";
+import type { Group, GroupJoinRequest, GroupMember, GroupRole } from "@/types";
 
 export default function GroupMembersPage({ params }: { params: { groupId: string } }) {
   return <AuthGate>{(user) => <GroupMembers groupId={params.groupId} userId={user.uid} />}</AuthGate>;
@@ -14,14 +14,16 @@ export default function GroupMembersPage({ params }: { params: { groupId: string
 function GroupMembers({ groupId, userId }: { groupId: string; userId: string }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
+  const [requests, setRequests] = useState<GroupJoinRequest[]>([]);
   const [message, setMessage] = useState("読み込み中です。");
   const requester = findGroupMember(members, userId);
   const canManage = canManageGroupMembersSync(requester);
 
   const load = useCallback(async () => {
-    const [nextGroup, nextMembers] = await Promise.all([getGroup(groupId), getGroupMembers(groupId)]);
+    const [nextGroup, nextMembers, nextRequests] = await Promise.all([getGroup(groupId), getGroupMembers(groupId), getGroupJoinRequests(groupId)]);
     setGroup(nextGroup);
     setMembers(nextMembers);
+    setRequests(nextRequests);
     setMessage(nextGroup ? "" : "グループが見つかりません。");
   }, [groupId]);
 
@@ -51,6 +53,13 @@ function GroupMembers({ groupId, userId }: { groupId: string; userId: string }) 
     setMessage("権限を更新しました。");
   }
 
+  async function handleReviewRequest(request: GroupJoinRequest, status: "approved" | "rejected") {
+    if (!requester) return;
+    await reviewGroupJoinRequest(request, status, requester.userId);
+    await load();
+    setMessage(status === "approved" ? "参加申請を承認しました。" : "参加申請を却下しました。");
+  }
+
   if (group && !canManage) {
     return <><PageHeader title="メンバー管理" actionHref={`/groups/${groupId}`} actionLabel="詳細" /><main className="mx-auto max-w-xl px-4 py-5"><p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">オーナーまたは管理者のみアクセスできます。</p></main></>;
   }
@@ -61,6 +70,27 @@ function GroupMembers({ groupId, userId }: { groupId: string; userId: string }) 
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-5">
         {message ? <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
         {group ? <h1 className="text-2xl font-black">{group.name} メンバー管理</h1> : null}
+        <section className="rounded border border-coral/20 bg-orange-50 p-4 shadow-soft">
+          <h2 className="text-lg font-black">参加申請</h2>
+          <div className="mt-3 grid gap-3">
+            {requests.filter((request) => request.status === "pending").length ? requests.filter((request) => request.status === "pending").map((request) => (
+              <article key={request.id} className="rounded bg-white p-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-black">{request.userName}</p>
+                    <p className="text-xs font-bold text-slate-500">{request.email ?? "メール未取得"}</p>
+                    <p className="mt-1 text-xs font-bold text-slate-500">申請日: {formatDate(request.requestedAt)}</p>
+                    {request.message ? <p className="mt-2 rounded bg-foam p-2 text-sm font-bold leading-5 text-slate-700">{request.message}</p> : null}
+                  </div>
+                  <div className="grid gap-2 sm:w-40">
+                    <button onClick={() => handleReviewRequest(request, "approved")} className="tap-target rounded bg-water px-4 py-2 text-sm font-black text-white">承認</button>
+                    <button onClick={() => handleReviewRequest(request, "rejected")} className="tap-target rounded border border-coral bg-white px-4 py-2 text-sm font-black text-coral">却下</button>
+                  </div>
+                </div>
+              </article>
+            )) : <p className="rounded bg-white p-3 text-sm font-bold text-slate-600">承認待ちの参加申請はありません。</p>}
+          </div>
+        </section>
         <div className="grid gap-3">
           {members.map((member) => {
             const locked = member.role === "owner" || (requester?.role === "admin" && member.role === "admin");
