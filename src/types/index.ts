@@ -206,3 +206,13 @@ export type GroupMember = {
   updatedAt: string | null;
   status: "active" | "invited" | "removed";
 };
+
+export type GroupCatchComment = {
+  id: string;
+  groupId: string;
+  catchId: string;
+  userId: string;
+  userName: string;
+  body: string;
+  createdAt: string;
+};

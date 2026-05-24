@@ -7,9 +7,10 @@ import { AuthGate } from "@/components/AuthGate";
 import { CatchCard, formatDate } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
 import { deleteCatch, getGroupCatches, updateCatch } from "@/lib/catches";
+import { addGroupCatchComment, getGroupCatchComments } from "@/lib/groupCatchComments";
 import { canDeleteGroupCatchSync, canEditGroupCatchSync, canManageGroupMembersSync, canViewGroupExactLocationSync, findGroupMember } from "@/lib/groupPermissions";
 import { deleteGroup, getGroup, getGroupMembers } from "@/lib/groups";
-import type { Catch, Group, GroupMember } from "@/types";
+import type { Catch, Group, GroupCatchComment, GroupMember } from "@/types";
 
 export default function GroupDetailPage({ params }: { params: { groupId: string } }) {
   return <AuthGate>{(user) => <GroupDetail groupId={params.groupId} userId={user.uid} />}</AuthGate>;
@@ -19,6 +20,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [items, setItems] = useState<Catch[]>([]);
+  const [comments, setComments] = useState<GroupCatchComment[]>([]);
   const [message, setMessage] = useState("読み込み中です。");
   const currentMember = findGroupMember(members, userId);
   const canView = Boolean(currentMember);
@@ -26,11 +28,16 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   const canManageMembers = canManageGroupMembersSync(currentMember);
   const canDeleteGroup = currentMember?.role === "owner" || currentMember?.role === "admin";
   const memberNames = useMemo(() => new Map(members.map((member) => [member.userId, member.userName])), [members]);
+  const commentsByCatch = useMemo(() => groupCommentsByCatch(comments), [comments]);
   const digest = useMemo(() => buildDigest(items), [items]);
   const ranking = useMemo(() => buildRanking(items, memberNames), [items, memberNames]);
 
   async function reloadItems() {
     setItems(await getGroupCatches(groupId));
+  }
+
+  async function reloadComments() {
+    setComments(await getGroupCatchComments(groupId));
   }
 
   async function handleSaveCatch(item: Catch, patch: Partial<Pick<Catch, "fishType" | "sizeCm" | "comment" | "caughtAt" | "actualAnglerUserId">>) {
@@ -42,6 +49,18 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
     if (!window.confirm("このグループ釣果を削除しますか？")) return;
     await deleteCatch(item.id);
     await reloadItems();
+  }
+
+  async function handleAddComment(item: Catch, body: string) {
+    if (!currentMember) throw new Error("グループメンバーのみコメントできます。");
+    await addGroupCatchComment({
+      groupId,
+      catchId: item.id,
+      userId,
+      userName: currentMember.userName,
+      body
+    });
+    await reloadComments();
   }
 
   async function copyInviteLink(inviteCode: string) {
@@ -64,11 +83,12 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   }
 
   useEffect(() => {
-    Promise.all([getGroup(groupId), getGroupMembers(groupId), getGroupCatches(groupId)])
-      .then(([nextGroup, nextMembers, nextItems]) => {
+    Promise.all([getGroup(groupId), getGroupMembers(groupId), getGroupCatches(groupId), getGroupCatchComments(groupId)])
+      .then(([nextGroup, nextMembers, nextItems, nextComments]) => {
         setGroup(nextGroup);
         setMembers(nextMembers);
         setItems(nextItems);
+        setComments(nextComments);
         setMessage(nextGroup ? "" : "グループが見つかりません。");
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "グループを読み込めませんでした。"));
@@ -161,10 +181,12 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
                     members={members}
                     memberNames={memberNames}
                     showExact={canViewExact}
+                    comments={commentsByCatch.get(item.id) ?? []}
                     canEdit={canEditGroupCatchSync(currentMember, item, userId)}
                     canDelete={canDeleteGroupCatchSync(currentMember, item, userId)}
                     onSave={(patch) => handleSaveCatch(item, patch)}
                     onDelete={() => handleDeleteCatch(item)}
+                    onAddComment={(body) => handleAddComment(item, body)}
                   />
                 )) : <Empty text="釣果がありません。" />}
               </div>
@@ -191,21 +213,26 @@ function GroupCatch({
   members,
   memberNames,
   showExact,
+  comments,
   canEdit,
   canDelete,
   onSave,
-  onDelete
+  onDelete,
+  onAddComment
 }: {
   item: Catch;
   members: GroupMember[];
   memberNames: Map<string, string>;
   showExact: boolean;
+  comments: GroupCatchComment[];
   canEdit: boolean;
   canDelete: boolean;
   onSave: (patch: Partial<Pick<Catch, "fishType" | "sizeCm" | "comment" | "caughtAt" | "actualAnglerUserId">>) => Promise<void>;
   onDelete: () => void;
+  onAddComment: (body: string) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
+  const [commentBody, setCommentBody] = useState("");
   const [fishType, setFishType] = useState(item.fishType);
   const [sizeCm, setSizeCm] = useState(String(item.sizeCm));
   const [caughtAt, setCaughtAt] = useState(toLocalInputValue(new Date(item.caughtAt)));
@@ -213,6 +240,7 @@ function GroupCatch({
   const [actualAnglerUserId, setActualAnglerUserId] = useState(item.actualAnglerUserId);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [commentBusy, setCommentBusy] = useState(false);
 
   async function handleSave() {
     const nextSize = Number(sizeCm);
@@ -245,6 +273,24 @@ function GroupCatch({
       setMessage(error instanceof Error ? error.message : "編集できませんでした。");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleCommentSubmit() {
+    if (!commentBody.trim()) {
+      setMessage("コメントを入力してください。");
+      return;
+    }
+    setCommentBusy(true);
+    setMessage("コメントを追加しています。");
+    try {
+      await onAddComment(commentBody);
+      setCommentBody("");
+      setMessage("コメントを追加しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "コメントを追加できませんでした。");
+    } finally {
+      setCommentBusy(false);
     }
   }
 
@@ -286,6 +332,39 @@ function GroupCatch({
             {message ? <p className="text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
           </div>
         ) : null}
+        <div className="mt-3 rounded bg-foam p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-black text-slate-600">コメント</p>
+            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-black text-slate-500">{comments.length}件</span>
+          </div>
+          {comments.length ? (
+            <div className="mt-2 space-y-2">
+              {comments.map((comment) => (
+                <div key={comment.id} className="rounded bg-white p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-black text-ink">{comment.userName}</p>
+                    <p className="shrink-0 text-[11px] text-slate-400">{formatCommentDate(comment.createdAt)}</p>
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm font-bold leading-5 text-slate-700">{comment.body}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs font-bold text-slate-500">まだコメントはありません。</p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <input
+              value={commentBody}
+              onChange={(event) => setCommentBody(event.target.value)}
+              className="min-w-0 flex-1 rounded border border-slate-300 bg-white p-2 text-sm font-bold"
+              placeholder="ナイス、状況メモなど"
+            />
+            <button type="button" disabled={commentBusy || !commentBody.trim()} onClick={handleCommentSubmit} className="rounded bg-water px-3 py-2 text-sm font-black text-white disabled:opacity-50">
+              送信
+            </button>
+          </div>
+          {!editing && message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
+        </div>
       </div>
     </div>
   );
@@ -353,6 +432,12 @@ function buildRanking(items: Catch[], memberNames: Map<string, string>) {
   return [...groups.entries()].map(([userId, userItems]) => ({ userId, userName: memberNames.get(userId) ?? "メンバー", best: Math.max(...userItems.map((item) => item.sizeCm)), count: userItems.length })).sort((a, b) => b.best - a.best);
 }
 
+function groupCommentsByCatch(comments: GroupCatchComment[]) {
+  const groups = new Map<string, GroupCatchComment[]>();
+  comments.forEach((comment) => groups.set(comment.catchId, [...(groups.get(comment.catchId) ?? []), comment]));
+  return groups;
+}
+
 function RankingRow({ row, rank }: { row: { userName: string; best: number; count: number }; rank: number }) {
   return <div className="rounded border border-teal-100 bg-white p-3 shadow-soft"><p className="text-xs font-black text-coral">#{rank}</p><p className="font-black">{row.userName}</p><p className="text-sm font-bold text-slate-600">最大 {row.best}cm / {row.count}件</p></div>;
 }
@@ -392,6 +477,15 @@ function getLocationLabel(value: Group["locationVisibilityDefault"]) {
 function toLocalInputValue(date: Date) {
   const offset = date.getTimezoneOffset();
   return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
+}
+
+function formatCommentDate(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
 
 function escapeHtml(value: string) {
