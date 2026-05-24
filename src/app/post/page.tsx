@@ -477,9 +477,15 @@ function PostForm({ userId }: { userId: string }) {
 
 function MapPicker({ location, onPick }: { location: LocationPoint | null; onPick: (point: LocationPoint) => void }) {
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
+  const onPickRef = useRef(onPick);
   const initialLocationRef = useRef(location);
   const [message, setMessage] = useState("地図を読み込んでいます。");
+
+  useEffect(() => {
+    onPickRef.current = onPick;
+  }, [onPick]);
 
   useEffect(() => {
     let mounted = true;
@@ -506,6 +512,7 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
         mapTypeControl: false,
         fullscreenControl: false
       });
+      mapInstanceRef.current = map;
 
       markerRef.current = new google.maps.Marker({
         position: center,
@@ -516,7 +523,7 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
       function setPoint(latLng: google.maps.LatLng) {
         const point = { latitude: latLng.lat(), longitude: latLng.lng() };
         markerRef.current?.setPosition(latLng);
-        onPick(point);
+        onPickRef.current(point);
         setMessage("ピンの場所を投稿位置に設定しました。");
       }
 
@@ -539,7 +546,14 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
     return () => {
       mounted = false;
     };
-  }, [onPick]);
+  }, []);
+
+  useEffect(() => {
+    if (!location || !mapInstanceRef.current || !markerRef.current) return;
+    const nextPosition = { lat: location.latitude, lng: location.longitude };
+    markerRef.current.setPosition(nextPosition);
+    mapInstanceRef.current.panTo(nextPosition);
+  }, [location]);
 
   return (
     <div className="mt-3">
