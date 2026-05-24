@@ -27,6 +27,11 @@ export async function getUserCatches(userId: string): Promise<Catch[]> {
   return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
 }
 
+export async function getCatchById(catchId: string): Promise<Catch | null> {
+  const snapshot = await getDoc(doc(getFirebaseDb(), "catches", catchId));
+  return snapshot.exists() ? normalizeCatchDoc(snapshot.id, snapshot.data()) : null;
+}
+
 export async function getTournamentCatches(tournamentId: string): Promise<Catch[]> {
   const snapshot = await getDocs(query(collection(getFirebaseDb(), "catches"), where("tournamentId", "==", tournamentId)));
   return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
@@ -37,7 +42,31 @@ export async function getGroupCatches(groupId: string): Promise<Catch[]> {
   return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
 }
 
-export async function updateCatch(catchId: string, data: Partial<Pick<Catch, "fishType" | "sizeCm" | "comment" | "caughtAt" | "actualAnglerUserId" | "groupIds" | "primaryGroupId">>) {
+export async function updateCatch(
+  catchId: string,
+  data: Partial<
+    Pick<
+      Catch,
+      | "fishType"
+      | "sizeCm"
+      | "comment"
+      | "caughtAt"
+      | "actualAnglerUserId"
+      | "groupIds"
+      | "primaryGroupId"
+      | "latitude"
+      | "longitude"
+      | "publicLatitude"
+      | "publicLongitude"
+      | "locationVisibility"
+      | "areaName"
+      | "areaCode"
+      | "pointName"
+      | "blurRadiusMeters"
+      | "locationUpdatedAt"
+    >
+  >
+) {
   const db = getFirebaseDb();
   await updateDoc(doc(db, "catches", catchId), data);
   const publicRef = doc(db, "publicCatches", catchId);
