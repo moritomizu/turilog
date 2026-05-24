@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithPopup, signOut, onAuthStateChanged, type User } from "firebase/auth";
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, updateProfile, type User } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { Suspense, useEffect, useState } from "react";
 import { getFirebaseAuth, getFirebaseDb, googleProvider, isFirebaseConfigured, missingFirebaseEnv } from "@/lib/firebase";
@@ -22,6 +22,9 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -40,30 +43,73 @@ function LoginContent() {
     setMessage("");
     try {
       const result = await signInWithPopup(getFirebaseAuth(), googleProvider);
-      await setDoc(
-        doc(getFirebaseDb(), "users", result.user.uid),
-        {
-          uid: result.user.uid,
-          displayName: result.user.displayName,
-          email: result.user.email,
-          createdAt: serverTimestamp(),
-          termsAccepted: true,
-          privacyAccepted: true,
-          termsAcceptedAt: serverTimestamp(),
-          privacyAcceptedAt: serverTimestamp(),
-          termsVersion: TERMS_VERSION,
-          privacyVersion: PRIVACY_VERSION
-        },
-        { merge: true }
-      );
+      await saveUserProfile(result.user);
       setMessage("ログインしました。");
-      const next = searchParams.get("next");
-      if (next?.startsWith("/")) router.push(next);
+      goNext();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "ログインに失敗しました。");
+      setMessage(getAuthErrorMessage(error));
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleEmailLogin(mode: "login" | "signup") {
+    if (!acceptedLegal) {
+      setMessage("利用規約とプライバシーポリシーへの同意が必要です。");
+      return;
+    }
+    if (!email.trim() || password.length < 6) {
+      setMessage("メールアドレスと6文字以上のパスワードを入力してください。");
+      return;
+    }
+    if (mode === "signup" && !displayName.trim()) {
+      setMessage("新規登録では表示名を入力してください。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const auth = getFirebaseAuth();
+      const result =
+        mode === "signup"
+          ? await createUserWithEmailAndPassword(auth, email.trim(), password)
+          : await signInWithEmailAndPassword(auth, email.trim(), password);
+      if (mode === "signup" && displayName.trim()) {
+        await updateProfile(result.user, { displayName: displayName.trim() });
+      }
+      await saveUserProfile(result.user, mode === "signup" ? displayName.trim() : undefined);
+      setMessage(mode === "signup" ? "登録しました。" : "ログインしました。");
+      goNext();
+    } catch (error) {
+      setMessage(getAuthErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveUserProfile(nextUser: User, overrideName?: string) {
+    await setDoc(
+      doc(getFirebaseDb(), "users", nextUser.uid),
+      {
+        uid: nextUser.uid,
+        displayName: overrideName ?? nextUser.displayName,
+        email: nextUser.email,
+        createdAt: serverTimestamp(),
+        termsAccepted: true,
+        privacyAccepted: true,
+        termsAcceptedAt: serverTimestamp(),
+        privacyAcceptedAt: serverTimestamp(),
+        termsVersion: TERMS_VERSION,
+        privacyVersion: PRIVACY_VERSION
+      },
+      { merge: true }
+    );
+  }
+
+  function goNext() {
+    const next = searchParams.get("next");
+    if (next?.startsWith("/")) router.push(next);
   }
 
   return (
@@ -71,7 +117,7 @@ function LoginContent() {
       <PageHeader title="ログイン" />
       <main className="mx-auto max-w-xl px-4 py-6">
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
-          <h1 className="text-2xl font-black">Googleログイン</h1>
+          <h1 className="text-2xl font-black">ログイン / 新規登録</h1>
           <p className="mt-2 text-sm leading-6 text-slate-700">投稿・一覧・分析はログイン済みユーザーだけが利用できます。</p>
 
           {!isFirebaseConfigured ? (
@@ -111,6 +157,34 @@ function LoginContent() {
               <button disabled={busy || !acceptedLegal} onClick={handleLogin} className="tap-target w-full rounded bg-water px-5 py-4 font-black text-white disabled:opacity-60">
                 {busy ? "ログイン中..." : "Googleでログイン"}
               </button>
+              <div className="flex items-center gap-3 text-xs font-black text-slate-400">
+                <span className="h-px flex-1 bg-slate-200" />
+                <span>または</span>
+                <span className="h-px flex-1 bg-slate-200" />
+              </div>
+              <div className="space-y-3 rounded border border-teal-100 bg-white p-3">
+                <label className="block">
+                  <span className="text-sm font-bold">表示名（新規登録時）</span>
+                  <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold" placeholder="例: TaPiYoTa" />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-bold">メールアドレス</span>
+                  <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold" placeholder="you@example.com" autoComplete="email" />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-bold">パスワード</span>
+                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold" placeholder="6文字以上" autoComplete="current-password" />
+                </label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button type="button" disabled={busy || !acceptedLegal} onClick={() => handleEmailLogin("login")} className="tap-target rounded border border-water bg-white px-5 py-3 font-black text-water disabled:opacity-60">
+                    メールでログイン
+                  </button>
+                  <button type="button" disabled={busy || !acceptedLegal} onClick={() => handleEmailLogin("signup")} className="tap-target rounded bg-coral px-5 py-3 font-black text-white disabled:opacity-60">
+                    メールで新規登録
+                  </button>
+                </div>
+                <p className="text-xs font-bold leading-5 text-slate-500">Firebase Consoleで「メール/パスワード」認証を有効にすると利用できます。</p>
+              </div>
             </div>
           )}
 
@@ -119,6 +193,17 @@ function LoginContent() {
       </main>
     </>
   );
+}
+
+function getAuthErrorMessage(error: unknown) {
+  const code = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code) : "";
+  if (code === "auth/email-already-in-use") return "このメールアドレスはすでに登録されています。ログインをお試しください。";
+  if (code === "auth/invalid-email") return "メールアドレスの形式が正しくありません。";
+  if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") return "メールアドレスまたはパスワードが違います。";
+  if (code === "auth/weak-password") return "パスワードは6文字以上で設定してください。";
+  if (code === "auth/operation-not-allowed") return "メール/パスワード認証がFirebaseで有効になっていません。Firebase Consoleで有効化してください。";
+  if (code === "auth/popup-closed-by-user") return "ログイン画面が閉じられました。もう一度お試しください。";
+  return error instanceof Error ? error.message : "ログインに失敗しました。";
 }
 
 function LoginShell({ message }: { message: string }) {
