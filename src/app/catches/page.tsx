@@ -6,7 +6,6 @@ import { CatchCard } from "@/components/CatchCard";
 import { PageHeader } from "@/components/PageHeader";
 import { getUserCatches, updateCatch, updateCatchPublicStatus } from "@/lib/catches";
 import { canEditCatchLog } from "@/lib/catchPermissions";
-import { getDisplayLocation } from "@/lib/locationBlur";
 import type { Catch } from "@/types";
 
 export default function CatchesPage() {
@@ -41,7 +40,7 @@ function CatchList({ userId }: { userId: string }) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
             <div key={item.id} className="relative">
-              <CatchCard item={item} displayLocation={getDisplayLocation(userId, item, { type: "personal" })} />
+              <CatchCard item={item} />
               <EmbedControls
                 item={item}
                 userId={userId}

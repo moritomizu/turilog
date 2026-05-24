@@ -273,7 +273,7 @@ function TournamentCatch({ item, userName, showPrivateDetails, displayLocation }
           {getEntryStatusLabel(item.tournamentEntryStatus)}
         </span>
       ) : null}
-      <CatchCard item={displayItem} displayLocation={displayLocation} />
+      <CatchCard item={displayItem} />
       {showPrivateDetails ? (
         <div className="rounded-b border-x border-b border-teal-100 bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
           <p>{displayLocation.message}</p>

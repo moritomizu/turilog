@@ -298,7 +298,7 @@ function GroupCatch({
 
   return (
     <div>
-      <CatchCard item={item} displayLocation={displayLocation} />
+      <CatchCard item={item} />
       <div className="rounded-b border-x border-b border-teal-100 bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
         <p>釣った人: {memberNames.get(item.actualAnglerUserId) ?? "メンバー"}</p>
         <p>投稿者: {memberNames.get(item.postedByUserId) ?? "メンバー"}{item.isProxyPost ? " / 代理投稿" : ""}</p>

@@ -182,20 +182,15 @@ function PostForm({ userId }: { userId: string }) {
       if (file) imageUrl = await uploadCatchImage(userId, file);
       const caughtAtIso = new Date(caughtAt).toISOString();
 
-      let tideInfo = await fetchTideInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch((error) => {
-        setMessage(error instanceof Error ? `潮位は未取得で保存します: ${error.message}` : "潮位は未取得で保存します。");
-        return null;
-      });
+      const [tideInfoResult, weatherResult, seaTemperatureResult] = await Promise.all([
+        fetchTideInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch(() => null),
+        fetchWeatherInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch(() => null),
+        fetchSeaTemperatureInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch(() => null)
+      ]);
 
-      let weather = await fetchWeatherInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch((error) => {
-        setMessage(error instanceof Error ? `天候は未取得で保存します: ${error.message}` : "天候は未取得で保存します。");
-        return null;
-      });
-
-      let seaTemperature = await fetchSeaTemperatureInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch((error) => {
-        setMessage(error instanceof Error ? `水温は未取得で保存します: ${error.message}` : "水温は未取得で保存します。");
-        return null;
-      });
+      let tideInfo = tideInfoResult;
+      let weather = weatherResult;
+      let seaTemperature = seaTemperatureResult;
 
       tideInfo ??= {
         tideHeight: null,
