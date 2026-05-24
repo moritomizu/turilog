@@ -2,12 +2,26 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, updateProfile, type User } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  isSignInWithEmailLink,
+  onAuthStateChanged,
+  sendSignInLinkToEmail,
+  signInWithEmailAndPassword,
+  signInWithEmailLink,
+  signInWithPopup,
+  signOut,
+  updateProfile,
+  type User
+} from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { Suspense, useEffect, useState } from "react";
 import { getFirebaseAuth, getFirebaseDb, googleProvider, isFirebaseConfigured, missingFirebaseEnv } from "@/lib/firebase";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 import { PageHeader } from "@/components/PageHeader";
+
+const EMAIL_LINK_STORAGE_KEY = "tsurilogEmailForSignIn";
+const EMAIL_LINK_NAME_STORAGE_KEY = "tsurilogEmailLinkDisplayName";
 
 export default function LoginPage() {
   return (
@@ -31,6 +45,36 @@ function LoginContent() {
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     return onAuthStateChanged(getFirebaseAuth(), setUser);
+  }, []);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured || typeof window === "undefined") return;
+    if (!isSignInWithEmailLink(getFirebaseAuth(), window.location.href)) return;
+
+    const storedEmail = window.localStorage.getItem(EMAIL_LINK_STORAGE_KEY) ?? "";
+    const inputEmail = storedEmail || window.prompt("ログインに使ったメールアドレスを入力してください。") || "";
+    if (!inputEmail.trim()) {
+      setMessage("メールリンク認証にはメールアドレスが必要です。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("メールリンクでログインしています。");
+    signInWithEmailLink(getFirebaseAuth(), inputEmail.trim(), window.location.href)
+      .then(async (result) => {
+        const storedName = window.localStorage.getItem(EMAIL_LINK_NAME_STORAGE_KEY) ?? "";
+        if (!result.user.displayName && storedName.trim()) {
+          await updateProfile(result.user, { displayName: storedName.trim() });
+        }
+        await saveUserProfile(result.user, storedName.trim() || undefined);
+        window.localStorage.removeItem(EMAIL_LINK_STORAGE_KEY);
+        window.localStorage.removeItem(EMAIL_LINK_NAME_STORAGE_KEY);
+        setMessage("メールリンクでログインしました。");
+        goNext();
+      })
+      .catch((error) => setMessage(getAuthErrorMessage(error)))
+      .finally(() => setBusy(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleLogin() {
@@ -81,6 +125,36 @@ function LoginContent() {
       await saveUserProfile(result.user, mode === "signup" ? displayName.trim() : undefined);
       setMessage(mode === "signup" ? "登録しました。" : "ログインしました。");
       goNext();
+    } catch (error) {
+      setMessage(getAuthErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSendEmailLink() {
+    if (!acceptedLegal) {
+      setMessage("利用規約とプライバシーポリシーへの同意が必要です。");
+      return;
+    }
+    if (!email.trim()) {
+      setMessage("メールアドレスを入力してください。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("ログインリンクを送信しています。");
+    try {
+      const url = new URL("/login", window.location.origin);
+      const next = searchParams.get("next");
+      if (next?.startsWith("/")) url.searchParams.set("next", next);
+      await sendSignInLinkToEmail(getFirebaseAuth(), email.trim(), {
+        url: url.toString(),
+        handleCodeInApp: true
+      });
+      window.localStorage.setItem(EMAIL_LINK_STORAGE_KEY, email.trim());
+      if (displayName.trim()) window.localStorage.setItem(EMAIL_LINK_NAME_STORAGE_KEY, displayName.trim());
+      setMessage("ログインリンクを送信しました。メール内のリンクを開くと登録/ログインが完了します。");
     } catch (error) {
       setMessage(getAuthErrorMessage(error));
     } finally {
@@ -185,6 +259,15 @@ function LoginContent() {
                 </div>
                 <p className="text-xs font-bold leading-5 text-slate-500">Googleアカウントを使わない場合は、メールアドレスとパスワードでも登録・ログインできます。</p>
               </div>
+              <div className="space-y-3 rounded border border-sky-100 bg-sky-50 p-3">
+                <div>
+                  <p className="text-sm font-black text-sky-900">メールリンクでログイン</p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-slate-600">パスワードなしで、メールに届いたリンクから登録・ログインできます。</p>
+                </div>
+                <button type="button" disabled={busy || !acceptedLegal || !email.trim()} onClick={handleSendEmailLink} className="tap-target w-full rounded bg-water px-5 py-3 font-black text-white disabled:opacity-60">
+                  ログインリンクをメールで送る
+                </button>
+              </div>
             </div>
           )}
 
@@ -202,6 +285,8 @@ function getAuthErrorMessage(error: unknown) {
   if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") return "メールアドレスまたはパスワードが違います。";
   if (code === "auth/weak-password") return "パスワードは6文字以上で設定してください。";
   if (code === "auth/operation-not-allowed") return "メール/パスワード認証がFirebaseで有効になっていません。Firebase Consoleで有効化してください。";
+  if (code === "auth/expired-action-code") return "メールリンクの有効期限が切れています。もう一度送信してください。";
+  if (code === "auth/invalid-action-code") return "メールリンクが無効です。もう一度送信してください。";
   if (code === "auth/popup-closed-by-user") return "ログイン画面が閉じられました。もう一度お試しください。";
   return error instanceof Error ? error.message : "ログインに失敗しました。";
 }
