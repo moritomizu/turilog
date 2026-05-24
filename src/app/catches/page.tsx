@@ -40,13 +40,10 @@ function CatchList({ userId }: { userId: string }) {
           {items.map((item) => (
             <div key={item.id} className="relative">
               <CatchCard item={item} />
-              <EmbedControls
+              <CatchActionMenu
                 item={item}
                 userId={userId}
                 onChange={(nextItem) => setItems((current) => current.map((value) => (value.id === nextItem.id ? nextItem : value)))}
-              />
-              <EditCatchControls
-                item={item}
                 onDelete={(deletedId) => setItems((current) => current.filter((value) => value.id !== deletedId))}
               />
             </div>
@@ -57,43 +54,7 @@ function CatchList({ userId }: { userId: string }) {
   );
 }
 
-function EditCatchControls({ item, onDelete }: { item: Catch; onDelete: (catchId: string) => void }) {
-  const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function handleDelete() {
-    if (!window.confirm("この釣果を削除しますか？削除すると元に戻せません。")) return;
-    setBusy(true);
-    setMessage("削除しています。");
-    try {
-      await deleteCatch(item.id);
-      onDelete(item.id);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "釣果を削除できませんでした。");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <>
-      <Link
-        href={`/catches/${item.id}/edit`}
-        title="釣果を編集"
-        aria-label="釣果を編集"
-        className="tap-target absolute left-3 top-3 z-10 rounded-full border border-white/80 bg-white/95 px-3 py-2 text-xs font-black text-ink shadow-soft"
-      >
-        編集
-      </Link>
-      <button type="button" disabled={busy} onClick={handleDelete} className="tap-target absolute left-3 top-14 z-10 rounded-full border border-white/80 bg-white/95 px-3 py-2 text-xs font-black text-red-700 shadow-soft disabled:opacity-60">
-        削除
-      </button>
-      {message ? <p className="absolute left-3 right-3 top-24 z-20 rounded bg-white p-2 text-xs font-bold text-slate-600 shadow-soft">{message}</p> : null}
-    </>
-  );
-}
-
-function EmbedControls({ item, userId, onChange }: { item: Catch; userId: string; onChange: (item: Catch) => void }) {
+function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; userId: string; onChange: (item: Catch) => void; onDelete: (catchId: string) => void }) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -124,7 +85,21 @@ function EmbedControls({ item, userId, onChange }: { item: Catch; userId: string
       await navigator.clipboard.writeText(embedCode);
       setMessage("埋め込みコードをコピーしました。");
     } catch {
-      setMessage("コピーできませんでした。下のコードを手動でコピーしてください。");
+      setMessage("コピーできませんでした。");
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm("この釣果を削除しますか？削除すると元に戻せません。")) return;
+    setBusy(true);
+    setMessage("削除しています。");
+    try {
+      await deleteCatch(item.id);
+      onDelete(item.id);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "釣果を削除できませんでした。");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -132,25 +107,26 @@ function EmbedControls({ item, userId, onChange }: { item: Catch; userId: string
     <>
       <button
         type="button"
-        title="共有・埋め込み"
-        aria-label="共有・埋め込み"
+        title="釣果メニュー"
+        aria-label="釣果メニュー"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className={`tap-target absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border shadow-soft ${
-          item.isPublic ? "border-sky-200 bg-sky-600 text-white" : "border-white/80 bg-white/95 text-water"
-        }`}
+        className="tap-target absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/80 bg-white/95 text-ink shadow-soft"
       >
-        <ShareIcon />
+        <DotsIcon />
         {item.isPublic ? <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-lime-300 ring-2 ring-white" /> : null}
       </button>
       {open ? (
         <section className="absolute left-3 right-3 top-16 z-20 rounded border border-teal-100 bg-white p-3 shadow-soft">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-black text-ink">共有</p>
+            <p className="text-sm font-black text-ink">メニュー</p>
             <span className={`rounded-full px-2 py-1 text-xs font-black ${item.isPublic ? "bg-sky-100 text-sky-800" : "bg-slate-100 text-slate-600"}`}>
               {item.isPublic ? "公開中" : "非公開"}
             </span>
           </div>
+          <Link href={`/catches/${item.id}/edit`} className="tap-target mt-3 flex w-full items-center justify-center rounded bg-water px-4 py-2 text-sm font-black text-white">
+            編集する
+          </Link>
           <button
             type="button"
             disabled={busy}
@@ -167,9 +143,11 @@ function EmbedControls({ item, userId, onChange }: { item: Catch; userId: string
               <a href={shareUrl} target="_blank" rel="noreferrer" className="tap-target block rounded border border-slate-300 px-4 py-2 text-center text-sm font-black text-ink">
                 表示を確認
               </a>
-              <textarea readOnly value={embedCode} className="h-20 w-full rounded border border-slate-300 bg-foam p-2 text-xs text-slate-700" />
             </div>
           ) : null}
+          <button type="button" disabled={busy} onClick={handleDelete} className="tap-target mt-3 w-full rounded border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-700 disabled:opacity-60">
+            削除する
+          </button>
           {message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
         </section>
       ) : null}
@@ -177,13 +155,12 @@ function EmbedControls({ item, userId, onChange }: { item: Catch; userId: string
   );
 }
 
-function ShareIcon() {
+function DotsIcon() {
   return (
     <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
-      <path d="M8.7 10.7 15.3 7M8.7 13.3l6.6 3.7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
-      <circle cx="18" cy="5.5" r="3" stroke="currentColor" strokeWidth="2" />
-      <circle cx="18" cy="18.5" r="3" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="5" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="19" r="1.8" fill="currentColor" />
     </svg>
   );
 }
