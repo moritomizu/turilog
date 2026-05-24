@@ -17,7 +17,8 @@ export default function GroupsPage() {
   const [items, setItems] = useState<GroupListItem[]>([]);
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
   const [joinName, setJoinName] = useState("");
-  const [requestMessage, setRequestMessage] = useState("");
+  const [openRequestGroupId, setOpenRequestGroupId] = useState("");
+  const [requestMessages, setRequestMessages] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("グループ一覧を読み込んでいます。");
   const [busyId, setBusyId] = useState("");
   const joinedCount = useMemo(() => items.filter((item) => joinedIds.has(item.id)).length, [items, joinedIds]);
@@ -49,7 +50,7 @@ export default function GroupsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]);
 
-  async function handleJoin(group: Group) {
+  async function handleJoin(group: Group, groupMessage = "") {
     if (!user) {
       setMessage("参加するにはログインしてください。");
       return;
@@ -63,8 +64,10 @@ export default function GroupsPage() {
         rememberParticipantName(nextName);
         setMessage("グループに参加しました。");
       } else {
-        await requestJoinGroup(group, user.uid, nextName, user.email ?? null, requestMessage);
+        await requestJoinGroup(group, user.uid, nextName, user.email ?? null, groupMessage);
         rememberParticipantName(nextName);
+        setOpenRequestGroupId("");
+        setRequestMessages((current) => ({ ...current, [group.id]: "" }));
         setMessage("参加申請を送信しました。承認されるとグループに参加できます。");
       }
       await load(user);
@@ -88,14 +91,11 @@ export default function GroupsPage() {
             <Link href="/groups/join" className="tap-target rounded border border-slate-300 px-4 py-3 text-center font-black text-ink">招待コードで参加</Link>
           </div>
           {user ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4">
               <label className="block">
                 <span className="text-xs font-black text-slate-600">参加名</span>
                 <input value={joinName} onChange={(event) => setJoinName(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white p-3 text-sm font-bold" />
-              </label>
-              <label className="block">
-                <span className="text-xs font-black text-slate-600">申請メッセージ（任意）</span>
-                <input value={requestMessage} onChange={(event) => setRequestMessage(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white p-3 text-sm font-bold" placeholder="よろしくお願いします" />
+                <span className="mt-1 block text-xs font-bold leading-5 text-slate-500">参加・申請時にグループ管理者へ表示される名前です。</span>
               </label>
             </div>
           ) : (
@@ -106,6 +106,8 @@ export default function GroupsPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((group) => {
             const joined = joinedIds.has(group.id);
+            const requestOpen = openRequestGroupId === group.id;
+            const requestMessage = requestMessages[group.id] ?? "";
             return (
               <article key={group.id} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <div className="flex items-start justify-between gap-2">
@@ -139,9 +141,40 @@ export default function GroupsPage() {
                       {busyId === group.id ? "参加中..." : "このグループに参加"}
                     </button>
                   ) : (
-                    <button disabled={busyId === group.id || !joinName.trim()} onClick={() => handleJoin(group)} className="tap-target rounded border border-coral px-4 py-3 font-black text-coral disabled:opacity-50">
-                      {busyId === group.id ? "申請中..." : "参加申請する"}
-                    </button>
+                    <div className="rounded border border-orange-100 bg-orange-50 p-3">
+                      {!requestOpen ? (
+                        <>
+                          <p className="text-xs font-bold leading-5 text-slate-700">このグループは申請制です。概要を確認して、管理者へメッセージを添えて申請できます。</p>
+                          <button type="button" disabled={!joinName.trim()} onClick={() => setOpenRequestGroupId(group.id)} className="tap-target mt-2 w-full rounded border border-coral bg-white px-4 py-3 font-black text-coral disabled:opacity-50">
+                            参加申請フォームを開く
+                          </button>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="rounded bg-white p-3 text-xs font-bold leading-5 text-slate-700">
+                            <p className="font-black text-ink">申請先: {group.name}</p>
+                            <p className="mt-1">{group.description || "説明なし"}</p>
+                          </div>
+                          <label className="block">
+                            <span className="text-xs font-black text-slate-600">管理者へのメッセージ</span>
+                            <textarea
+                              value={requestMessage}
+                              onChange={(event) => setRequestMessages((current) => ({ ...current, [group.id]: event.target.value }))}
+                              className="mt-1 min-h-24 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold"
+                              placeholder="例: いつも大阪湾でシーバスをしています。参加よろしくお願いします。"
+                            />
+                          </label>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <button type="button" onClick={() => setOpenRequestGroupId("")} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
+                              キャンセル
+                            </button>
+                            <button disabled={busyId === group.id || !joinName.trim()} onClick={() => handleJoin(group, requestMessage)} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
+                              {busyId === group.id ? "申請中..." : "この内容で申請"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </article>
