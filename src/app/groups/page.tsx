@@ -123,12 +123,23 @@ export default function GroupsPage() {
                 <div className="mt-3 grid gap-2">
                   {joined ? (
                     <Link href={`/groups/${group.id}`} className="tap-target rounded bg-foam px-4 py-3 text-center font-black text-water">参加中・詳細を見る</Link>
+                  ) : !user ? (
+                    <div className="rounded bg-foam p-3">
+                      <p className="text-xs font-bold leading-5 text-slate-600">
+                        {group.visibility === "public"
+                          ? "新規登録またはログインすると、このグループに参加できます。"
+                          : "新規登録またはログインすると、このグループへ参加申請を送れます。"}
+                      </p>
+                      <Link href="/login?next=/groups" className="tap-target mt-2 flex items-center justify-center rounded bg-water px-4 py-3 text-sm font-black text-white">
+                        ログイン / 新規登録へ
+                      </Link>
+                    </div>
                   ) : group.visibility === "public" ? (
-                    <button disabled={!user || busyId === group.id || !joinName.trim()} onClick={() => handleJoin(group)} className="tap-target rounded bg-water px-4 py-3 font-black text-white disabled:opacity-50">
+                    <button disabled={busyId === group.id || !joinName.trim()} onClick={() => handleJoin(group)} className="tap-target rounded bg-water px-4 py-3 font-black text-white disabled:opacity-50">
                       {busyId === group.id ? "参加中..." : "このグループに参加"}
                     </button>
                   ) : (
-                    <button disabled={!user || busyId === group.id || !joinName.trim()} onClick={() => handleJoin(group)} className="tap-target rounded border border-coral px-4 py-3 font-black text-coral disabled:opacity-50">
+                    <button disabled={busyId === group.id || !joinName.trim()} onClick={() => handleJoin(group)} className="tap-target rounded border border-coral px-4 py-3 font-black text-coral disabled:opacity-50">
                       {busyId === group.id ? "申請中..." : "参加申請する"}
                     </button>
                   )}

@@ -183,7 +183,7 @@ function LoginContent() {
                     メールで新規登録
                   </button>
                 </div>
-                <p className="text-xs font-bold leading-5 text-slate-500">Firebase Consoleで「メール/パスワード」認証を有効にすると利用できます。</p>
+                <p className="text-xs font-bold leading-5 text-slate-500">Googleアカウントを使わない場合は、メールアドレスとパスワードでも登録・ログインできます。</p>
               </div>
             </div>
           )}
