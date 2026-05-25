@@ -6,7 +6,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { ProfileStepBasic, ProfileStepMotivation, ProfileStepStyle, initialProfileSurveyState, toProfilePayload, type ProfileSurveyState } from "@/components/ProfileSurveyForm";
 import { getAgeRangeLabel, getFishingFrequencyLabel, getFishingMotivationLabel } from "@/lib/profileOptions";
-import { getUserProfile, saveUserProfileData } from "@/lib/userProfiles";
+import { getUserProfile, saveUserProfileData, uploadUserAvatar } from "@/lib/userProfiles";
 
 export default function ProfilePage() {
   return <AuthGate skipOnboardingCheck>{(user) => <ProfileEditor userId={user.uid} fallbackName={user.displayName ?? user.email ?? ""} />}</AuthGate>;
@@ -14,6 +14,7 @@ export default function ProfilePage() {
 
 function ProfileEditor({ userId, fallbackName }: { userId: string; fallbackName: string }) {
   const [profile, setProfile] = useState<ProfileSurveyState>(() => initialProfileSurveyState(null, fallbackName));
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [message, setMessage] = useState("読み込み中です。");
   const [busy, setBusy] = useState(false);
 
@@ -30,7 +31,10 @@ function ProfileEditor({ userId, fallbackName }: { userId: string; fallbackName:
     setBusy(true);
     setMessage("");
     try {
-      await saveUserProfileData(userId, toProfilePayload(profile));
+      const avatarUrl = avatarFile ? await uploadUserAvatar(userId, avatarFile) : profile.avatarUrl;
+      await saveUserProfileData(userId, { ...toProfilePayload(profile), avatarUrl });
+      setProfile((current) => ({ ...current, avatarUrl }));
+      setAvatarFile(null);
       setMessage("プロフィールを保存しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存できませんでした。");
@@ -57,6 +61,8 @@ function ProfileEditor({ userId, fallbackName }: { userId: string; fallbackName:
 
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
           <h2 className="mb-4 text-lg font-black">基本プロフィール</h2>
+          <AvatarField avatarUrl={profile.avatarUrl} file={avatarFile} displayName={profile.displayName} onChange={setAvatarFile} />
+          <div className="mt-4" />
           <ProfileStepBasic state={profile} setState={setProfile} />
         </section>
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
@@ -78,5 +84,22 @@ function ProfileEditor({ userId, fallbackName }: { userId: string; fallbackName:
         </div>
       </main>
     </>
+  );
+}
+
+function AvatarField({ avatarUrl, file, displayName, onChange }: { avatarUrl: string; file: File | null; displayName: string; onChange: (file: File | null) => void }) {
+  const preview = file ? URL.createObjectURL(file) : avatarUrl;
+  return (
+    <label className="flex items-center gap-4 rounded bg-foam p-3">
+      <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-water text-xl font-black text-white">
+        {preview ? <img src={preview} alt="プロフィールアイコン" className="h-full w-full object-cover" /> : (displayName || "T").slice(0, 1)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-black text-slate-700">自分のアイコン</span>
+        <span className="mt-1 block text-xs font-bold leading-5 text-slate-500">プロフィールや今後の表示に使います。</span>
+        <span className="mt-2 inline-flex rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">画像を選択</span>
+      </span>
+      <input type="file" accept="image/*" onChange={(event) => onChange(event.target.files?.[0] ?? null)} className="hidden" />
+    </label>
   );
 }

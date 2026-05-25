@@ -1,7 +1,8 @@
 "use client";
 
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import type { UserProfile } from "@/types";
 
 const ONBOARDING_REMINDER_DAYS = 14;
@@ -20,6 +21,12 @@ export async function saveUserProfileData(userId: string, data: Partial<UserProf
     },
     { merge: true }
   );
+}
+
+export async function uploadUserAvatar(userId: string, file: File) {
+  const storageRef = ref(getFirebaseStorage(), `users/${userId}/avatars/${crypto.randomUUID()}-${file.name}`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
 }
 
 export async function completeOnboarding(userId: string, data: Partial<UserProfile>) {
@@ -50,6 +57,7 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     uid: typeof data.uid === "string" ? data.uid : id,
     displayName: typeof data.displayName === "string" ? data.displayName : "",
     email: typeof data.email === "string" ? data.email : null,
+    avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : null,
     ageRange: typeof data.ageRange === "string" ? (data.ageRange as UserProfile["ageRange"]) : undefined,
     residenceArea: typeof data.residenceArea === "string" ? data.residenceArea : "",
     fishingAreas: Array.isArray(data.fishingAreas) ? data.fishingAreas.filter((item): item is string => typeof item === "string") : [],

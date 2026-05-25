@@ -38,6 +38,7 @@ export type User = {
   uid: string;
   displayName: string | null;
   email: string | null;
+  avatarUrl?: string | null;
   createdAt: Date;
   termsAccepted?: boolean;
   privacyAccepted?: boolean;
@@ -54,6 +55,7 @@ export type UserProfile = {
   uid: string;
   displayName?: string;
   email?: string | null;
+  avatarUrl?: string | null;
   ageRange?: AgeRange;
   residenceArea?: string;
   fishingAreas?: string[];

@@ -10,6 +10,7 @@ import { canManageGroupMembersSync, findGroupMember } from "@/lib/groupPermissio
 import { getGroupJoinRequests, getGroupMembers, getGroupsForUser } from "@/lib/groups";
 import { canManageApprovals, findParticipant } from "@/lib/tournamentPermissions";
 import { getTournamentParticipants, getTournaments } from "@/lib/tournaments";
+import { getUserProfile } from "@/lib/userProfiles";
 import type { Catch, GroupCatchComment } from "@/types";
 
 const links = [
@@ -17,7 +18,6 @@ const links = [
   { href: "/catches", label: "釣果一覧", body: "新着順で自分の釣果を確認" },
   { href: "/tournaments", label: "釣り大会", body: "大会に参加してランキングを競う" },
   { href: "/groups", label: "グループ", body: "釣り仲間と釣果・ランキング・マップを共有" },
-  { href: "/profile", label: "プロフィール", body: "釣りスタイルとタックルを登録して投稿を簡単に" },
   { href: "/ranking", label: "ランキング", body: "年間・魚種別・月別の最大サイズ" },
   { href: "/map", label: "マップ", body: "釣れた地点を地図で振り返る" },
   { href: "/analysis", label: "潮位分析", body: "上げ潮・下げ潮・何分目の傾向" }
@@ -25,6 +25,7 @@ const links = [
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [approvalSummary, setApprovalSummary] = useState<ApprovalSummary>(emptyApprovalSummary());
 
   useEffect(() => {
@@ -35,8 +36,12 @@ export default function Home() {
   useEffect(() => {
     if (!user) {
       setApprovalSummary(emptyApprovalSummary());
+      setProfileAvatarUrl(null);
       return;
     }
+    getUserProfile(user.uid)
+      .then((profile) => setProfileAvatarUrl(profile?.avatarUrl ?? user.photoURL ?? null))
+      .catch(() => setProfileAvatarUrl(user.photoURL ?? null));
     loadApprovalSummary(user.uid)
       .then(setApprovalSummary)
       .catch(() => setApprovalSummary(emptyApprovalSummary()));
@@ -49,8 +54,15 @@ export default function Home() {
     <main className="min-h-screen bg-foam px-4 py-6">
       <section className="mx-auto max-w-2xl">
         <div className="py-8">
-          <p className="text-sm font-bold text-water">Personal fishing log</p>
-          <h1 className="mt-2 text-4xl font-black tracking-normal text-ink">TsuriLog</h1>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-water">Personal fishing log</p>
+              <h1 className="mt-2 text-4xl font-black tracking-normal text-ink">TsuriLog</h1>
+            </div>
+            <Link href={user ? "/profile" : "/login"} aria-label="プロフィール設定" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-teal-100 bg-white text-base font-black text-water shadow-soft">
+              {profileAvatarUrl ? <img src={profileAvatarUrl} alt="" className="h-full w-full object-cover" /> : user ? getInitial(user.displayName ?? user.email) : "人"}
+            </Link>
+          </div>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-700">
             created by TaPiYoTa
             <br />
@@ -137,6 +149,10 @@ type ApprovalSummary = {
 
 function emptyApprovalSummary(): ApprovalSummary {
   return { groupRequests: 0, tournamentEntries: 0, groupDetails: [], tournamentDetails: [], commentDetails: [] };
+}
+
+function getInitial(value: string | null | undefined) {
+  return (value || "T").trim().slice(0, 1).toUpperCase();
 }
 
 async function loadApprovalSummary(userId: string) {

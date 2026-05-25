@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ProfileStepBasic, ProfileStepMotivation, ProfileStepStyle, initialProfileSurveyState, toProfilePayload, type ProfileSurveyState } from "@/components/ProfileSurveyForm";
 import { TackleFormFields, emptyTackleInput } from "@/components/TackleFormFields";
 import { createTackle, type TackleInput } from "@/lib/tackles";
-import { completeOnboarding, getUserProfile, skipOnboarding } from "@/lib/userProfiles";
+import { completeOnboarding, getUserProfile, skipOnboarding, uploadUserAvatar } from "@/lib/userProfiles";
 
 export default function OnboardingPage() {
   return <AuthGate skipOnboardingCheck>{(user) => <OnboardingForm userId={user.uid} fallbackName={user.displayName ?? user.email ?? ""} />}</AuthGate>;
@@ -17,6 +17,7 @@ function OnboardingForm({ userId, fallbackName }: { userId: string; fallbackName
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState<ProfileSurveyState>(() => initialProfileSurveyState(null, fallbackName));
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [tackle, setTackle] = useState<TackleInput>(emptyTackleInput());
   const [message, setMessage] = useState("読み込み中です。");
   const [busy, setBusy] = useState(false);
@@ -35,7 +36,8 @@ function OnboardingForm({ userId, fallbackName }: { userId: string; fallbackName
     setBusy(true);
     setMessage("");
     try {
-      await completeOnboarding(userId, toProfilePayload(profile));
+      const avatarUrl = avatarFile ? await uploadUserAvatar(userId, avatarFile) : profile.avatarUrl;
+      await completeOnboarding(userId, { ...toProfilePayload(profile), avatarUrl });
       if (tackle.name.trim()) await createTackle(userId, tackle);
       router.push("/post");
     } catch (error) {
@@ -78,7 +80,12 @@ function OnboardingForm({ userId, fallbackName }: { userId: string; fallbackName
         {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
 
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
-          {step === 0 ? <ProfileStepBasic state={profile} setState={setProfile} /> : null}
+          {step === 0 ? (
+            <div className="space-y-4">
+              <AvatarField avatarUrl={profile.avatarUrl} file={avatarFile} displayName={profile.displayName} onChange={setAvatarFile} />
+              <ProfileStepBasic state={profile} setState={setProfile} />
+            </div>
+          ) : null}
           {step === 1 ? <ProfileStepStyle state={profile} setState={setProfile} /> : null}
           {step === 2 ? <ProfileStepMotivation state={profile} setState={setProfile} /> : null}
           {step === 3 ? (
@@ -111,5 +118,22 @@ function OnboardingForm({ userId, fallbackName }: { userId: string; fallbackName
         </div>
       </main>
     </>
+  );
+}
+
+function AvatarField({ avatarUrl, file, displayName, onChange }: { avatarUrl: string; file: File | null; displayName: string; onChange: (file: File | null) => void }) {
+  const preview = file ? URL.createObjectURL(file) : avatarUrl;
+  return (
+    <label className="flex items-center gap-4 rounded bg-foam p-3">
+      <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-water text-xl font-black text-white">
+        {preview ? <img src={preview} alt="プロフィールアイコン" className="h-full w-full object-cover" /> : (displayName || "T").slice(0, 1)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-black text-slate-700">自分のアイコン</span>
+        <span className="mt-1 block text-xs font-bold leading-5 text-slate-500">大会やプロフィールで使える画像です。あとから変更できます。</span>
+        <span className="mt-2 inline-flex rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">画像を選択</span>
+      </span>
+      <input type="file" accept="image/*" onChange={(event) => onChange(event.target.files?.[0] ?? null)} className="hidden" />
+    </label>
   );
 }

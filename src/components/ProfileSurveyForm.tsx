@@ -14,6 +14,7 @@ import {
 
 export type ProfileSurveyState = {
   displayName: string;
+  avatarUrl: string;
   ageRange: AgeRange;
   residenceArea: string;
   fishingAreas: string[];
@@ -27,6 +28,7 @@ export type ProfileSurveyState = {
 export function initialProfileSurveyState(profile?: UserProfile | null, fallbackName = ""): ProfileSurveyState {
   return {
     displayName: profile?.displayName || fallbackName,
+    avatarUrl: profile?.avatarUrl ?? "",
     ageRange: profile?.ageRange ?? "preferNotToSay",
     residenceArea: profile?.residenceArea || "回答しない",
     fishingAreas: profile?.fishingAreas ?? [],
@@ -41,6 +43,7 @@ export function initialProfileSurveyState(profile?: UserProfile | null, fallback
 export function toProfilePayload(state: ProfileSurveyState) {
   return {
     displayName: state.displayName.trim(),
+    avatarUrl: state.avatarUrl,
     ageRange: state.ageRange || undefined,
     residenceArea: state.residenceArea,
     fishingAreas: state.fishingAreas,

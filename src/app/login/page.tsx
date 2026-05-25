@@ -169,6 +169,7 @@ function LoginContent() {
         uid: nextUser.uid,
         displayName: overrideName ?? nextUser.displayName,
         email: nextUser.email,
+        avatarUrl: nextUser.photoURL ?? null,
         createdAt: serverTimestamp(),
         termsAccepted: true,
         privacyAccepted: true,
