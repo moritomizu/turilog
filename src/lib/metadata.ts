@@ -1,0 +1,137 @@
+import type { Metadata } from "next";
+
+type MetadataDoc = Record<string, unknown>;
+
+const appName = "TsuriLog";
+const defaultDescription = "心に残る一枚のために。釣果を残して、潮位・水温・タックル・釣行データから振り返れる個人用釣りログです。";
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+};
+
+export function getSiteUrl() {
+  const configured = process.env.NEXT_PUBLIC_APP_URL;
+  if (configured) return configured.replace(/\/$/, "");
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}
+
+export function createPageMetadata({
+  title,
+  description = defaultDescription,
+  path = "/",
+  image
+}: {
+  title: string;
+  description?: string;
+  path?: string;
+  image?: string | null;
+}): Metadata {
+  const siteUrl = getSiteUrl();
+  const url = `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
+  const imageUrl = image || `${siteUrl}/opengraph-image`;
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      siteName: appName,
+      title,
+      description,
+      url,
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: title }]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [imageUrl]
+    }
+  };
+}
+
+export async function getPublicCatchMetadata(catchId: string) {
+  const data = await getDocData("publicCatches", catchId);
+  if (!data || data.isPublic !== true) return null;
+  const fishType = text(data.fishType, "釣果");
+  const sizeCm = typeof data.sizeCm === "number" ? `${data.sizeCm}cm` : "";
+  const tide = text(data.tidePhaseLabel, "潮情報も記録");
+  const area = text(data.areaName, "釣果エリア");
+  return {
+    title: `${fishType}${sizeCm ? ` ${sizeCm}` : ""} | TsuriLog釣果`,
+    description: `${area}で記録された${fishType}${sizeCm ? ` ${sizeCm}` : ""}の釣果。${tide}、天候、水温、タックルも一緒に振り返れる釣りログです。`,
+    image: typeof data.imageUrl === "string" ? data.imageUrl : null
+  };
+}
+
+export async function getGroupMetadata(groupId: string) {
+  const data = await getDocData("groups", groupId);
+  if (!data) return null;
+  const name = text(data.name, "釣り仲間グループ");
+  const description = text(data.description, "仲間同士で釣果・ランキング・釣果マップ・分析を共有できるTsuriLogグループです。");
+  return {
+    title: `${name} | TsuriLogグループ`,
+    description: `${description} 釣り仲間の投稿を見ながら、日々の釣果をもっと楽しく振り返れます。`
+  };
+}
+
+export async function getTournamentMetadata(tournamentId: string) {
+  const data = await getDocData("tournaments", tournamentId);
+  if (!data) return null;
+  const name = text(data.name, "釣り大会");
+  const description = text(data.description, "期間中の釣果でランキングを競えるTsuriLogの釣り大会です。");
+  const target = Array.isArray(data.targetFishTypes) ? data.targetFishTypes.filter((item): item is string => typeof item === "string").join("、") : "";
+  return {
+    title: `${name} | TsuriLog釣り大会`,
+    description: `${description}${target ? ` 対象魚種: ${target}。` : ""}写真投稿からランキングまで、仲間と釣果を競えます。`
+  };
+}
+
+async function getDocData(collectionName: string, id: string): Promise<MetadataDoc | null> {
+  if (!isFirebaseMetadataConfigured()) return null;
+  const projectId = firebaseConfig.projectId;
+  const apiKey = firebaseConfig.apiKey;
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collectionName}/${id}?key=${apiKey}`;
+  const response = await fetch(url, { next: { revalidate: 300 } });
+  if (!response.ok) return null;
+  const body = (await response.json()) as { fields?: Record<string, FirestoreValue> };
+  return body.fields ? decodeFields(body.fields) : null;
+}
+
+function isFirebaseMetadataConfigured() {
+  return Object.values(firebaseConfig).every(Boolean);
+}
+
+function text(value: unknown, fallback: string) {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+type FirestoreValue = {
+  stringValue?: string;
+  integerValue?: string;
+  doubleValue?: number;
+  booleanValue?: boolean;
+  arrayValue?: { values?: FirestoreValue[] };
+  mapValue?: { fields?: Record<string, FirestoreValue> };
+  nullValue?: null;
+};
+
+function decodeFields(fields: Record<string, FirestoreValue>): MetadataDoc {
+  return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, decodeValue(value)]));
+}
+
+function decodeValue(value: FirestoreValue): unknown {
+  if ("stringValue" in value) return value.stringValue;
+  if ("integerValue" in value) return Number(value.integerValue);
+  if ("doubleValue" in value) return value.doubleValue;
+  if ("booleanValue" in value) return value.booleanValue;
+  if ("arrayValue" in value) return value.arrayValue?.values?.map(decodeValue) ?? [];
+  if ("mapValue" in value) return value.mapValue?.fields ? decodeFields(value.mapValue.fields) : {};
+  return null;
+}
