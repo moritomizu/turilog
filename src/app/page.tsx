@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { useEffect, useState } from "react";
-import { getTournamentCatches } from "@/lib/catches";
+import { getGroupCatches, getTournamentCatches } from "@/lib/catches";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
+import { getGroupCatchComments } from "@/lib/groupCatchComments";
 import { canManageGroupMembersSync, findGroupMember } from "@/lib/groupPermissions";
 import { getGroupJoinRequests, getGroupMembers, getGroupsForUser } from "@/lib/groups";
 import { canManageApprovals, findParticipant } from "@/lib/tournamentPermissions";
 import { getTournamentParticipants, getTournaments } from "@/lib/tournaments";
+import type { Catch, GroupCatchComment } from "@/types";
 
 const links = [
   { href: "/post", label: "釣果を投稿", body: "写真・魚種・サイズ・場所・潮位を記録" },
@@ -40,6 +42,7 @@ export default function Home() {
   }, [user]);
 
   const approvalCount = approvalSummary.groupRequests + approvalSummary.tournamentEntries;
+  const commentCount = approvalSummary.commentDetails.reduce((sum, item) => sum + item.count, 0);
 
   return (
     <main className="min-h-screen bg-foam px-4 py-6">
@@ -85,6 +88,27 @@ export default function Home() {
           </section>
         ) : null}
 
+        {user && commentCount > 0 ? (
+          <section className="mb-4 rounded border border-teal-100 bg-white p-4 shadow-soft">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black text-water">COMMENTS</p>
+                <h2 className="mt-1 text-xl font-black text-ink">自分の釣果にコメントがあります</h2>
+                <p className="mt-1 text-sm font-bold leading-6 text-slate-700">グループ内の自分の投稿に新しいコメントが届いています。</p>
+              </div>
+              <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-coral px-3 text-sm font-black text-white">{commentCount}</span>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {approvalSummary.commentDetails.map((group) => (
+                <Link key={group.id} href={`/groups/${group.id}`} className="tap-target flex items-center justify-between gap-3 rounded bg-foam px-4 py-3 font-black text-water">
+                  <span className="min-w-0 truncate">{group.name}</span>
+                  <span className="shrink-0 rounded-full bg-white px-2 py-1 text-xs text-coral ring-1 ring-coral/30">コメント{group.count}件</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <div className="grid gap-3">
           {links.map((item) => (
             <Link key={item.href} href={item.href} className="tap-target rounded border border-teal-100 bg-white p-5 shadow-soft transition hover:border-water">
@@ -107,10 +131,11 @@ type ApprovalSummary = {
   tournamentEntries: number;
   groupDetails: { id: string; name: string; count: number }[];
   tournamentDetails: { id: string; name: string; count: number }[];
+  commentDetails: { id: string; name: string; count: number }[];
 };
 
 function emptyApprovalSummary(): ApprovalSummary {
-  return { groupRequests: 0, tournamentEntries: 0, groupDetails: [], tournamentDetails: [] };
+  return { groupRequests: 0, tournamentEntries: 0, groupDetails: [], tournamentDetails: [], commentDetails: [] };
 }
 
 async function loadApprovalSummary(userId: string) {
@@ -142,10 +167,34 @@ async function loadApprovalSummary(userId: string) {
     )
   ).filter((item): item is { id: string; name: string; count: number } => Boolean(item));
 
+  const commentDetails = (
+    await Promise.all(
+      groups.map(async (group) => {
+        const [catches, comments] = await Promise.all([getGroupCatches(group.id), getGroupCatchComments(group.id)]);
+        const count = getNewCommentCount(group.id, catches, comments, userId);
+        return count > 0 ? { id: group.id, name: group.name, count } : null;
+      })
+    )
+  ).filter((item): item is { id: string; name: string; count: number } => Boolean(item));
+
   return {
     groupRequests: groupDetails.reduce((sum, item) => sum + item.count, 0),
     tournamentEntries: tournamentDetails.reduce((sum, item) => sum + item.count, 0),
     groupDetails,
-    tournamentDetails
+    tournamentDetails,
+    commentDetails
   };
+}
+
+function getNewCommentCount(groupId: string, catches: Catch[], comments: GroupCatchComment[], userId: string) {
+  if (typeof window === "undefined") return 0;
+  const stored = window.localStorage.getItem(`tsurilog:lastViewedGroupComments:${groupId}`);
+  const fallback = Date.now() - 7 * 86400000;
+  const since = stored ? Number(stored) : fallback;
+  const myCatchIds = new Set(
+    catches
+      .filter((item) => item.userId === userId || item.actualAnglerUserId === userId)
+      .map((item) => item.id)
+  );
+  return comments.filter((comment) => myCatchIds.has(comment.catchId) && comment.userId !== userId && new Date(comment.createdAt).getTime() > since).length;
 }

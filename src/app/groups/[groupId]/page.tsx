@@ -98,6 +98,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   useEffect(() => {
     if (!group || !canView) return;
     window.localStorage.setItem(`tsurilog:lastViewedGroup:${groupId}`, String(Date.now()));
+    window.localStorage.setItem(`tsurilog:lastViewedGroupComments:${groupId}`, String(Date.now()));
   }, [group, canView, groupId]);
 
   if (group && !canView) {

@@ -6,11 +6,12 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 import { PageHeader } from "@/components/PageHeader";
 import { getGroupCatches } from "@/lib/catches";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
+import { getGroupCatchComments } from "@/lib/groupCatchComments";
 import { getDiscoverableGroups, getGroupMembers, getGroupsForUser, joinGroup, requestJoinGroup } from "@/lib/groups";
 import { getPreferredParticipantName, rememberParticipantName } from "@/lib/participantName";
-import type { Group } from "@/types";
+import type { Catch, Group, GroupCatchComment } from "@/types";
 
-type GroupListItem = Group & { latestCatchCount: number; memberTotal: number };
+type GroupListItem = Group & { latestCatchCount: number; memberTotal: number; newCommentCount: number };
 type GroupListItemWithUnread = GroupListItem & { newCatchCount: number };
 
 export default function GroupsPage() {
@@ -38,12 +39,13 @@ export default function GroupsPage() {
     const groupMap = new Map([...groups, ...joined].map((group) => [group.id, group]));
     const nextItems = await Promise.all(
       [...groupMap.values()].map(async (group) => {
-        const catches = await getGroupCatches(group.id);
+        const [catches, comments] = await Promise.all([getGroupCatches(group.id), getGroupCatchComments(group.id)]);
         return {
           ...group,
           memberTotal: (await getGroupMembers(group.id)).length,
           latestCatchCount: catches.filter((item) => Date.now() - new Date(item.caughtAt).getTime() <= 30 * 86400000).length,
-          newCatchCount: getNewCatchCount(group.id, catches)
+          newCatchCount: getNewCatchCount(group.id, catches),
+          newCommentCount: nextUser ? getNewCommentCount(group.id, catches, comments, nextUser.uid) : 0
         };
       })
     );
@@ -157,7 +159,12 @@ function GroupSection({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="truncate text-lg font-black text-ink">{group.name}</h3>
-                    {joined && group.newCatchCount > 0 ? <span className="mt-1 inline-flex rounded-full bg-coral px-2 py-0.5 text-xs font-black text-white">{group.newCatchCount}件の新着</span> : null}
+                    {joined && (group.newCatchCount > 0 || group.newCommentCount > 0) ? (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {group.newCatchCount > 0 ? <span className="inline-flex rounded-full bg-coral px-2 py-0.5 text-xs font-black text-white">{group.newCatchCount}件の新着</span> : null}
+                        {group.newCommentCount > 0 ? <span className="inline-flex rounded-full bg-white px-2 py-0.5 text-xs font-black text-coral ring-1 ring-coral/30">コメント{group.newCommentCount}件</span> : null}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {joined ? <span className="rounded-full bg-water px-2 py-1 text-xs font-black text-white">参加中</span> : null}
@@ -238,7 +245,7 @@ function GroupSection({
 function buildGroupSections(items: GroupListItem[], joinedIds: Set<string>) {
   const withUnread = items as GroupListItemWithUnread[];
   return {
-    joined: withUnread.filter((item) => joinedIds.has(item.id)).sort((a, b) => b.newCatchCount - a.newCatchCount),
+    joined: withUnread.filter((item) => joinedIds.has(item.id)).sort((a, b) => b.newCommentCount + b.newCatchCount - (a.newCommentCount + a.newCatchCount)),
     publicGroups: withUnread.filter((item) => !joinedIds.has(item.id) && item.visibility === "public"),
     requestGroups: withUnread.filter((item) => !joinedIds.has(item.id) && item.visibility === "inviteOnly")
   };
@@ -250,6 +257,19 @@ function getNewCatchCount(groupId: string, catches: { caughtAt: string }[]) {
   const fallback = Date.now() - 7 * 86400000;
   const since = stored ? Number(stored) : fallback;
   return catches.filter((item) => new Date(item.caughtAt).getTime() > since).length;
+}
+
+function getNewCommentCount(groupId: string, catches: Catch[], comments: GroupCatchComment[], userId: string) {
+  if (typeof window === "undefined") return 0;
+  const stored = window.localStorage.getItem(`tsurilog:lastViewedGroupComments:${groupId}`);
+  const fallback = Date.now() - 7 * 86400000;
+  const since = stored ? Number(stored) : fallback;
+  const myCatchIds = new Set(
+    catches
+      .filter((item) => item.userId === userId || item.actualAnglerUserId === userId)
+      .map((item) => item.id)
+  );
+  return comments.filter((comment) => myCatchIds.has(comment.catchId) && comment.userId !== userId && new Date(comment.createdAt).getTime() > since).length;
 }
 
 function getVisibilityLabel(value: Group["visibility"]) {
