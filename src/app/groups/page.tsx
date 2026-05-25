@@ -167,6 +167,7 @@ function GroupSection({
                     ) : null}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
+                    {user?.uid === group.ownerId ? <span className="rounded-full bg-ink px-2 py-1 text-xs font-black text-white">主催者</span> : null}
                     {joined ? <span className="rounded-full bg-water px-2 py-1 text-xs font-black text-white">参加中</span> : null}
                     <span className={`rounded-full px-2 py-1 text-xs font-black ${group.visibility === "public" ? "bg-water/10 text-water" : "bg-orange-100 text-coral"}`}>
                       {getVisibilityLabel(group.visibility)}

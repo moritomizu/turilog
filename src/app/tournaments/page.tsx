@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
+import { getTournamentCatches } from "@/lib/catches";
+import { canManageApprovals, findParticipant } from "@/lib/tournamentPermissions";
 import { getTournamentParticipants, getTournaments, getTournamentStatus, getRankingTypeLabel } from "@/lib/tournaments";
 import type { Tournament, TournamentStatus } from "@/types";
 
@@ -15,7 +17,12 @@ export default function TournamentsPage() {
   );
 }
 
-type TournamentListItem = Tournament & { participantCount: number; isParticipant: boolean };
+type TournamentListItem = Tournament & {
+  participantCount: number;
+  isParticipant: boolean;
+  isOwner: boolean;
+  pendingApprovalCount: number;
+};
 
 function TournamentList({ userId }: { userId: string }) {
   const [items, setItems] = useState<TournamentListItem[]>([]);
@@ -28,10 +35,16 @@ function TournamentList({ userId }: { userId: string }) {
         const withCounts = await Promise.all(
           result.map(async (tournament) => {
             const participants = await getTournamentParticipants(tournament.id);
+            const currentParticipant = findParticipant(participants, userId, tournament.ownerId);
+            const pendingApprovalCount = canManageApprovals(currentParticipant)
+              ? (await getTournamentCatches(tournament.id)).filter((item) => item.tournamentEntryStatus === "pending").length
+              : 0;
             return {
               ...tournament,
               participantCount: participants.length,
-              isParticipant: participants.some((participant) => participant.userId === userId)
+              isParticipant: participants.some((participant) => participant.userId === userId),
+              isOwner: tournament.ownerId === userId,
+              pendingApprovalCount
             };
           })
         );
@@ -71,9 +84,19 @@ function TournamentSection({ title, items }: { title: string; items: TournamentL
             <div className="flex items-start justify-between gap-2">
               <h3 className="text-lg font-black text-ink">{item.name}</h3>
               <div className="flex shrink-0 flex-col items-end gap-1">
+                {item.isOwner ? (
+                  <span className="rounded-full bg-ink px-3 py-1 text-[11px] font-black text-white shadow-sm">
+                    主催者
+                  </span>
+                ) : null}
                 {item.isParticipant ? (
                   <span className="rounded-full bg-coral px-3 py-1 text-[11px] font-black text-white shadow-sm">
                     参加中
+                  </span>
+                ) : null}
+                {item.pendingApprovalCount > 0 ? (
+                  <span className="rounded-full bg-white px-2 py-1 text-[11px] font-black text-coral ring-1 ring-coral/30">
+                    承認待ち{item.pendingApprovalCount}件
                   </span>
                 ) : null}
                 <span className={`rounded-full px-2 py-1 text-[11px] font-black ${item.visibility === "public" ? "bg-water/10 text-water" : "bg-slate-100 text-slate-600"}`}>
@@ -87,6 +110,7 @@ function TournamentSection({ title, items }: { title: string; items: TournamentL
               <p>対象: {item.targetFishTypes.join("、") || "指定なし"}</p>
               <p>方式: {getRankingTypeLabel(item.rankingType)}</p>
               <p>参加人数: {item.participantCount}人</p>
+              {item.pendingApprovalCount > 0 ? <p className="text-coral">承認待ち投稿: {item.pendingApprovalCount}件</p> : null}
             </div>
           </Link>
         ))}
