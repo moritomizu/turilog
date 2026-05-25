@@ -95,6 +95,11 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
       .catch((error) => setMessage(error instanceof Error ? error.message : "グループを読み込めませんでした。"));
   }, [groupId]);
 
+  useEffect(() => {
+    if (!group || !canView) return;
+    window.localStorage.setItem(`tsurilog:lastViewedGroup:${groupId}`, String(Date.now()));
+  }, [group, canView, groupId]);
+
   if (group && !canView) {
     return (
       <>

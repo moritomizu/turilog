@@ -1,4 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { useEffect, useState } from "react";
+import { getTournamentCatches } from "@/lib/catches";
+import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
+import { canManageGroupMembersSync, findGroupMember } from "@/lib/groupPermissions";
+import { getGroupJoinRequests, getGroupMembers, getGroupsForUser } from "@/lib/groups";
+import { canManageApprovals, findParticipant } from "@/lib/tournamentPermissions";
+import { getTournamentParticipants, getTournaments } from "@/lib/tournaments";
 
 const links = [
   { href: "/post", label: "釣果を投稿", body: "写真・魚種・サイズ・場所・潮位を記録" },
@@ -11,6 +21,26 @@ const links = [
 ];
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [approvalSummary, setApprovalSummary] = useState({ groupRequests: 0, tournamentEntries: 0 });
+
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+    return onAuthStateChanged(getFirebaseAuth(), setUser);
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setApprovalSummary({ groupRequests: 0, tournamentEntries: 0 });
+      return;
+    }
+    loadApprovalSummary(user.uid)
+      .then(setApprovalSummary)
+      .catch(() => setApprovalSummary({ groupRequests: 0, tournamentEntries: 0 }));
+  }, [user]);
+
+  const approvalCount = approvalSummary.groupRequests + approvalSummary.tournamentEntries;
+
   return (
     <main className="min-h-screen bg-foam px-4 py-6">
       <section className="mx-auto max-w-2xl">
@@ -25,6 +55,25 @@ export default function Home() {
             潮位や水温、釣行データなどデータから振り返ることができる個人用釣りログです。
           </p>
         </div>
+
+        {user && approvalCount > 0 ? (
+          <section className="mb-4 rounded border border-coral/30 bg-orange-50 p-4 shadow-soft">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black text-coral">APPROVAL</p>
+                <h2 className="mt-1 text-xl font-black text-ink">承認待ちがあります</h2>
+                <p className="mt-1 text-sm font-bold leading-6 text-slate-700">
+                  グループ参加申請 {approvalSummary.groupRequests}件 / 大会投稿承認 {approvalSummary.tournamentEntries}件
+                </p>
+              </div>
+              <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-coral px-3 text-sm font-black text-white">{approvalCount}</span>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {approvalSummary.groupRequests > 0 ? <Link href="/groups/mine" className="tap-target rounded bg-white px-4 py-3 text-center font-black text-coral">グループ申請を確認</Link> : null}
+              {approvalSummary.tournamentEntries > 0 ? <Link href="/tournaments" className="tap-target rounded bg-white px-4 py-3 text-center font-black text-coral">大会承認を確認</Link> : null}
+            </div>
+          </section>
+        ) : null}
 
         <div className="grid gap-3">
           {links.map((item) => (
@@ -41,4 +90,28 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+async function loadApprovalSummary(userId: string) {
+  const [groups, tournaments] = await Promise.all([getGroupsForUser(userId), getTournaments()]);
+
+  const groupRequests = await groups.reduce(async (sumPromise, group) => {
+    const sum = await sumPromise;
+    const members = await getGroupMembers(group.id);
+    const currentMember = findGroupMember(members, userId);
+    if (!canManageGroupMembersSync(currentMember)) return sum;
+    const requests = await getGroupJoinRequests(group.id);
+    return sum + requests.filter((request) => request.status === "pending").length;
+  }, Promise.resolve(0));
+
+  const tournamentEntries = await tournaments.reduce(async (sumPromise, tournament) => {
+    const sum = await sumPromise;
+    const participants = await getTournamentParticipants(tournament.id);
+    const currentParticipant = findParticipant(participants, userId, tournament.ownerId);
+    if (!canManageApprovals(currentParticipant)) return sum;
+    const catches = await getTournamentCatches(tournament.id);
+    return sum + catches.filter((item) => item.tournamentEntryStatus === "pending").length;
+  }, Promise.resolve(0));
+
+  return { groupRequests, tournamentEntries };
 }

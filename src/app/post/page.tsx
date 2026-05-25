@@ -406,7 +406,7 @@ function PostForm({ userId }: { userId: string }) {
 
             {showDetails ? (
               <div className="mt-4 space-y-4">
-                <Field label="釣った日時" type="datetime-local" value={caughtAt} onChange={setCaughtAt} required />
+                <Field label="釣った日時" type="datetime-local" value={caughtAt} onChange={setCaughtAt} required compact />
 
                 <section className="rounded bg-foam p-3">
                   <h2 className="text-sm font-black">場所</h2>
@@ -696,7 +696,7 @@ function Field({
       <span className="text-sm font-bold">{label}</span>
       <input
         required={required}
-        className={`mt-2 w-full rounded border border-slate-300 bg-white font-bold ${compact ? "p-2 text-sm" : "p-4 text-lg"}`}
+        className={`mt-2 w-full rounded border border-slate-300 bg-white font-bold ${compact || type === "datetime-local" ? "p-3 text-base" : "p-4 text-lg"}`}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}

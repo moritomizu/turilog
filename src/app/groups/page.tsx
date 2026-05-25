@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { getGroupCatches } from "@/lib/catches";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
@@ -11,6 +11,7 @@ import { getPreferredParticipantName, rememberParticipantName } from "@/lib/part
 import type { Group } from "@/types";
 
 type GroupListItem = Group & { latestCatchCount: number; memberTotal: number };
+type GroupListItemWithUnread = GroupListItem & { newCatchCount: number };
 
 export default function GroupsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -21,7 +22,8 @@ export default function GroupsPage() {
   const [requestMessages, setRequestMessages] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("グループ一覧を読み込んでいます。");
   const [busyId, setBusyId] = useState("");
-  const joinedCount = useMemo(() => items.filter((item) => joinedIds.has(item.id)).length, [items, joinedIds]);
+  const visibleGroups = useMemo(() => buildGroupSections(items, joinedIds), [items, joinedIds]);
+  const joinedCount = visibleGroups.joined.length;
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -33,12 +35,17 @@ export default function GroupsPage() {
 
   async function load(nextUser: User | null = user) {
     const [groups, joined] = await Promise.all([getDiscoverableGroups(), nextUser ? getGroupsForUser(nextUser.uid) : Promise.resolve([])]);
+    const groupMap = new Map([...groups, ...joined].map((group) => [group.id, group]));
     const nextItems = await Promise.all(
-      groups.map(async (group) => ({
-        ...group,
-        memberTotal: (await getGroupMembers(group.id)).length,
-        latestCatchCount: (await getGroupCatches(group.id)).filter((item) => Date.now() - new Date(item.caughtAt).getTime() <= 30 * 86400000).length
-      }))
+      [...groupMap.values()].map(async (group) => {
+        const catches = await getGroupCatches(group.id);
+        return {
+          ...group,
+          memberTotal: (await getGroupMembers(group.id)).length,
+          latestCatchCount: catches.filter((item) => Date.now() - new Date(item.caughtAt).getTime() <= 30 * 86400000).length,
+          newCatchCount: getNewCatchCount(group.id, catches)
+        };
+      })
     );
     setItems(nextItems);
     setJoinedIds(new Set(joined.map((group) => group.id)));
@@ -103,18 +110,61 @@ export default function GroupsPage() {
           )}
         </section>
         {message ? <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((group) => {
+        <GroupSection title="参加中のグループ" items={visibleGroups.joined} joinedIds={joinedIds} user={user} joinName={joinName} busyId={busyId} openRequestGroupId={openRequestGroupId} requestMessages={requestMessages} onJoin={handleJoin} onOpenRequest={setOpenRequestGroupId} onRequestMessageChange={setRequestMessages} />
+        <GroupSection title="参加可能なグループ" items={visibleGroups.publicGroups} joinedIds={joinedIds} user={user} joinName={joinName} busyId={busyId} openRequestGroupId={openRequestGroupId} requestMessages={requestMessages} onJoin={handleJoin} onOpenRequest={setOpenRequestGroupId} onRequestMessageChange={setRequestMessages} />
+        <GroupSection title="申請制のグループ" items={visibleGroups.requestGroups} joinedIds={joinedIds} user={user} joinName={joinName} busyId={busyId} openRequestGroupId={openRequestGroupId} requestMessages={requestMessages} onJoin={handleJoin} onOpenRequest={setOpenRequestGroupId} onRequestMessageChange={setRequestMessages} />
+      </main>
+    </>
+  );
+}
+
+function GroupSection({
+  title,
+  items,
+  joinedIds,
+  user,
+  joinName,
+  busyId,
+  openRequestGroupId,
+  requestMessages,
+  onJoin,
+  onOpenRequest,
+  onRequestMessageChange
+}: {
+  title: string;
+  items: GroupListItemWithUnread[];
+  joinedIds: Set<string>;
+  user: User | null;
+  joinName: string;
+  busyId: string;
+  openRequestGroupId: string;
+  requestMessages: Record<string, string>;
+  onJoin: (group: Group, groupMessage?: string) => Promise<void>;
+  onOpenRequest: (groupId: string) => void;
+  onRequestMessageChange: Dispatch<SetStateAction<Record<string, string>>>;
+}) {
+  if (!items.length) return null;
+  return (
+    <section>
+      <h2 className="mb-3 text-xl font-black">{title}</h2>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((group) => {
             const joined = joinedIds.has(group.id);
             const requestOpen = openRequestGroupId === group.id;
             const requestMessage = requestMessages[group.id] ?? "";
             return (
               <article key={group.id} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-lg font-black text-ink">{group.name}</h2>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-black ${group.visibility === "public" ? "bg-water text-white" : "bg-orange-100 text-coral"}`}>
-                    {getVisibilityLabel(group.visibility)}
-                  </span>
+                  <div className="min-w-0">
+                    <h3 className="truncate text-lg font-black text-ink">{group.name}</h3>
+                    {joined && group.newCatchCount > 0 ? <span className="mt-1 inline-flex rounded-full bg-coral px-2 py-0.5 text-xs font-black text-white">{group.newCatchCount}件の新着</span> : null}
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {joined ? <span className="rounded-full bg-water px-2 py-1 text-xs font-black text-white">参加中</span> : null}
+                    <span className={`rounded-full px-2 py-1 text-xs font-black ${group.visibility === "public" ? "bg-water/10 text-water" : "bg-orange-100 text-coral"}`}>
+                      {getVisibilityLabel(group.visibility)}
+                    </span>
+                  </div>
                 </div>
                 <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{group.description || "説明なし"}</p>
                 <div className="mt-3 space-y-1 text-xs font-bold text-slate-600">
@@ -137,7 +187,7 @@ export default function GroupsPage() {
                       </Link>
                     </div>
                   ) : group.visibility === "public" ? (
-                    <button disabled={busyId === group.id || !joinName.trim()} onClick={() => handleJoin(group)} className="tap-target rounded bg-water px-4 py-3 font-black text-white disabled:opacity-50">
+                    <button disabled={busyId === group.id || !joinName.trim()} onClick={() => onJoin(group)} className="tap-target rounded bg-water px-4 py-3 font-black text-white disabled:opacity-50">
                       {busyId === group.id ? "参加中..." : "このグループに参加"}
                     </button>
                   ) : (
@@ -145,7 +195,7 @@ export default function GroupsPage() {
                       {!requestOpen ? (
                         <>
                           <p className="text-xs font-bold leading-5 text-slate-700">このグループは申請制です。概要を確認して、管理者へメッセージを添えて申請できます。</p>
-                          <button type="button" disabled={!joinName.trim()} onClick={() => setOpenRequestGroupId(group.id)} className="tap-target mt-2 w-full rounded border border-coral bg-white px-4 py-3 font-black text-coral disabled:opacity-50">
+                          <button type="button" disabled={!joinName.trim()} onClick={() => onOpenRequest(group.id)} className="tap-target mt-2 w-full rounded border border-coral bg-white px-4 py-3 font-black text-coral disabled:opacity-50">
                             参加申請フォームを開く
                           </button>
                         </>
@@ -159,16 +209,16 @@ export default function GroupsPage() {
                             <span className="text-xs font-black text-slate-600">管理者へのメッセージ</span>
                             <textarea
                               value={requestMessage}
-                              onChange={(event) => setRequestMessages((current) => ({ ...current, [group.id]: event.target.value }))}
+                              onChange={(event) => onRequestMessageChange((current) => ({ ...current, [group.id]: event.target.value }))}
                               className="mt-1 min-h-24 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold"
                               placeholder="例: いつも大阪湾でシーバスをしています。参加よろしくお願いします。"
                             />
                           </label>
                           <div className="grid gap-2 sm:grid-cols-2">
-                            <button type="button" onClick={() => setOpenRequestGroupId("")} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
+                            <button type="button" onClick={() => onOpenRequest("")} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
                               キャンセル
                             </button>
-                            <button disabled={busyId === group.id || !joinName.trim()} onClick={() => handleJoin(group, requestMessage)} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
+                            <button disabled={busyId === group.id || !joinName.trim()} onClick={() => onJoin(group, requestMessage)} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
                               {busyId === group.id ? "申請中..." : "この内容で申請"}
                             </button>
                           </div>
@@ -180,10 +230,26 @@ export default function GroupsPage() {
               </article>
             );
           })}
-        </div>
-      </main>
-    </>
+      </div>
+    </section>
   );
+}
+
+function buildGroupSections(items: GroupListItem[], joinedIds: Set<string>) {
+  const withUnread = items as GroupListItemWithUnread[];
+  return {
+    joined: withUnread.filter((item) => joinedIds.has(item.id)).sort((a, b) => b.newCatchCount - a.newCatchCount),
+    publicGroups: withUnread.filter((item) => !joinedIds.has(item.id) && item.visibility === "public"),
+    requestGroups: withUnread.filter((item) => !joinedIds.has(item.id) && item.visibility === "inviteOnly")
+  };
+}
+
+function getNewCatchCount(groupId: string, catches: { caughtAt: string }[]) {
+  if (typeof window === "undefined") return 0;
+  const stored = window.localStorage.getItem(`tsurilog:lastViewedGroup:${groupId}`);
+  const fallback = Date.now() - 7 * 86400000;
+  const since = stored ? Number(stored) : fallback;
+  return catches.filter((item) => new Date(item.caughtAt).getTime() > since).length;
 }
 
 function getVisibilityLabel(value: Group["visibility"]) {
