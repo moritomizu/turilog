@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+html {
   color-scheme: light;
 }
 
@@ -10,6 +11,18 @@ body {
   margin: 0;
   background: #f4fbf8;
   color: #17201d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root,
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background: #f4fbf8;
+    color: #17201d;
+  }
 }
 
 button,

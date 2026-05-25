@@ -16,10 +16,18 @@ export async function uploadCatchImage(userId: string, file: File) {
 }
 
 export async function createCatch(data: Omit<Catch, "id" | "createdAt">) {
-  await addDoc(collection(getFirebaseDb(), "catches"), {
+  const ref = await addDoc(collection(getFirebaseDb(), "catches"), {
     ...data,
     createdAt: serverTimestamp()
   });
+  return ref.id;
+}
+
+export async function updateCatchEnrichment(
+  catchId: string,
+  data: Partial<TideInfo & OfficialTideReference & OfficialCurrentReference & { weather: WeatherInfo; seaTemperature: SeaTemperatureInfo }>
+) {
+  await updateDoc(doc(getFirebaseDb(), "catches", catchId), data);
 }
 
 export async function getUserCatches(userId: string): Promise<Catch[]> {

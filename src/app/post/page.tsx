@@ -1,10 +1,11 @@
 "use client";
 
 import { Loader } from "@googlemaps/js-api-loader";
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
-import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
+import { createCatch, emptyTackleInfo, getUserCatches, updateCatchEnrichment, uploadCatchImage } from "@/lib/catches";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { getPostableGroupsForUser } from "@/lib/groups";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
@@ -70,6 +71,8 @@ function PostForm({ userId }: { userId: string }) {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [submitStage, setSubmitStage] = useState("");
+  const [successSummary, setSuccessSummary] = useState("");
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
   const canQuickPost = fishType.trim().length > 0 && Number(sizeCm) > 0;
 
@@ -176,38 +179,15 @@ function PostForm({ userId }: { userId: string }) {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setMessage("投稿を保存しています。");
+    setSuccessSummary("");
+    setSubmitStage(file ? "写真をアップロードしています。" : "釣果を保存しています。");
+    setMessage("");
     try {
       let imageUrl: string | null = null;
       if (file) imageUrl = await uploadCatchImage(userId, file);
+      setSubmitStage("釣果を保存しています。");
       const caughtAtIso = new Date(caughtAt).toISOString();
-
-      const [tideInfoResult, weatherResult, seaTemperatureResult] = await Promise.all([
-        fetchTideInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch(() => null),
-        fetchWeatherInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch(() => null),
-        fetchSeaTemperatureInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch(() => null)
-      ]);
-
-      let tideInfo = tideInfoResult;
-      let weather = weatherResult;
-      let seaTemperature = seaTemperatureResult;
-
-      tideInfo ??= {
-        tideHeight: null,
-        tideDirection: "unknown",
-        tidePhase: null,
-        tidePhaseLabel: "潮位未取得",
-        previousTideTime: null,
-        previousTideType: "unknown",
-        nextTideTime: null,
-        nextTideType: "unknown",
-        minutesToNextTide: null,
-        tideStationName: null,
-        tideStationDistance: null,
-        tideApiProvider: "none"
-      };
-      weather ??= emptyWeatherInfo();
-      seaTemperature ??= emptySeaTemperatureInfo();
+      const emptyTideInfo = getEmptyTideInfo();
       const selectedTournament = tournamentOptions.find((item) => item.id === selectedTournamentId) ?? null;
       const tournamentCheck = selectedTournament
         ? isTournamentEntryEligible(selectedTournament, caughtAtIso, fishType, Number(sizeCm), location?.latitude != null && location?.longitude != null)
@@ -219,12 +199,14 @@ function PostForm({ userId }: { userId: string }) {
       const blurredLocation = location && blurRadiusMeters ? generateBlurredLocation(location.latitude, location.longitude, blurRadiusMeters) : null;
       const inferredArea = location ? getAreaFromLocation(location.latitude, location.longitude) : { areaName: "", areaCode: "" };
       const savedAreaName = areaName || inferredArea.areaName;
+      const savedFishType = fishType.trim();
+      const savedSizeCm = Number(sizeCm);
 
-      await createCatch({
+      const catchId = await createCatch({
         userId,
         imageUrl,
-        fishType,
-        sizeCm: Number(sizeCm),
+        fishType: savedFishType,
+        sizeCm: savedSizeCm,
         caughtAt: caughtAtIso,
         comment,
         tackle,
@@ -251,30 +233,29 @@ function PostForm({ userId }: { userId: string }) {
         actualAnglerUserId: userId,
         isProxyPost: false,
         proxyPostReason: "",
-        weather,
-        seaTemperature,
+        weather: emptyWeatherInfo(),
+        seaTemperature: emptySeaTemperatureInfo(),
         lunar: getLunarInfo(caughtAtIso),
         ...getOfficialCurrentReference(location?.latitude, location?.longitude, caughtAtIso),
         ...getOfficialTideReference(location?.latitude, location?.longitude, caughtAtIso),
-        ...tideInfo
+        ...emptyTideInfo
       });
 
       rememberLastPostGroupId(selectedGroup?.id ?? "");
+      enrichCatchAfterPost(catchId, location, caughtAtIso);
 
       setFishType("");
       setSizeCm("");
       setComment("");
       setTackle(emptyTackleInfo());
       setFile(null);
-      setAreaName("");
-      setPointName("");
-      setSelectedAreaId("");
-      setSelectedTournamentId("");
       setCaughtAt(toLocalInputValue(new Date()));
-      setMessage(buildPostMessage(selectedTournament, tournamentCheck, selectedGroup));
+      setSuccessSummary(`${savedFishType} ${savedSizeCm}cm を投稿しました。`);
+      setMessage(`${buildPostMessage(selectedTournament, tournamentCheck, selectedGroup)} 潮位・天候・水温は裏側で追記中です。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "投稿に失敗しました。");
     } finally {
+      setSubmitStage("");
       setBusy(false);
     }
   }
@@ -456,11 +437,38 @@ function PostForm({ userId }: { userId: string }) {
           </p>
 
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
+          {successSummary ? (
+            <section className="rounded border border-water/20 bg-white p-4 shadow-soft" aria-live="polite">
+              <p className="text-xs font-black text-water">投稿完了</p>
+              <h2 className="mt-1 text-lg font-black text-ink">{successSummary}</h2>
+              <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
+                場所・エリア・共有先はそのまま残しています。続けて釣れた魚だけ入力すれば、すぐ次の投稿ができます。
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuccessSummary("");
+                    setMessage("");
+                    setCaughtAt(toLocalInputValue(new Date()));
+                  }}
+                  className="tap-target rounded bg-water px-4 py-3 text-sm font-black text-white"
+                >
+                  続けて投稿する
+                </button>
+                <Link href="/catches" className="tap-target rounded border border-slate-300 bg-white px-4 py-3 text-center text-sm font-black text-ink">
+                  一覧で確認
+                </Link>
+              </div>
+            </section>
+          ) : null}
 
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-teal-100 bg-white/95 p-4 backdrop-blur">
             <div className="mx-auto max-w-xl">
-              <button disabled={busy || !canQuickPost} className="tap-target w-full rounded bg-water px-5 py-4 text-lg font-black text-white shadow-soft disabled:opacity-60">
-                {busy ? "保存中..." : "すぐ投稿する"}
+              {busy && submitStage ? <SubmitProgress label={submitStage} /> : null}
+              <button disabled={busy || !canQuickPost} className="tap-target flex w-full items-center justify-center gap-3 rounded bg-water px-5 py-4 text-lg font-black text-white shadow-soft disabled:opacity-60">
+                {busy ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" /> : null}
+                {busy ? submitStage || "保存中..." : "すぐ投稿する"}
               </button>
             </div>
           </div>
@@ -857,6 +865,51 @@ function buildPostMessage(selectedTournament: Tournament | null, tournamentCheck
   if (!selectedTournament) return `投稿しました。${groupText}`.trim();
   const tournamentText = tournamentCheck?.ok ? "大会投稿は承認待ちです。" : `${getTournamentSkipMessage(tournamentCheck)} 承認画面で確認できます。`;
   return `投稿しました。${tournamentText}${groupText}`;
+}
+
+function getEmptyTideInfo() {
+  return {
+    tideHeight: null,
+    tideDirection: "unknown" as const,
+    tidePhase: null,
+    tidePhaseLabel: "潮位取得中",
+    previousTideTime: null,
+    previousTideType: "unknown" as const,
+    nextTideTime: null,
+    nextTideType: "unknown" as const,
+    minutesToNextTide: null,
+    tideStationName: null,
+    tideStationDistance: null,
+    tideApiProvider: "none" as const
+  };
+}
+
+function enrichCatchAfterPost(catchId: string, location: LocationPoint | null, caughtAtIso: string) {
+  void Promise.all([
+    fetchTideInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch(() => null),
+    fetchWeatherInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch(() => null),
+    fetchSeaTemperatureInfo(location?.latitude ?? null, location?.longitude ?? null, caughtAtIso).catch(() => null)
+  ]).then(([tideInfo, weather, seaTemperature]) => {
+    updateCatchEnrichment(catchId, {
+      ...(tideInfo ?? { ...getEmptyTideInfo(), tidePhaseLabel: "潮位未取得" }),
+      weather: weather ?? emptyWeatherInfo(),
+      seaTemperature: seaTemperature ?? emptySeaTemperatureInfo()
+    }).catch(() => undefined);
+  });
+}
+
+function SubmitProgress({ label }: { label: string }) {
+  return (
+    <div className="mb-2 overflow-hidden rounded border border-teal-100 bg-white p-3 shadow-soft" aria-live="polite">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-black text-water">{label}</p>
+        <p className="text-[11px] font-bold text-slate-500">画面を閉じずに少しお待ちください</p>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-foam">
+        <div className="h-full w-1/2 animate-pulse rounded-full bg-water" />
+      </div>
+    </div>
+  );
 }
 
 function estimateSizeCm(points: MeasurePoint[], knownCm: number) {
