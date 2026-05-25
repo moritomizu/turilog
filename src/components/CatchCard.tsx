@@ -29,6 +29,7 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
         {hasTackle(item) ? (
           <div className="rounded bg-foam p-3 text-sm leading-6">
             <p className="text-xs font-bold text-slate-500">タックル</p>
+            {item.tackleName ? <p className="font-black text-water">{item.tackleName}</p> : null}
             {item.tackle.lureName ? <p className="font-bold">ルアー: {item.tackle.lureName}{item.tackle.lureColor ? ` / ${item.tackle.lureColor}` : ""}</p> : null}
             {item.tackle.rodName ? <p>ロッド: {item.tackle.rodName}</p> : null}
             {item.tackle.reelName ? <p>リール: {item.tackle.reelName}</p> : null}
@@ -103,7 +104,7 @@ function formatSeaTemperature(item: Catch) {
 }
 
 function hasTackle(item: Catch) {
-  return Object.values(item.tackle).some(Boolean);
+  return Boolean(item.tackleName) || Object.values(item.tackle).some(Boolean);
 }
 
 function formatWind(item: Catch) {

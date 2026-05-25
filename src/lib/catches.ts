@@ -159,6 +159,13 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
     seaTemperature: normalizeSeaTemperature(data.seaTemperature),
     lunar: normalizeLunar(data.lunar),
     tackle: normalizeTackle(data.tackle),
+    tackleId: typeof data.tackleId === "string" ? data.tackleId : null,
+    tackleName: typeof data.tackleName === "string" ? data.tackleName : "",
+    rod: typeof data.rod === "string" ? data.rod : "",
+    reel: typeof data.reel === "string" ? data.reel : "",
+    line: typeof data.line === "string" ? data.line : "",
+    leader: typeof data.leader === "string" ? data.leader : "",
+    lure: typeof data.lure === "string" ? data.lure : "",
     ...normalizeTide(data),
     ...normalizeOfficialTideReference(data),
     ...normalizeOfficialCurrentReference(data)

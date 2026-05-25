@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getFirebaseAuth, isFirebaseConfigured, missingFirebaseEnv } from "@/lib/firebase";
+import { getUserProfile, shouldShowOnboarding } from "@/lib/userProfiles";
 
-export function AuthGate({ children }: { children: (user: FirebaseUser) => React.ReactNode }) {
+export function AuthGate({ children, skipOnboardingCheck = false }: { children: (user: FirebaseUser) => React.ReactNode; skipOnboardingCheck?: boolean }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -23,11 +28,21 @@ export function AuthGate({ children }: { children: (user: FirebaseUser) => React
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    if (!user || skipOnboardingCheck || pathname === "/onboarding") return;
+    setCheckingOnboarding(true);
+    getUserProfile(user.uid)
+      .then((profile) => {
+        if (shouldShowOnboarding(profile)) router.push("/onboarding");
+      })
+      .finally(() => setCheckingOnboarding(false));
+  }, [pathname, router, skipOnboardingCheck, user]);
+
   if (!isFirebaseConfigured) {
     return <Notice title="Firebase設定が必要です" message={`${missingFirebaseEnv.join(", ")} を .env.local に設定してください。`} />;
   }
 
-  if (loading) return <Notice title="確認中" message="ログイン状態を確認しています。" />;
+  if (loading || checkingOnboarding) return <Notice title="確認中" message="ログイン状態を確認しています。" />;
 
   if (!user) {
     return (

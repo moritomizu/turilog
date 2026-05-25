@@ -759,6 +759,105 @@ http://localhost:3000/*
 - エリア別ぼかし半径
 - 大会ごとの詳細な位置情報ルール
 
+## オンボーディング・プロフィール機能
+
+初回ログイン後、`users.onboardingCompleted` が `true` ではないユーザーは `/onboarding` に案内されます。
+
+オンボーディングでは、釣果投稿や分析を便利にするために以下を登録できます。
+
+- 表示名
+- 年代
+- 居住エリア
+- よく行く釣行エリア
+- 主な釣りジャンル
+- 釣行頻度
+- 主な釣行スタイル
+- アプリでやりたいこと
+- 釣りへの熱量
+- 初期タックル1セット
+
+入力はあとから `/profile` で編集できます。初回登録時の離脱を防ぐため、オンボーディングには「あとで設定する」ボタンがあります。スキップした場合は `users.onboardingSkippedAt` を保存し、毎回強制表示しない設計です。
+
+保存先:
+
+```text
+users/{uid}
+```
+
+主な追加フィールド:
+
+```text
+onboardingCompleted
+onboardingCompletedAt
+onboardingSkippedAt
+ageRange
+residenceArea
+fishingAreas
+fishingGenres
+fishingFrequency
+fishingStyle
+appPurposes
+fishingMotivation
+updatedAt
+```
+
+## タックル管理機能
+
+`/profile/tackles` で、よく使うタックルセットを登録・編集・削除できます。
+
+保存先:
+
+```text
+tackles/{tackleId}
+```
+
+保存項目:
+
+```text
+userId
+name
+fishingGenre
+rod
+reel
+line
+leader
+lure
+memo
+isDefault
+createdAt
+updatedAt
+```
+
+釣果投稿画面では、登録済みタックルを選択できます。選択するとロッド・リール・ライン・リーダー・ルアーが投稿フォームへ反映されます。
+
+投稿時には以下を `catches` にスナップショット保存します。
+
+```text
+tackleId
+tackleName
+rod
+reel
+line
+leader
+lure
+```
+
+これにより、あとからタックル管理側の内容を変更しても、過去釣果に記録された当時のタックル情報は変わりません。
+
+## 将来的な分析活用
+
+オンボーディングで固定選択肢として保存した情報は、将来的に以下の分析へ活用できます。
+
+- 年代別利用傾向
+- エリア別利用傾向
+- 釣種別利用傾向
+- 釣行頻度別の継続率
+- 熱量別の課金可能性
+- タックル別釣果傾向
+- スポンサー提案用のセグメント分析
+
+プロフィール情報やタックル情報は個人の趣味嗜好に関わるデータです。公開範囲や分析利用を広げる場合は、利用規約・プライバシーポリシー・画面上の説明をあわせて見直してください。
+
 ## 今後の拡張候補
 
 - 釣り大会モード

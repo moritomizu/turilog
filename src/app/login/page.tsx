@@ -184,6 +184,7 @@ function LoginContent() {
   function goNext() {
     const next = searchParams.get("next");
     if (next?.startsWith("/")) router.push(next);
+    else router.push("/post");
   }
 
   return (

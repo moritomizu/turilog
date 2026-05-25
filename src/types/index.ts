@@ -15,6 +15,15 @@ export type GroupVisibility = "private" | "inviteOnly" | "public";
 export type GroupLocationVisibility = "exactForAdminsOnly" | "exactForAllMembers" | "blurredForMembers" | "hidden";
 export type TournamentLocationVisibility = "exactForOrganizersOnly" | "blurredForParticipants" | "areaOnlyForParticipants" | "hiddenForParticipants";
 export type DisplayLocationType = "exact" | "blurred" | "areaOnly" | "hidden";
+export type AgeRange = "10s" | "20s" | "30s" | "40s" | "50s" | "60plus" | "preferNotToSay";
+export type FishingFrequency =
+  | "twiceOrMorePerWeek"
+  | "oncePerWeek"
+  | "twoThreeTimesPerMonth"
+  | "oncePerMonth"
+  | "onceEveryFewMonths"
+  | "fewTimesPerYear";
+export type FishingMotivation = "casual" | "improve" | "serious" | "competitive" | "business";
 
 export type DisplayLocation = {
   type: DisplayLocationType;
@@ -36,6 +45,27 @@ export type User = {
   privacyAcceptedAt?: Date;
   termsVersion?: string;
   privacyVersion?: string;
+  onboardingCompleted?: boolean;
+  onboardingCompletedAt?: Date;
+  onboardingSkippedAt?: Date;
+};
+
+export type UserProfile = {
+  uid: string;
+  displayName?: string;
+  email?: string | null;
+  ageRange?: AgeRange;
+  residenceArea?: string;
+  fishingAreas?: string[];
+  fishingGenres?: string[];
+  fishingFrequency?: FishingFrequency;
+  fishingStyle?: string;
+  appPurposes?: string[];
+  fishingMotivation?: FishingMotivation;
+  onboardingCompleted?: boolean;
+  onboardingCompletedAt?: string | null;
+  onboardingSkippedAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type TideInfo = {
@@ -114,6 +144,22 @@ export type TackleInfo = {
   leaderName: string;
 };
 
+export type Tackle = {
+  id: string;
+  userId: string;
+  name: string;
+  fishingGenre?: string;
+  rod?: string;
+  reel?: string;
+  line?: string;
+  leader?: string;
+  lure?: string;
+  memo?: string;
+  isDefault?: boolean;
+  createdAt: string;
+  updatedAt?: string | null;
+};
+
 export type Catch = TideInfo &
   OfficialTideReference &
   OfficialCurrentReference & {
@@ -121,6 +167,13 @@ export type Catch = TideInfo &
   seaTemperature: SeaTemperatureInfo;
   lunar: LunarInfo;
   tackle: TackleInfo;
+  tackleId?: string | null;
+  tackleName?: string;
+  rod?: string;
+  reel?: string;
+  line?: string;
+  leader?: string;
+  lure?: string;
   id: string;
   userId: string;
   imageUrl: string | null;

@@ -15,10 +15,11 @@ import { getOfficialCurrentReference } from "@/lib/officialCurrent";
 import { getOfficialTideReference } from "@/lib/officialTide";
 import { getLastPostGroupId, rememberLastPostGroupId } from "@/lib/postPreferences";
 import { emptySeaTemperatureInfo, fetchSeaTemperatureInfo } from "@/lib/seaTemperature";
+import { getUserTackles, tackleToTackleInfo } from "@/lib/tackles";
 import { fetchTideInfo } from "@/lib/tide";
 import { getJoinedTournaments, getTournament, isTournamentEntryEligible } from "@/lib/tournaments";
 import { emptyWeatherInfo, fetchWeatherInfo } from "@/lib/weather";
-import type { Catch, Group, LocationPoint, TackleInfo, Tournament } from "@/types";
+import type { Catch, Group, LocationPoint, Tackle, TackleInfo, Tournament } from "@/types";
 
 type LocationSuggestion = LocationPoint & {
   label: string;
@@ -45,6 +46,8 @@ function PostForm({ userId }: { userId: string }) {
   const [caughtAt, setCaughtAt] = useState(toLocalInputValue(new Date()));
   const [comment, setComment] = useState("");
   const [tackle, setTackle] = useState<TackleInfo>(emptyTackleInfo());
+  const [tackleOptions, setTackleOptions] = useState<Tackle[]>([]);
+  const [selectedTackleId, setSelectedTackleId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [location, setLocation] = useState<LocationPoint | null>(null);
   const [manualLatitude, setManualLatitude] = useState("");
@@ -119,6 +122,28 @@ function PostForm({ userId }: { userId: string }) {
       })
       .catch(() => setGroupOptions([]));
   }, [userId]);
+
+  useEffect(() => {
+    getUserTackles(userId)
+      .then((items) => {
+        setTackleOptions(items);
+        const defaultTackle = items.find((item) => item.isDefault);
+        if (defaultTackle) {
+          setSelectedTackleId(defaultTackle.id);
+          setTackle(tackleToTackleInfo(defaultTackle));
+        }
+      })
+      .catch(() => setTackleOptions([]));
+  }, [userId]);
+
+  function handleTackleSelect(tackleId: string) {
+    setSelectedTackleId(tackleId);
+    const selected = tackleOptions.find((item) => item.id === tackleId);
+    if (selected) {
+      setTackle(tackleToTackleInfo(selected));
+      setMessage(`${selected.name} をタックルに反映しました。`);
+    }
+  }
 
   async function handleLocation() {
     setMessage("位置情報を取得しています。");
@@ -195,6 +220,7 @@ function PostForm({ userId }: { userId: string }) {
       const hasTournamentSelection = Boolean(selectedTournament);
       const selectedGroup = groupOptions.find((item) => item.id === selectedGroupId) ?? null;
       const selectedGroupIds = selectedGroup ? [selectedGroup.id] : [];
+      const selectedTackle = tackleOptions.find((item) => item.id === selectedTackleId) ?? null;
       const blurRadiusMeters = location ? getDefaultBlurRadius() : null;
       const blurredLocation = location && blurRadiusMeters ? generateBlurredLocation(location.latitude, location.longitude, blurRadiusMeters) : null;
       const inferredArea = location ? getAreaFromLocation(location.latitude, location.longitude) : { areaName: "", areaCode: "" };
@@ -233,6 +259,13 @@ function PostForm({ userId }: { userId: string }) {
         actualAnglerUserId: userId,
         isProxyPost: false,
         proxyPostReason: "",
+        tackleId: selectedTackle?.id ?? null,
+        tackleName: selectedTackle?.name ?? "",
+        rod: tackle.rodName,
+        reel: tackle.reelName,
+        line: tackle.lineName,
+        leader: tackle.leaderName,
+        lure: [tackle.lureName, tackle.lureColor].filter(Boolean).join(" / "),
         weather: emptyWeatherInfo(),
         seaTemperature: emptySeaTemperatureInfo(),
         lunar: getLunarInfo(caughtAtIso),
@@ -247,7 +280,6 @@ function PostForm({ userId }: { userId: string }) {
       setFishType("");
       setSizeCm("");
       setComment("");
-      setTackle(emptyTackleInfo());
       setFile(null);
       setCaughtAt(toLocalInputValue(new Date()));
       setSuccessSummary(`${savedFishType} ${savedSizeCm}cm を投稿しました。`);
@@ -324,6 +356,36 @@ function PostForm({ userId }: { userId: string }) {
               <p className="mt-2 text-xs font-bold leading-5 text-slate-600">前回選んだ共有先を次回も自動で選択します。秘密にしたい釣果は「自分だけ」を選んでください。</p>
             </section>
           ) : null}
+
+          <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-black text-water">使用タックルセット</h2>
+                <p className="mt-1 text-xs font-bold leading-5 text-slate-600">登録済みタックルを選ぶと、ロッド・リール・ラインを自動入力します。</p>
+              </div>
+              <Link href="/profile/tackles" className="shrink-0 rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">
+                管理
+              </Link>
+            </div>
+            {tackleOptions.length ? (
+              <select
+                value={selectedTackleId}
+                onChange={(event) => handleTackleSelect(event.target.value)}
+                className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
+              >
+                <option value="">選択しない / 手入力</option>
+                {tackleOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}{item.fishingGenre ? `（${item.fishingGenre}）` : ""}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="mt-3 rounded bg-foam p-3 text-xs font-bold leading-5 text-slate-600">
+                登録済みタックルはまだありません。よく使うセットを登録すると、投稿がかなり楽になります。
+              </p>
+            )}
+          </section>
 
           <section className="grid grid-cols-2 gap-3">
             <button type="button" onClick={handleLocation} className="tap-target rounded border border-water bg-white px-4 py-3 text-sm font-black text-water shadow-soft">
