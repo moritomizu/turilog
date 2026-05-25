@@ -32,6 +32,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   const commentsByCatch = useMemo(() => groupCommentsByCatch(comments), [comments]);
   const digest = useMemo(() => buildDigest(items), [items]);
   const ranking = useMemo(() => buildRanking(items, memberNames), [items, memberNames]);
+  const mapPinNumbers = useMemo(() => buildMapPinNumbers(items, userId, group, currentMember), [items, userId, group, currentMember]);
 
   async function reloadItems() {
     setItems(await getGroupCatches(groupId));
@@ -178,7 +179,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
 
             <section>
               <h2 className="mb-3 text-xl font-black">グループ釣果マップ</h2>
-              <GroupCatchMap items={items} memberNames={memberNames} group={group} member={currentMember} userId={userId} />
+              <GroupCatchMap items={items} memberNames={memberNames} group={group} member={currentMember} userId={userId} pinNumbers={mapPinNumbers} />
             </section>
 
             <section>
@@ -189,6 +190,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
                     key={item.id}
                     item={maskLocation(item, getDisplayLocation(userId, item, { type: "group", group, member: currentMember }))}
                     displayLocation={getDisplayLocation(userId, item, { type: "group", group, member: currentMember })}
+                    mapPinNumber={mapPinNumbers.get(item.id) ?? null}
                     members={members}
                     memberNames={memberNames}
                     comments={commentsByCatch.get(item.id) ?? []}
@@ -221,6 +223,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
 function GroupCatch({
   item,
   displayLocation,
+  mapPinNumber,
   members,
   memberNames,
   comments,
@@ -232,6 +235,7 @@ function GroupCatch({
 }: {
   item: Catch;
   displayLocation: DisplayLocation;
+  mapPinNumber: number | null;
   members: GroupMember[];
   memberNames: Map<string, string>;
   comments: GroupCatchComment[];
@@ -308,6 +312,11 @@ function GroupCatch({
 
   return (
     <div>
+      {mapPinNumber ? (
+        <div className="rounded-t border-x border-t border-teal-100 bg-water px-3 py-2 text-xs font-black text-white shadow-soft">
+          地図ピン #{mapPinNumber} の釣果
+        </div>
+      ) : null}
       <CatchCard item={item} />
       <div className="rounded-b border-x border-b border-teal-100 bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
         <p>釣った人: {memberNames.get(item.actualAnglerUserId) ?? "メンバー"}</p>
@@ -403,7 +412,7 @@ function EditField({ label, value, onChange, type = "text" }: { label: string; v
   );
 }
 
-function GroupCatchMap({ items, memberNames, group, member, userId }: { items: Catch[]; memberNames: Map<string, string>; group: Group; member: GroupMember | null; userId: string }) {
+function GroupCatchMap({ items, memberNames, group, member, userId, pinNumbers }: { items: Catch[]; memberNames: Map<string, string>; group: Group; member: GroupMember | null; userId: string; pinNumbers: Map<string, number> }) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [message, setMessage] = useState("地図を準備しています。");
   useEffect(() => {
@@ -424,17 +433,34 @@ function GroupCatchMap({ items, memberNames, group, member, userId }: { items: C
       const map = new google.maps.Map(mapRef.current as HTMLDivElement, { center: { lat: positioned[0].displayLocation.latitude, lng: positioned[0].displayLocation.longitude }, zoom: 10 });
       const info = new google.maps.InfoWindow();
       positioned.forEach(({ item, displayLocation }) => {
-        const marker = new google.maps.Marker({ position: { lat: displayLocation.latitude, lng: displayLocation.longitude }, map, title: `${item.fishType} ${item.sizeCm}cm` });
+        const pinNumber = pinNumbers.get(item.id);
+        const marker = new google.maps.Marker({
+          position: { lat: displayLocation.latitude, lng: displayLocation.longitude },
+          map,
+          title: `${pinNumber ? `#${pinNumber} ` : ""}${item.fishType} ${item.sizeCm}cm`,
+          label: pinNumber ? { text: String(pinNumber), color: "#ffffff", fontWeight: "900" } : undefined
+        });
         marker.addListener("click", () => {
-          info.setContent(`<strong>${escapeHtml(item.fishType)} ${item.sizeCm}cm</strong><p>${formatDate(item.caughtAt)}</p><p>釣った人: ${escapeHtml(memberNames.get(item.actualAnglerUserId) ?? "メンバー")}</p><p>${escapeHtml(item.comment || "")}</p><p>${item.isProxyPost ? "代理投稿" : "本人投稿"}</p><p>${escapeHtml(displayLocation.message)}</p>`);
+          info.setContent(`<strong>${pinNumber ? `#${pinNumber} ` : ""}${escapeHtml(item.fishType)} ${item.sizeCm}cm</strong><p>${formatDate(item.caughtAt)}</p><p>釣った人: ${escapeHtml(memberNames.get(item.actualAnglerUserId) ?? "メンバー")}</p><p>${escapeHtml(item.comment || "")}</p><p>${item.isProxyPost ? "代理投稿" : "本人投稿"}</p><p>${escapeHtml(displayLocation.message)}</p>`);
           info.open({ map, anchor: marker });
         });
       });
       setMessage("");
     }
     load().catch((error) => setMessage(error instanceof Error ? error.message : "地図を表示できませんでした。"));
-  }, [items, memberNames, group, member, userId]);
+  }, [items, memberNames, group, member, userId, pinNumbers]);
   return <div>{message ? <p className="mb-3 rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}<div ref={mapRef} className="h-[52vh] min-h-[340px] rounded border border-teal-100 bg-white shadow-soft" /></div>;
+}
+
+function buildMapPinNumbers(items: Catch[], userId: string, group: Group | null, member: GroupMember | null) {
+  const numbers = new Map<string, number>();
+  if (!group) return numbers;
+  items.forEach((item) => {
+    const displayLocation = getDisplayLocation(userId, item, { type: "group", group, member });
+    if (displayLocation.latitude == null || displayLocation.longitude == null) return;
+    numbers.set(item.id, numbers.size + 1);
+  });
+  return numbers;
 }
 
 function buildDigest(items: Catch[]) {

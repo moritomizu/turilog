@@ -34,7 +34,7 @@ export function createPageMetadata({
 }): Metadata {
   const siteUrl = getSiteUrl();
   const url = `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
-  const imageUrl = image || `${siteUrl}/opengraph-image`;
+  const imageUrl = image ? (image.startsWith("http") ? image : `${siteUrl}${image.startsWith("/") ? image : `/${image}`}`) : `${siteUrl}/opengraph-image`;
   return {
     title,
     description,
@@ -81,6 +81,32 @@ export async function getGroupMetadata(groupId: string) {
   };
 }
 
+export async function getGroupOgSummary(groupId: string) {
+  const group = await getDocData("groups", groupId);
+  if (!group) return null;
+  const catches = await queryCatchesByGroup(groupId).catch(() => []);
+  const now = new Date();
+  const monthItems = catches.filter((item) => {
+    const caughtAt = typeof item.caughtAt === "string" ? new Date(item.caughtAt) : null;
+    return caughtAt && caughtAt.getFullYear() === now.getFullYear() && caughtAt.getMonth() === now.getMonth();
+  });
+  const biggest = catches.reduce<{ fishType: string; sizeCm: number } | null>((best, item) => {
+    const sizeCm = typeof item.sizeCm === "number" ? item.sizeCm : 0;
+    if (!best || sizeCm > best.sizeCm) return { fishType: text(item.fishType, "釣果"), sizeCm };
+    return best;
+  }, null);
+  return {
+    name: text(group.name, "釣り仲間グループ"),
+    description: text(group.description, "釣り仲間で釣果を共有中"),
+    memberCount: typeof group.memberCount === "number" ? group.memberCount : null,
+    catchCount: catches.length,
+    monthCount: monthItems.length,
+    monthMax: monthItems.length ? Math.max(...monthItems.map((item) => (typeof item.sizeCm === "number" ? item.sizeCm : 0))) : 0,
+    topFish: topValue(monthItems.map((item) => text(item.fishType, ""))),
+    biggest
+  };
+}
+
 export async function getTournamentMetadata(tournamentId: string) {
   const data = await getDocData("tournaments", tournamentId);
   if (!data) return null;
@@ -104,12 +130,46 @@ async function getDocData(collectionName: string, id: string): Promise<MetadataD
   return body.fields ? decodeFields(body.fields) : null;
 }
 
+async function queryCatchesByGroup(groupId: string): Promise<MetadataDoc[]> {
+  if (!isFirebaseMetadataConfigured()) return [];
+  const projectId = firebaseConfig.projectId;
+  const apiKey = firebaseConfig.apiKey;
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: "catches" }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "groupIds" },
+            op: "ARRAY_CONTAINS",
+            value: { stringValue: groupId }
+          }
+        },
+        limit: 200
+      }
+    }),
+    next: { revalidate: 300 }
+  });
+  if (!response.ok) return [];
+  const body = (await response.json()) as { document?: { fields?: Record<string, FirestoreValue> } }[];
+  return body.map((item) => (item.document?.fields ? decodeFields(item.document.fields) : null)).filter((item): item is MetadataDoc => Boolean(item));
+}
+
 function isFirebaseMetadataConfigured() {
   return Object.values(firebaseConfig).every(Boolean);
 }
 
 function text(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function topValue(values: string[]) {
+  const counts = new Map<string, number>();
+  values.filter(Boolean).forEach((value) => counts.set(value, (counts.get(value) ?? 0) + 1));
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
 }
 
 type FirestoreValue = {
