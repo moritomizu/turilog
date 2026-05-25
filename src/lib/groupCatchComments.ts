@@ -9,12 +9,14 @@ export async function getGroupCatchComments(groupId: string): Promise<GroupCatch
   return snapshot.docs.map((item) => normalizeGroupCatchComment(item.id, item.data())).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 }
 
-export async function addGroupCatchComment(input: Pick<GroupCatchComment, "groupId" | "catchId" | "userId" | "userName" | "body">) {
+export async function addGroupCatchComment(input: Pick<GroupCatchComment, "groupId" | "catchId" | "userId" | "userName" | "body"> & Partial<Pick<GroupCatchComment, "replyToCommentId" | "replyToUserName">>) {
   const body = input.body.trim();
   if (!body) throw new Error("コメントを入力してください。");
   await addDoc(collection(getFirebaseDb(), "groupCatchComments"), {
     ...input,
     body,
+    replyToCommentId: input.replyToCommentId ?? null,
+    replyToUserName: input.replyToUserName ?? null,
     createdAt: serverTimestamp()
   });
 }
@@ -27,6 +29,8 @@ function normalizeGroupCatchComment(id: string, data: Record<string, unknown>): 
     userId: typeof data.userId === "string" ? data.userId : "",
     userName: typeof data.userName === "string" ? data.userName : "メンバー",
     body: typeof data.body === "string" ? data.body : "",
+    replyToCommentId: typeof data.replyToCommentId === "string" ? data.replyToCommentId : null,
+    replyToUserName: typeof data.replyToUserName === "string" ? data.replyToUserName : null,
     createdAt: normalizeDate(data.createdAt)
   };
 }

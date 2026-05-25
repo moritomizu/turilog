@@ -52,14 +52,16 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
     await reloadItems();
   }
 
-  async function handleAddComment(item: Catch, body: string) {
+  async function handleAddComment(item: Catch, body: string, replyTo?: GroupCatchComment | null) {
     if (!currentMember) throw new Error("グループメンバーのみコメントできます。");
     await addGroupCatchComment({
       groupId,
       catchId: item.id,
       userId,
       userName: currentMember.userName,
-      body
+      body,
+      replyToCommentId: replyTo?.id ?? null,
+      replyToUserName: replyTo?.userName ?? null
     });
     await reloadComments();
   }
@@ -194,7 +196,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
                     canDelete={canDeleteGroupCatchSync(currentMember, item, userId)}
                     onSave={(patch) => handleSaveCatch(item, patch)}
                     onDelete={() => handleDeleteCatch(item)}
-                    onAddComment={(body) => handleAddComment(item, body)}
+                    onAddComment={(body, replyTo) => handleAddComment(item, body, replyTo)}
                   />
                 )) : <Empty text="釣果がありません。" />}
               </div>
@@ -237,10 +239,11 @@ function GroupCatch({
   canDelete: boolean;
   onSave: (patch: Partial<Pick<Catch, "fishType" | "sizeCm" | "comment" | "caughtAt" | "actualAnglerUserId">>) => Promise<void>;
   onDelete: () => void;
-  onAddComment: (body: string) => Promise<void>;
+  onAddComment: (body: string, replyTo?: GroupCatchComment | null) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [commentBody, setCommentBody] = useState("");
+  const [replyTo, setReplyTo] = useState<GroupCatchComment | null>(null);
   const [fishType, setFishType] = useState(item.fishType);
   const [sizeCm, setSizeCm] = useState(String(item.sizeCm));
   const [caughtAt, setCaughtAt] = useState(toLocalInputValue(new Date(item.caughtAt)));
@@ -292,9 +295,10 @@ function GroupCatch({
     setCommentBusy(true);
     setMessage("コメントを追加しています。");
     try {
-      await onAddComment(commentBody);
+      await onAddComment(commentBody, replyTo);
       setCommentBody("");
-      setMessage("コメントを追加しました。");
+      setReplyTo(null);
+      setMessage(replyTo ? "返信を追加しました。" : "コメントを追加しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "コメントを追加できませんでした。");
     } finally {
@@ -348,12 +352,16 @@ function GroupCatch({
           {comments.length ? (
             <div className="mt-2 space-y-2">
               {comments.map((comment) => (
-                <div key={comment.id} className="rounded bg-white p-2">
+                <div key={comment.id} className={`rounded bg-white p-2 ${comment.replyToCommentId ? "ml-4 border-l-4 border-water/30" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-black text-ink">{comment.userName}</p>
                     <p className="shrink-0 text-[11px] text-slate-400">{formatCommentDate(comment.createdAt)}</p>
                   </div>
+                  {comment.replyToUserName ? <p className="mt-1 text-[11px] font-black text-water">@{comment.replyToUserName} への返信</p> : null}
                   <p className="mt-1 whitespace-pre-wrap text-sm font-bold leading-5 text-slate-700">{comment.body}</p>
+                  <button type="button" onClick={() => setReplyTo(comment)} className="mt-2 rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-black text-slate-600">
+                    返信
+                  </button>
                 </div>
               ))}
             </div>
@@ -361,14 +369,22 @@ function GroupCatch({
             <p className="mt-2 text-xs font-bold text-slate-500">まだコメントはありません。</p>
           )}
           <div className="mt-3 flex gap-2">
-            <input
-              value={commentBody}
-              onChange={(event) => setCommentBody(event.target.value)}
-              className="min-w-0 flex-1 rounded border border-slate-300 bg-white p-2 text-sm font-bold"
-              placeholder="ナイス、状況メモなど"
-            />
+            <div className="min-w-0 flex-1">
+              {replyTo ? (
+                <div className="mb-2 flex items-center justify-between gap-2 rounded bg-white px-2 py-1 text-xs font-bold text-slate-600">
+                  <span className="min-w-0 truncate">@{replyTo.userName} に返信</span>
+                  <button type="button" onClick={() => setReplyTo(null)} className="shrink-0 text-coral">解除</button>
+                </div>
+              ) : null}
+              <input
+                value={commentBody}
+                onChange={(event) => setCommentBody(event.target.value)}
+                className="w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold"
+                placeholder={replyTo ? "返信を書く" : "ナイス、状況メモなど"}
+              />
+            </div>
             <button type="button" disabled={commentBusy || !commentBody.trim()} onClick={handleCommentSubmit} className="rounded bg-water px-3 py-2 text-sm font-black text-white disabled:opacity-50">
-              送信
+              {replyTo ? "返信" : "送信"}
             </button>
           </div>
           {!editing && message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}

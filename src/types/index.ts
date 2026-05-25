@@ -230,6 +230,8 @@ export type GroupCatchComment = {
   userId: string;
   userName: string;
   body: string;
+  replyToCommentId: string | null;
+  replyToUserName: string | null;
   createdAt: string;
 };
 
