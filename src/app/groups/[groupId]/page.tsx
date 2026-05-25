@@ -307,7 +307,6 @@ function GroupCatch({
       <div className="rounded-b border-x border-b border-teal-100 bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
         <p>釣った人: {memberNames.get(item.actualAnglerUserId) ?? "メンバー"}</p>
         <p>投稿者: {memberNames.get(item.postedByUserId) ?? "メンバー"}{item.isProxyPost ? " / 代理投稿" : ""}</p>
-        <p>{displayLocation.message}</p>
         {displayLocation.type === "exact" ? <p>緯度経度: {displayLocation.latitude != null ? `${displayLocation.latitude.toFixed(5)}, ${displayLocation.longitude?.toFixed(5)}` : "未取得"}</p> : null}
         {(canEdit || canDelete) ? (
           <div className="mt-2 grid grid-cols-2 gap-2">
