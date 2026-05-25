@@ -37,7 +37,7 @@ export default async function Image({ params }: { params: { groupId: string } })
           </div>
         </div>
 
-        <div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: 66, fontWeight: 900, lineHeight: 1.05, maxWidth: 980 }}>{name}</div>
           <div style={{ marginTop: 20, fontSize: 27, lineHeight: 1.35, color: "#334155", maxWidth: 980 }}>
             {description.length > 70 ? `${description.slice(0, 70)}...` : description}
@@ -65,6 +65,8 @@ function Stat({ label, value, accent = false }: { label: string; value: string; 
   return (
     <div
       style={{
+        display: "flex",
+        flexDirection: "column",
         flex: 1,
         borderRadius: 18,
         background: accent ? "#0f766e" : "white",
