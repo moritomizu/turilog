@@ -505,7 +505,9 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
         zoom: initialLocation ? 14 : 9,
         streetViewControl: false,
         mapTypeControl: false,
-        fullscreenControl: false
+        fullscreenControl: false,
+        clickableIcons: false,
+        gestureHandling: "greedy"
       });
       mapInstanceRef.current = map;
 
@@ -531,7 +533,7 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
         if (position) setPoint(position);
       });
 
-      setMessage("地図をタップ、またはピンを動かして場所を指定できます。");
+      setMessage("地図をタップ、ピンを動かす、または地図中心を指定して場所を決められます。");
     }
 
     load().catch((error) => {
@@ -550,9 +552,21 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
     mapInstanceRef.current.panTo(nextPosition);
   }, [location]);
 
+  function pickMapCenter() {
+    const center = mapInstanceRef.current?.getCenter();
+    if (!center) return;
+    const point = { latitude: center.lat(), longitude: center.lng() };
+    markerRef.current?.setPosition(center);
+    onPickRef.current(point);
+    setMessage("地図中心の場所を投稿位置に設定しました。");
+  }
+
   return (
     <div className="mt-3">
       <div ref={mapRef} className="h-72 w-full rounded border border-teal-100 bg-white" />
+      <button type="button" onClick={pickMapCenter} className="tap-target mt-2 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
+        地図中心をピン位置にする
+      </button>
       <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p>
     </div>
   );

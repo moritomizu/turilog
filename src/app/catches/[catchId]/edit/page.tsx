@@ -219,7 +219,15 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
       if (!mounted || !mapRef.current) return;
       const initialLocation = initialLocationRef.current;
       const center = initialLocation ? { lat: initialLocation.latitude, lng: initialLocation.longitude } : { lat: 34.617, lng: 135.015 };
-      const map = new google.maps.Map(mapRef.current, { center, zoom: initialLocation ? 14 : 9, streetViewControl: false, mapTypeControl: false, fullscreenControl: false });
+      const map = new google.maps.Map(mapRef.current, {
+        center,
+        zoom: initialLocation ? 14 : 9,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false,
+        clickableIcons: false,
+        gestureHandling: "greedy"
+      });
       mapInstanceRef.current = map;
       markerRef.current = new google.maps.Marker({ position: center, map, draggable: true });
       function setPoint(latLng: google.maps.LatLng) {
@@ -235,7 +243,7 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
         const position = markerRef.current?.getPosition();
         if (position) setPoint(position);
       });
-      setMessage("地図をタップ、またはピンを動かして場所を指定できます。");
+      setMessage("地図をタップ、ピンを動かす、または地図中心を指定して場所を決められます。");
     }
     load().catch((error) => setMessage(error instanceof Error ? error.message : "地図を表示できませんでした。"));
     return () => {
@@ -250,9 +258,21 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
     mapInstanceRef.current.panTo(nextPosition);
   }, [location]);
 
+  function pickMapCenter() {
+    const center = mapInstanceRef.current?.getCenter();
+    if (!center) return;
+    const point = { latitude: center.lat(), longitude: center.lng() };
+    markerRef.current?.setPosition(center);
+    onPickRef.current(point);
+    setMessage("地図中心の場所を釣果ポイントに設定しました。");
+  }
+
   return (
     <div className="mt-3">
       <div ref={mapRef} className="h-80 w-full rounded border border-teal-100 bg-white" />
+      <button type="button" onClick={pickMapCenter} className="tap-target mt-2 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
+        地図中心をピン位置にする
+      </button>
       <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p>
     </div>
   );
