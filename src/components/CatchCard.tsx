@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import type { Catch } from "@/types";
 
-export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
+export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: Catch; rank?: number; mapPinNumber?: number | null; onMapPinClick?: () => void }) {
   const [showTideHelp, setShowTideHelp] = useState(false);
 
   return (
@@ -21,7 +21,19 @@ export function CatchCard({ item, rank }: { item: Catch; rank?: number }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-black">{item.fishType}</h2>
-            <p className="text-sm text-slate-600">{formatDate(item.caughtAt)}</p>
+            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+              <p className="text-sm text-slate-600">{formatDate(item.caughtAt)}</p>
+              {mapPinNumber ? (
+                <button
+                  type="button"
+                  onClick={onMapPinClick}
+                  className="rounded-full border border-teal-100 bg-foam px-2 py-0.5 text-[11px] font-black text-water"
+                  aria-label={`地図ピン ${mapPinNumber} を表示`}
+                >
+                  📍{mapPinNumber}
+                </button>
+              ) : null}
+            </div>
           </div>
           <p className="shrink-0 text-2xl font-black text-water">{item.sizeCm}cm</p>
         </div>
