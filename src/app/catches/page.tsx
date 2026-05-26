@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
+import { FeatureLock } from "@/components/FeatureLock";
 import { PageHeader } from "@/components/PageHeader";
 import { deleteCatch, getUserCatches, updateCatchPublicStatus } from "@/lib/catches";
 import type { Catch } from "@/types";
@@ -36,6 +37,7 @@ function CatchList({ userId }: { userId: string }) {
       <main className="mx-auto max-w-5xl space-y-5 px-4 py-5">
         {message ? <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
         {items.length ? <CatchDigest digest={digest} /> : null}
+        {items.length ? <FeatureLock userId={userId} featureKey="csvExport" compact /> : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
             <div key={item.id} className="relative">

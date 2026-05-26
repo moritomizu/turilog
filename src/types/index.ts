@@ -24,6 +24,33 @@ export type FishingFrequency =
   | "onceEveryFewMonths"
   | "fewTimesPerYear";
 export type FishingMotivation = "casual" | "improve" | "serious" | "competitive" | "business";
+export type SubscriptionPlan = "free" | "premium" | "organizer" | "groupPro" | "tester";
+export type FeatureKey =
+  | "basicCatchLog"
+  | "basicRanking"
+  | "joinTournament"
+  | "joinGroup"
+  | "advancedAnalysis"
+  | "groupAnalysis"
+  | "tournamentCreate"
+  | "tournamentAdmin"
+  | "detailedMap"
+  | "csvExport"
+  | "proxyPost"
+  | "tackleAnalysis"
+  | "aiReport"
+  | "privateGroup"
+  | "unlimitedGroups"
+  | "unlimitedTournaments"
+  | "plan_premium"
+  | "plan_organizer"
+  | "plan_groupPro";
+export type FeatureEventType =
+  | "viewLockedFeature"
+  | "clickInterested"
+  | "clickLearnMore"
+  | "attemptUseFeature"
+  | "useFeature";
 
 export type DisplayLocation = {
   type: DisplayLocationType;
@@ -49,6 +76,11 @@ export type User = {
   onboardingCompleted?: boolean;
   onboardingCompletedAt?: Date;
   onboardingSkippedAt?: Date;
+  subscriptionPlan?: SubscriptionPlan;
+  enabledFeatures?: FeatureKey[];
+  disabledFeatures?: FeatureKey[];
+  trialEndsAt?: Date;
+  planUpdatedAt?: Date;
 };
 
 export type UserProfile = {
@@ -67,7 +99,23 @@ export type UserProfile = {
   onboardingCompleted?: boolean;
   onboardingCompletedAt?: string | null;
   onboardingSkippedAt?: string | null;
+  subscriptionPlan?: SubscriptionPlan;
+  enabledFeatures?: FeatureKey[];
+  disabledFeatures?: FeatureKey[];
+  trialEndsAt?: string | null;
+  planUpdatedAt?: string | null;
   updatedAt?: string | null;
+};
+
+export type FeatureEvent = {
+  id: string;
+  userId: string;
+  featureKey: FeatureKey;
+  eventType: FeatureEventType;
+  planAtEvent: SubscriptionPlan;
+  pagePath: string;
+  createdAt: string;
+  metadata: Record<string, unknown>;
 };
 
 export type TideInfo = {

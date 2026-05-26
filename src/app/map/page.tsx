@@ -4,6 +4,7 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { useEffect, useRef, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { formatDate } from "@/components/CatchCard";
+import { FeatureGate } from "@/components/FeatureGate";
 import { PageHeader } from "@/components/PageHeader";
 import { getUserCatches } from "@/lib/catches";
 import { getDisplayLocation } from "@/lib/locationBlur";
@@ -12,7 +13,11 @@ import type { Catch, DisplayLocation } from "@/types";
 export default function MapPage() {
   return (
     <AuthGate>
-      {(user) => <CatchMap userId={user.uid} />}
+      {(user) => (
+        <FeatureGate userId={user.uid} featureKey="detailedMap">
+          <CatchMap userId={user.uid} />
+        </FeatureGate>
+      )}
     </AuthGate>
   );
 }

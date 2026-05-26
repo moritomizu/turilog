@@ -858,6 +858,142 @@ lure
 
 プロフィール情報やタックル情報は個人の趣味嗜好に関わるデータです。公開範囲や分析利用を広げる場合は、利用規約・プライバシーポリシー・画面上の説明をあわせて見直してください。
 
+## Feature Flags / プラン管理
+
+課金導入前の準備として、機能ごとの利用可否を判定する基盤を追加しています。
+
+主なファイル:
+
+```text
+src/lib/plans.ts
+src/lib/features.ts
+src/lib/featureEvents.ts
+src/components/FeatureLock.tsx
+```
+
+`src/lib/plans.ts` で、以下の仮プランと利用可能機能を定義しています。
+
+```text
+free
+premium
+organizer
+groupPro
+tester
+```
+
+`tester` は検証用で、原則すべての機能を使えるプランです。
+
+## hasFeature の使い方
+
+画面側で有料候補機能を制御する場合は、直接 `subscriptionPlan` を見ずに `hasFeature` または `FeatureGate` を使います。
+
+例:
+
+```tsx
+<FeatureGate userId={user.uid} featureKey="advancedAnalysis">
+  <Analysis userId={user.uid} />
+</FeatureGate>
+```
+
+個別に判定したい場合:
+
+```ts
+const allowed = await hasFeature(userId, "detailedMap");
+```
+
+Firestore の `users` には、将来的なプラン変更や個別開放に備えて以下を保存できます。
+
+```text
+subscriptionPlan
+enabledFeatures
+disabledFeatures
+trialEndsAt
+planUpdatedAt
+```
+
+`enabledFeatures` は個別に機能を開放したい場合、`disabledFeatures` は一時的に制限したい場合に使います。
+
+## FeatureLock の使い方
+
+まだ使えない機能には `FeatureLock` を表示します。
+
+```tsx
+<FeatureLock userId={userId} featureKey="csvExport" />
+```
+
+表示内容:
+
+- 機能名
+- できること
+- 想定プラン
+- 興味ありボタン
+- 詳しく知りたいボタン
+
+決済は行いません。ボタン操作は `featureEvents` に保存されます。
+
+## featureEvents の保存内容
+
+ユーザーが有料候補機能に反応した場合、Firestore の `featureEvents` コレクションに保存します。
+
+保存項目:
+
+```text
+userId
+featureKey
+eventType
+planAtEvent
+pagePath
+createdAt
+metadata
+```
+
+`eventType` は以下を想定しています。
+
+```text
+viewLockedFeature
+clickInterested
+clickLearnMore
+attemptUseFeature
+useFeature
+```
+
+簡易確認画面:
+
+```text
+/admin/feature-events
+```
+
+管理者判定は、`users.subscriptionPlan === "tester"` または `.env.local` の `NEXT_PUBLIC_ADMIN_UIDS` に含まれるUIDで行います。
+
+## プラン一覧ページ
+
+以下のページで、準備中のプランと機能一覧を確認できます。
+
+```text
+/plans
+```
+
+「興味あり」を押すと、以下の `featureKey` で `featureEvents` に保存されます。
+
+```text
+plan_premium
+plan_organizer
+plan_groupPro
+```
+
+## Stripe連携の想定
+
+将来的にStripe決済を導入する場合は、決済完了後に `users.subscriptionPlan` と `planUpdatedAt` を更新します。
+
+例:
+
+```text
+subscriptionPlan: "premium"
+planUpdatedAt: serverTimestamp()
+```
+
+その後、画面側は既存の `hasFeature` 判定のまま利用できます。
+
 ## 今後の拡張候補
 
 - 釣り大会モード

@@ -69,6 +69,11 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     onboardingCompleted: data.onboardingCompleted === true,
     onboardingCompletedAt: normalizeDateString(data.onboardingCompletedAt),
     onboardingSkippedAt: normalizeDateString(data.onboardingSkippedAt),
+    subscriptionPlan: typeof data.subscriptionPlan === "string" ? (data.subscriptionPlan as UserProfile["subscriptionPlan"]) : "free",
+    enabledFeatures: Array.isArray(data.enabledFeatures) ? data.enabledFeatures.filter((item): item is NonNullable<UserProfile["enabledFeatures"]>[number] => typeof item === "string") : [],
+    disabledFeatures: Array.isArray(data.disabledFeatures) ? data.disabledFeatures.filter((item): item is NonNullable<UserProfile["disabledFeatures"]>[number] => typeof item === "string") : [],
+    trialEndsAt: normalizeDateString(data.trialEndsAt),
+    planUpdatedAt: normalizeDateString(data.planUpdatedAt),
     updatedAt: normalizeDateString(data.updatedAt)
   };
 }

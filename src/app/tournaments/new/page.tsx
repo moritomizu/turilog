@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { FeatureGate } from "@/components/FeatureGate";
 import { PageHeader } from "@/components/PageHeader";
 import { createTournament, parseTargetFishTypes } from "@/lib/tournaments";
 import type { TournamentLocationVisibility, TournamentRankingType, TournamentVisibility } from "@/types";
@@ -10,7 +11,11 @@ import type { TournamentLocationVisibility, TournamentRankingType, TournamentVis
 export default function NewTournamentPage() {
   return (
     <AuthGate>
-      {(user) => <TournamentForm userId={user.uid} userName={user.displayName ?? user.email ?? "主催者"} email={user.email ?? null} />}
+      {(user) => (
+        <FeatureGate userId={user.uid} featureKey="tournamentCreate">
+          <TournamentForm userId={user.uid} userName={user.displayName ?? user.email ?? "主催者"} email={user.email ?? null} />
+        </FeatureGate>
+      )}
     </AuthGate>
   );
 }

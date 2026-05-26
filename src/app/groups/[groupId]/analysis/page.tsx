@@ -2,13 +2,22 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
+import { FeatureGate } from "@/components/FeatureGate";
 import { PageHeader } from "@/components/PageHeader";
 import { getGroupCatches } from "@/lib/catches";
 import { getGroup, getGroupMembers } from "@/lib/groups";
 import type { Catch, Group } from "@/types";
 
 export default function GroupAnalysisPage({ params }: { params: { groupId: string } }) {
-  return <AuthGate>{() => <GroupAnalysis groupId={params.groupId} />}</AuthGate>;
+  return (
+    <AuthGate>
+      {(user) => (
+        <FeatureGate userId={user.uid} featureKey="groupAnalysis">
+          <GroupAnalysis groupId={params.groupId} />
+        </FeatureGate>
+      )}
+    </AuthGate>
+  );
 }
 
 function GroupAnalysis({ groupId }: { groupId: string }) {

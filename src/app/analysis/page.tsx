@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
+import { FeatureGate } from "@/components/FeatureGate";
 import { PageHeader } from "@/components/PageHeader";
 import { getUserCatches } from "@/lib/catches";
 import type { Catch } from "@/types";
@@ -9,7 +10,11 @@ import type { Catch } from "@/types";
 export default function AnalysisPage() {
   return (
     <AuthGate>
-      {(user) => <Analysis userId={user.uid} />}
+      {(user) => (
+        <FeatureGate userId={user.uid} featureKey="advancedAnalysis">
+          <Analysis userId={user.uid} />
+        </FeatureGate>
+      )}
     </AuthGate>
   );
 }

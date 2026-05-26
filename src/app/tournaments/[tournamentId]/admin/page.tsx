@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
+import { FeatureGate } from "@/components/FeatureGate";
 import { PageHeader } from "@/components/PageHeader";
 import { getTournamentCatches, updateTournamentEntryStatus } from "@/lib/catches";
 import { canManageApprovals, findParticipant } from "@/lib/tournamentPermissions";
@@ -11,7 +12,11 @@ import type { Catch, Tournament, TournamentParticipant } from "@/types";
 export default function TournamentAdminPage({ params }: { params: { tournamentId: string } }) {
   return (
     <AuthGate>
-      {(user) => <TournamentAdmin tournamentId={params.tournamentId} userId={user.uid} />}
+      {(user) => (
+        <FeatureGate userId={user.uid} featureKey="tournamentAdmin">
+          <TournamentAdmin tournamentId={params.tournamentId} userId={user.uid} />
+        </FeatureGate>
+      )}
     </AuthGate>
   );
 }

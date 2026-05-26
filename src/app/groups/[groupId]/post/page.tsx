@@ -3,10 +3,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { FeatureLock } from "@/components/FeatureLock";
 import { PageHeader } from "@/components/PageHeader";
 import { createCatch, emptyTackleInfo, uploadCatchImage } from "@/lib/catches";
 import { canProxyPostToGroup } from "@/lib/groupPermissions";
 import { getGroup, getGroupMembers } from "@/lib/groups";
+import { getFeatureAccess } from "@/lib/features";
 import { getCurrentLocation } from "@/lib/location";
 import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
 import { getLunarInfo } from "@/lib/lunar";
@@ -26,6 +28,7 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [canProxy, setCanProxy] = useState(false);
+  const [proxyFeatureLocked, setProxyFeatureLocked] = useState(false);
   const [actualAnglerUserId, setActualAnglerUserId] = useState(userId);
   const [fishType, setFishType] = useState("");
   const [sizeCm, setSizeCm] = useState("");
@@ -36,11 +39,12 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    Promise.all([getGroup(groupId), getGroupMembers(groupId), canProxyPostToGroup(userId, groupId)])
-      .then(([nextGroup, nextMembers, nextCanProxy]) => {
+    Promise.all([getGroup(groupId), getGroupMembers(groupId), canProxyPostToGroup(userId, groupId), getFeatureAccess(userId, "proxyPost")])
+      .then(([nextGroup, nextMembers, nextCanProxy, proxyAccess]) => {
         setGroup(nextGroup);
         setMembers(nextMembers);
-        setCanProxy(nextCanProxy);
+        setCanProxy(nextCanProxy && proxyAccess.allowed);
+        setProxyFeatureLocked(nextCanProxy && !proxyAccess.allowed);
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "グループ投稿を準備できませんでした。"));
   }, [groupId, userId]);
@@ -133,6 +137,7 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
               </select>
             </label>
           ) : null}
+          {proxyFeatureLocked ? <FeatureLock userId={userId} featureKey="proxyPost" compact /> : null}
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
           <button disabled={busy} className="tap-target w-full rounded bg-coral px-5 py-4 text-lg font-black text-white disabled:opacity-60">{busy ? "投稿中..." : "グループに投稿する"}</button>
         </form>

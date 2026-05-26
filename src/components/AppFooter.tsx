@@ -12,6 +12,9 @@ export function AppFooter() {
           <Link href="/privacy" className="text-water">
             プライバシーポリシー
           </Link>
+          <Link href="/plans" className="text-water">
+            プラン
+          </Link>
         </nav>
       </div>
     </footer>
