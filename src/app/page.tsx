@@ -59,8 +59,8 @@ export default function Home() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-bold text-water">Personal fishing log</p>
-              <h1 className="mt-2 text-water">
-                <TsuriLogLogo className="h-16 w-72 max-w-full" />
+              <h1 className="mt-2 text-ink">
+                <TsuriLogLogo className="h-20 w-[23rem] max-w-full" />
               </h1>
             </div>
             <Link href={user ? "/profile" : "/login"} aria-label="プロフィール設定" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-teal-100 bg-white text-base font-black text-water shadow-soft">

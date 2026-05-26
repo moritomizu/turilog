@@ -42,7 +42,8 @@ export function TsuriLogLogo({ className, title = "TsuriLog" }: TsuriLogLogoProp
       role="img"
       className={className}
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="100 720 1010 260"
+      viewBox="120 740 980 220"
+      preserveAspectRatio="xMinYMid meet"
       fill="currentColor"
       dangerouslySetInnerHTML={{ __html: logoMarkup }}
     />
