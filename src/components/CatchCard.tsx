@@ -21,9 +21,9 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
             type="button"
             onClick={onMapPinClick}
             className="absolute bottom-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-sm font-black text-white shadow-soft ring-2 ring-white after:absolute after:-bottom-1 after:left-1/2 after:h-3 after:w-3 after:-translate-x-1/2 after:rotate-45 after:rounded-sm after:bg-red-600"
-            aria-label={`地図ピン ${mapPinNumber} を表示`}
+            aria-label="地図でこの釣果ポイントを表示"
           >
-            <span className="relative z-10">{mapPinNumber}</span>
+            <span className="relative z-10 text-lg leading-none">📍</span>
           </button>
         ) : null}
       </div>
@@ -47,7 +47,7 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
           </div>
         ) : null}
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <Info label="エリア" value={formatArea(item)} />
+          <Info label="ポイント" value={formatPoint(item)} />
           <Info label="当時の天候" value={item.weather.weatherLabel} />
           <Info label="当時の風" value={formatWind(item)} />
           <Info label="当時の気温" value={item.weather.temperatureC == null ? "未取得" : `${item.weather.temperatureC}度`} />
@@ -100,7 +100,9 @@ function TideHelp() {
   );
 }
 
-function formatArea(item: Catch) {
+function formatPoint(item: Catch) {
+  if (item.pointName && item.areaName) return `${item.pointName}(${item.areaName})`;
+  if (item.pointName) return item.pointName;
   if (item.areaName) return item.areaName;
   if (item.officialCurrentStationName) return item.officialCurrentStationName;
   if (item.latitude != null) return `${item.latitude.toFixed(4)}, ${item.longitude?.toFixed(4)}`;
