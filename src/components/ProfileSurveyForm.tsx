@@ -4,7 +4,7 @@ import type { AgeRange, FishingFrequency, FishingMotivation, UserProfile } from 
 import {
   ageRangeOptions,
   appPurposeOptions,
-  fishingAreaOptions,
+  fishingAreaGroups,
   fishingFrequencyOptions,
   fishingGenreOptions,
   fishingMotivationOptions,
@@ -68,7 +68,7 @@ export function ProfileStepBasic({ state, setState }: { state: ProfileSurveyStat
 export function ProfileStepStyle({ state, setState }: { state: ProfileSurveyState; setState: (state: ProfileSurveyState) => void }) {
   return (
     <div className="space-y-5">
-      <ChipGroup label="よく行く釣行エリア" values={fishingAreaOptions} selected={state.fishingAreas} onChange={(fishingAreas) => setState({ ...state, fishingAreas })} />
+      <GroupedChipGroup label="よく行く釣行エリア" groups={fishingAreaGroups} selected={state.fishingAreas} onChange={(fishingAreas) => setState({ ...state, fishingAreas })} />
       <ChipGroup label="主な釣りジャンル" values={fishingGenreOptions} selected={state.fishingGenres} onChange={(fishingGenres) => setState({ ...state, fishingGenres })} />
       <SelectField label="釣行頻度" value={state.fishingFrequency} onChange={(fishingFrequency) => setState({ ...state, fishingFrequency: fishingFrequency as FishingFrequency | "" })} options={[{ value: "", label: "選択してください" }, ...fishingFrequencyOptions.map((item) => ({ value: item.value, label: item.label }))]} />
       <SelectField label="主な釣行スタイル" value={state.fishingStyle} onChange={(fishingStyle) => setState({ ...state, fishingStyle })} options={[{ value: "", label: "選択してください" }, ...fishingStyleOptions.map((value) => ({ value, label: value }))]} />
@@ -106,6 +106,48 @@ function SelectField({ label, value, onChange, options }: { label: string; value
         ))}
       </select>
     </label>
+  );
+}
+
+function GroupedChipGroup({
+  label,
+  groups,
+  selected,
+  onChange
+}: {
+  label: string;
+  groups: { label: string; areas: string[] }[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+}) {
+  function toggle(value: string) {
+    onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
+  }
+
+  return (
+    <section>
+      <p className="text-sm font-black text-slate-700">{label}</p>
+      <p className="mt-1 text-xs font-bold leading-5 text-slate-500">全国で使いやすいよう、大カテゴリごとに選択できます。複数選択OKです。</p>
+      <div className="mt-3 space-y-3">
+        {groups.map((group) => (
+          <div key={group.label} className="rounded border border-teal-100 bg-white p-3">
+            <p className="text-xs font-black text-water">{group.label}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {group.areas.map((value) => (
+                <button
+                  type="button"
+                  key={value}
+                  onClick={() => toggle(value)}
+                  className={`tap-target rounded-full border px-4 py-2 text-sm font-black ${selected.includes(value) ? "border-water bg-water text-white" : "border-teal-100 bg-foam text-ink"}`}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

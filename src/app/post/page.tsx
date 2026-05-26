@@ -361,7 +361,7 @@ function PostForm({ userId }: { userId: string }) {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-black text-water">使用タックルセット</h2>
-                <p className="mt-1 text-xs font-bold leading-5 text-slate-600">登録済みタックルを選ぶと、ロッド・リール・ラインを自動入力します。</p>
+                <p className="mt-1 text-xs font-bold leading-5 text-slate-600">ジャンル別に登録したタックルセットから選ぶと、ロッド・リール・ラインを自動入力します。</p>
               </div>
               <Link href="/profile/tackles" className="shrink-0 rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">
                 管理
@@ -374,10 +374,14 @@ function PostForm({ userId }: { userId: string }) {
                 className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
               >
                 <option value="">選択しない / 手入力</option>
-                {tackleOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}{item.fishingGenre ? `（${item.fishingGenre}）` : ""}
-                  </option>
+                {groupTacklesByGenre(tackleOptions).map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.items.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}{item.lure ? ` / ${item.lure}` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             ) : (
@@ -909,6 +913,17 @@ function formatLocationSuggestionLabel(
 
 function topMapValue(values: Map<string, number>) {
   return [...values.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"))[0]?.[0] ?? "";
+}
+
+function groupTacklesByGenre(items: Tackle[]) {
+  const groups = new Map<string, Tackle[]>();
+  items.forEach((item) => {
+    const label = item.fishingGenre?.trim() || "ジャンル未設定";
+    groups.set(label, [...(groups.get(label) ?? []), item]);
+  });
+  return [...groups.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], "ja"))
+    .map(([label, groupItems]) => ({ label, items: groupItems }));
 }
 
 function getTournamentSkipMessage(check: ReturnType<typeof isTournamentEntryEligible> | null) {

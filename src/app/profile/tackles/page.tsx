@@ -91,7 +91,13 @@ function TackleManager({ userId }: { userId: string }) {
       <main className="mx-auto max-w-xl space-y-5 px-4 py-5">
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
           <h1 className="text-2xl font-black">タックル管理</h1>
-          <p className="mt-2 text-sm font-bold leading-6 text-slate-600">よく使うタックルを登録しておくと、釣果投稿時に選ぶだけでロッド・リール・ラインなどを記録できます。</p>
+          <p className="mt-2 text-sm font-bold leading-6 text-slate-600">タイラバ、ジギング、エギングなど、ジャンルごとに複数のタックルセットを登録できます。釣果投稿時に選ぶだけでロッド・リール・ラインなどを記録できます。</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <p className="rounded bg-foam p-3 text-sm font-black text-water">登録済み {items.length}セット</p>
+            <button type="button" onClick={() => { setEditingId(""); setForm(emptyTackleInput()); }} className="tap-target rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
+              別ジャンルのセットを追加
+            </button>
+          </div>
         </section>
 
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
@@ -109,28 +115,33 @@ function TackleManager({ userId }: { userId: string }) {
 
         {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
 
-        <section className="space-y-3">
+        <section className="space-y-4">
           <h2 className="text-xl font-black">登録済みタックル</h2>
-          {items.map((item) => (
-            <article key={item.id} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-black text-ink">{item.name}</h3>
-                  <p className="mt-1 text-sm font-bold text-slate-600">{[item.fishingGenre, item.lure].filter(Boolean).join(" / ") || "ジャンル未設定"}</p>
-                </div>
-                {item.isDefault ? <span className="rounded-full bg-water px-2 py-1 text-xs font-black text-white">よく使う</span> : null}
-              </div>
-              <div className="mt-3 space-y-1 text-sm font-bold text-slate-700">
-                {item.rod ? <p>ロッド: {item.rod}</p> : null}
-                {item.reel ? <p>リール: {item.reel}</p> : null}
-                {item.line || item.leader ? <p>ライン: {[item.line, item.leader].filter(Boolean).join(" / ")}</p> : null}
-                {item.memo ? <p className="whitespace-pre-wrap text-slate-600">{item.memo}</p> : null}
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <button type="button" onClick={() => startEdit(item)} className="tap-target rounded border border-water bg-white px-4 py-3 font-black text-water">編集</button>
-                <button type="button" disabled={busy} onClick={() => handleDelete(item)} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-500 disabled:opacity-50">削除</button>
-              </div>
-            </article>
+          {groupTacklesByGenre(items).map((group) => (
+            <div key={group.label} className="space-y-3">
+              <h3 className="rounded bg-foam px-3 py-2 text-sm font-black text-water">{group.label} / {group.items.length}セット</h3>
+              {group.items.map((item) => (
+                <article key={item.id} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-black text-ink">{item.name}</h3>
+                      <p className="mt-1 text-sm font-bold text-slate-600">{item.lure || "ルアー/仕掛け未設定"}</p>
+                    </div>
+                    {item.isDefault ? <span className="rounded-full bg-water px-2 py-1 text-xs font-black text-white">よく使う</span> : null}
+                  </div>
+                  <div className="mt-3 space-y-1 text-sm font-bold text-slate-700">
+                    {item.rod ? <p>ロッド: {item.rod}</p> : null}
+                    {item.reel ? <p>リール: {item.reel}</p> : null}
+                    {item.line || item.leader ? <p>ライン: {[item.line, item.leader].filter(Boolean).join(" / ")}</p> : null}
+                    {item.memo ? <p className="whitespace-pre-wrap text-slate-600">{item.memo}</p> : null}
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <button type="button" onClick={() => startEdit(item)} className="tap-target rounded border border-water bg-white px-4 py-3 font-black text-water">編集</button>
+                    <button type="button" disabled={busy} onClick={() => handleDelete(item)} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-500 disabled:opacity-50">削除</button>
+                  </div>
+                </article>
+              ))}
+            </div>
           ))}
         </section>
 
@@ -140,4 +151,15 @@ function TackleManager({ userId }: { userId: string }) {
       </main>
     </>
   );
+}
+
+function groupTacklesByGenre(items: Tackle[]) {
+  const groups = new Map<string, Tackle[]>();
+  items.forEach((item) => {
+    const label = item.fishingGenre?.trim() || "ジャンル未設定";
+    groups.set(label, [...(groups.get(label) ?? []), item]);
+  });
+  return [...groups.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], "ja"))
+    .map(([label, groupItems]) => ({ label, items: groupItems }));
 }
