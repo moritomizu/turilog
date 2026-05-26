@@ -20,10 +20,10 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
           <button
             type="button"
             onClick={onMapPinClick}
-            className="absolute bottom-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-sm font-black text-white shadow-soft ring-2 ring-white after:absolute after:-bottom-1 after:left-1/2 after:h-3 after:w-3 after:-translate-x-1/2 after:rotate-45 after:rounded-sm after:bg-red-600"
+            className="absolute bottom-3 right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 p-1.5 shadow-soft ring-2 ring-white"
             aria-label="地図でこの釣果ポイントを表示"
           >
-            <span className="relative z-10 text-lg leading-none">📍</span>
+            <img src="/icons/group-map-link.png" alt="" className="h-full w-full object-contain" />
           </button>
         ) : null}
       </div>
