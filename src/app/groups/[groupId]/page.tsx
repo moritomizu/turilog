@@ -327,8 +327,7 @@ function GroupCatch({
       <CatchCard item={item} mapPinNumber={mapPinNumber} onMapPinClick={onMapPinClick} />
       <div className="rounded-b border-x border-b border-teal-100 bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
         <p>釣った人: {memberNames.get(item.actualAnglerUserId) ?? "メンバー"}</p>
-        <p>投稿者: {memberNames.get(item.postedByUserId) ?? "メンバー"}{item.isProxyPost ? " / 代理投稿" : ""}</p>
-        {displayLocation.type === "exact" ? <p>緯度経度: {displayLocation.latitude != null ? `${displayLocation.latitude.toFixed(5)}, ${displayLocation.longitude?.toFixed(5)}` : "未取得"}</p> : null}
+        {item.isProxyPost ? <p>代理投稿</p> : null}
         {(canEdit || canDelete) ? (
           <div className="mt-2 grid grid-cols-2 gap-2">
             {canEdit ? <button onClick={() => setEditing((value) => !value)} className="rounded border border-water px-3 py-2 font-black text-water">{editing ? "編集を閉じる" : "編集"}</button> : null}
@@ -423,7 +422,8 @@ function EditField({ label, value, onChange, type = "text" }: { label: string; v
   );
 }
 
-const FREE_MAP_MAX_ZOOM = 11;
+const FREE_MAP_MAX_ZOOM = 10;
+const FREE_MAP_INITIAL_ZOOM = 9;
 
 function GroupCatchMap({
   items,
@@ -477,7 +477,7 @@ function GroupCatchMap({
       const google = await new Loader({ apiKey, version: "weekly" }).load();
       const map = new google.maps.Map(mapRef.current as HTMLDivElement, {
         center: { lat: positioned[0].displayLocation.latitude, lng: positioned[0].displayLocation.longitude },
-        zoom: 10,
+        zoom: detailedMapAllowed ? 10 : FREE_MAP_INITIAL_ZOOM,
         maxZoom: detailedMapAllowed ? undefined : FREE_MAP_MAX_ZOOM,
         streetViewControl: false,
         mapTypeControl: false,
@@ -508,13 +508,13 @@ function GroupCatchMap({
       });
       if (positioned.length === 1) {
         map.setCenter(bounds.getCenter());
-        map.setZoom(detailedMapAllowed ? 14 : FREE_MAP_MAX_ZOOM);
+        map.setZoom(detailedMapAllowed ? 14 : FREE_MAP_INITIAL_ZOOM);
       } else {
         map.fitBounds(bounds, 56);
         google.maps.event.addListenerOnce(map, "idle", () => {
           const zoom = map.getZoom();
           if (zoom != null && zoom > 15) map.setZoom(15);
-          if (!detailedMapAllowed && zoom != null && zoom > FREE_MAP_MAX_ZOOM) map.setZoom(FREE_MAP_MAX_ZOOM);
+          if (!detailedMapAllowed && zoom != null) map.setZoom(Math.max(Math.min(zoom - 1, FREE_MAP_MAX_ZOOM), 3));
           mapInteractionArmedRef.current = true;
         });
       }

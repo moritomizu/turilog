@@ -80,7 +80,9 @@ function TournamentSection({ title, items }: { title: string; items: TournamentL
       <h2 className="mb-3 text-xl font-black">{title}</h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
-          <Link key={item.id} href={`/tournaments/${item.id}`} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
+          <Link key={item.id} href={`/tournaments/${item.id}`} className="overflow-hidden rounded border border-teal-100 bg-white shadow-soft">
+            {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="aspect-[16/9] w-full object-cover" /> : null}
+            <div className="p-4">
             <div className="flex items-start justify-between gap-2">
               <h3 className="text-lg font-black text-ink">{item.name}</h3>
               <div className="flex shrink-0 flex-col items-end gap-1">
@@ -111,6 +113,7 @@ function TournamentSection({ title, items }: { title: string; items: TournamentL
               <p>方式: {getRankingTypeLabel(item.rankingType)}</p>
               <p>参加人数: {item.participantCount}人</p>
               {item.pendingApprovalCount > 0 ? <p className="text-coral">承認待ち投稿: {item.pendingApprovalCount}件</p> : null}
+            </div>
             </div>
           </Link>
         ))}

@@ -267,6 +267,7 @@ export type Tournament = {
   ownerId: string;
   name: string;
   description: string;
+  imageUrl: string | null;
   startAt: string;
   endAt: string;
   targetFishTypes: string[];

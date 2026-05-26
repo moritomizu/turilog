@@ -106,6 +106,7 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
         {tournament ? (
           <>
             <section className="rounded border border-coral/30 bg-orange-50 p-4 shadow-soft">
+              {tournament.imageUrl ? <img src={tournament.imageUrl} alt={tournament.name} className="mb-4 aspect-[16/9] w-full rounded object-cover" /> : null}
               <p className="text-xs font-black text-coral">{getStatusLabel(getTournamentStatus(tournament))}</p>
               <h1 className="mt-1 text-2xl font-black">{tournament.name}</h1>
               <p className="mt-2 text-sm font-bold leading-6 text-slate-700">{tournament.description}</p>

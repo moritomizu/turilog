@@ -66,7 +66,7 @@ export const featureDefinitions: Record<FeatureKey, FeatureDefinition> = {
   detailedMap: {
     key: "detailedMap",
     name: "詳細マップ",
-    description: "釣果ポイントをマップで振り返り、位置と釣果の関係を確認できます。",
+    description: "グループマップや釣果マップを拡大し、ポイント周辺の状況を詳しく振り返れます。",
     suggestedPlan: "premium"
   },
   csvExport: {
@@ -141,7 +141,7 @@ export const planDefinitions: Record<SubscriptionPlan, PlanDefinition> = {
   premium: {
     key: "premium",
     label: "Premium",
-    description: "個人の振り返りと分析を深めたいユーザー向けです。",
+    description: "個人の振り返りと分析を深めたいユーザー向けです。グループ詳細マップの拡大表示も利用できます。",
     features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "advancedAnalysis", "tackleAnalysis", "detailedMap", "aiReport"]
   },
   organizer: {
@@ -153,7 +153,7 @@ export const planDefinitions: Record<SubscriptionPlan, PlanDefinition> = {
   groupPro: {
     key: "groupPro",
     label: "Group Pro",
-    description: "日常の釣り仲間コミュニティを運営したい方向けです。",
+    description: "日常の釣り仲間コミュニティを運営したい方向けです。グループ分析、代理投稿、詳細マップ拡大をまとめて使えます。",
     features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "groupAnalysis", "proxyPost", "privateGroup", "detailedMap", "unlimitedGroups"]
   },
   tester: {

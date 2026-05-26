@@ -9,6 +9,7 @@ export type TournamentInput = {
   ownerId: string;
   name: string;
   description: string;
+  imageUrl?: string | null;
   startAt: string;
   endAt: string;
   targetFishTypes: string[];
@@ -82,6 +83,12 @@ export async function deleteTournament(tournamentId: string, ownerId: string) {
     });
   });
   await batch.commit();
+}
+
+export async function uploadTournamentImage(ownerId: string, file: File) {
+  const storageRef = ref(getFirebaseStorage(), `tournaments/${ownerId}/covers/${crypto.randomUUID()}-${file.name}`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
 }
 
 export async function getTournaments(): Promise<Tournament[]> {
@@ -180,6 +187,7 @@ function normalizeTournament(id: string, data: Record<string, unknown>): Tournam
     ownerId: typeof data.ownerId === "string" ? data.ownerId : "",
     name: typeof data.name === "string" ? data.name : "",
     description: typeof data.description === "string" ? data.description : "",
+    imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : null,
     startAt: normalizeDate(data.startAt),
     endAt: normalizeDate(data.endAt),
     targetFishTypes: Array.isArray(data.targetFishTypes) ? data.targetFishTypes.filter((item): item is string => typeof item === "string") : [],

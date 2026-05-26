@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { FeatureGate } from "@/components/FeatureGate";
 import { PageHeader } from "@/components/PageHeader";
-import { createTournament, parseTargetFishTypes } from "@/lib/tournaments";
+import { createTournament, parseTargetFishTypes, uploadTournamentImage } from "@/lib/tournaments";
 import type { TournamentLocationVisibility, TournamentRankingType, TournamentVisibility } from "@/types";
 
 export default function NewTournamentPage() {
@@ -32,18 +32,32 @@ function TournamentForm({ userId, userName, email }: { userId: string; userName:
   const [visibility, setVisibility] = useState<TournamentVisibility>("public");
   const [locationVisibilityDefault, setLocationVisibilityDefault] = useState<TournamentLocationVisibility>("exactForOrganizersOnly");
   const [maxParticipants, setMaxParticipants] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setMessage("大会を作成しています。");
     try {
+      const imageUrl = imageFile ? await uploadTournamentImage(userId, imageFile) : null;
       const id = await createTournament({
         ownerId: userId,
         name,
         description,
+        imageUrl,
         startAt: new Date(startAt).toISOString(),
         endAt: new Date(endAt).toISOString(),
         targetFishTypes: parseTargetFishTypes(targetFishTypes),
@@ -69,6 +83,11 @@ function TournamentForm({ userId, userName, email }: { userId: string; userName:
         <form onSubmit={handleSubmit} className="space-y-4 rounded border border-teal-100 bg-white p-4 shadow-soft">
           <Field label="大会名" value={name} onChange={setName} required />
           <TextArea label="説明" value={description} onChange={setDescription} />
+          <label className="block">
+            <span className="text-sm font-bold">大会画像（任意）</span>
+            <input type="file" accept="image/*" onChange={(event) => setImageFile(event.target.files?.[0] ?? null)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-sm font-bold" />
+          </label>
+          {imagePreview ? <img src={imagePreview} alt="" className="aspect-[16/9] w-full rounded object-cover" /> : null}
           <Field label="開始日時" type="datetime-local" value={startAt} onChange={setStartAt} required />
           <Field label="終了日時" type="datetime-local" value={endAt} onChange={setEndAt} required />
           <Field label="対象魚種（カンマ区切り）" value={targetFishTypes} onChange={setTargetFishTypes} placeholder="シーバス, マダイ" />
