@@ -11,6 +11,7 @@ import { getGroupJoinRequests, getGroupMembers, getGroupsForUser } from "@/lib/g
 import { canManageApprovals, findParticipant } from "@/lib/tournamentPermissions";
 import { getTournamentParticipants, getTournaments } from "@/lib/tournaments";
 import { getUserProfile } from "@/lib/userProfiles";
+import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 import type { Catch, GroupCatchComment } from "@/types";
 
 const links = [
@@ -58,7 +59,9 @@ export default function Home() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-bold text-water">Personal fishing log</p>
-              <h1 className="mt-2 text-4xl font-black tracking-normal text-ink">TsuriLog</h1>
+              <h1 className="mt-2 text-water">
+                <TsuriLogLogo className="h-16 w-72 max-w-full" />
+              </h1>
             </div>
             <Link href={user ? "/profile" : "/login"} aria-label="プロフィール設定" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-teal-100 bg-white text-base font-black text-water shadow-soft">
               {profileAvatarUrl ? <img src={profileAvatarUrl} alt="" className="h-full w-full object-cover" /> : user ? getInitial(user.displayName ?? user.email) : "人"}
