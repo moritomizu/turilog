@@ -2,11 +2,14 @@
 
 import { Loader } from "@googlemaps/js-api-loader";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { CatchCard, formatDate } from "@/components/CatchCard";
+import { FeatureLock } from "@/components/FeatureLock";
 import { PageHeader } from "@/components/PageHeader";
 import { deleteCatch, getGroupCatches, updateCatch } from "@/lib/catches";
+import { logFeatureAttempt } from "@/lib/featureEvents";
+import { getFeatureAccess } from "@/lib/features";
 import { addGroupCatchComment, getGroupCatchComments } from "@/lib/groupCatchComments";
 import { canDeleteGroupCatchSync, canEditGroupCatchSync, canManageGroupMembersSync, canViewGroupExactLocationSync, findGroupMember } from "@/lib/groupPermissions";
 import { deleteGroup, getGroup, getGroupMembers } from "@/lib/groups";
@@ -24,6 +27,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   const [comments, setComments] = useState<GroupCatchComment[]>([]);
   const [message, setMessage] = useState("読み込み中です。");
   const [selectedMapCatchId, setSelectedMapCatchId] = useState<string | null>(null);
+  const [detailedMapAllowed, setDetailedMapAllowed] = useState(false);
   const currentMember = findGroupMember(members, userId);
   const canView = Boolean(currentMember);
   const canViewExact = canViewGroupExactLocationSync(group, currentMember);
@@ -88,16 +92,17 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   }
 
   useEffect(() => {
-    Promise.all([getGroup(groupId), getGroupMembers(groupId), getGroupCatches(groupId), getGroupCatchComments(groupId)])
-      .then(([nextGroup, nextMembers, nextItems, nextComments]) => {
+    Promise.all([getGroup(groupId), getGroupMembers(groupId), getGroupCatches(groupId), getGroupCatchComments(groupId), getFeatureAccess(userId, "detailedMap")])
+      .then(([nextGroup, nextMembers, nextItems, nextComments, mapAccess]) => {
         setGroup(nextGroup);
         setMembers(nextMembers);
         setItems(nextItems);
         setComments(nextComments);
+        setDetailedMapAllowed(mapAccess.allowed);
         setMessage(nextGroup ? "" : "グループが見つかりません。");
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "グループを読み込めませんでした。"));
-  }, [groupId]);
+  }, [groupId, userId]);
 
   useEffect(() => {
     if (!group || !canView) return;
@@ -180,7 +185,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
 
             <section id="group-catch-map">
               <h2 className="mb-3 text-xl font-black">グループ釣果マップ</h2>
-              <GroupCatchMap items={items} memberNames={memberNames} group={group} member={currentMember} userId={userId} pinNumbers={mapPinNumbers} selectedCatchId={selectedMapCatchId} />
+              <GroupCatchMap items={items} memberNames={memberNames} group={group} member={currentMember} userId={userId} pinNumbers={mapPinNumbers} selectedCatchId={selectedMapCatchId} detailedMapAllowed={detailedMapAllowed} />
             </section>
 
             <section>
@@ -418,12 +423,43 @@ function EditField({ label, value, onChange, type = "text" }: { label: string; v
   );
 }
 
-function GroupCatchMap({ items, memberNames, group, member, userId, pinNumbers, selectedCatchId }: { items: Catch[]; memberNames: Map<string, string>; group: Group; member: GroupMember | null; userId: string; pinNumbers: Map<string, number>; selectedCatchId: string | null }) {
+const FREE_MAP_MAX_ZOOM = 11;
+
+function GroupCatchMap({
+  items,
+  memberNames,
+  group,
+  member,
+  userId,
+  pinNumbers,
+  selectedCatchId,
+  detailedMapAllowed
+}: {
+  items: Catch[];
+  memberNames: Map<string, string>;
+  group: Group;
+  member: GroupMember | null;
+  userId: string;
+  pinNumbers: Map<string, number>;
+  selectedCatchId: string | null;
+  detailedMapAllowed: boolean;
+}) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const markerEntriesRef = useRef(new Map<string, { marker: google.maps.Marker; content: string; position: google.maps.LatLngLiteral }>());
+  const mapInteractionArmedRef = useRef(false);
+  const loggedAttemptRef = useRef(false);
   const [message, setMessage] = useState("地図を準備しています。");
+  const [showMapLock, setShowMapLock] = useState(false);
+
+  const showDetailedMapLock = useCallback(async () => {
+    setShowMapLock(true);
+    if (loggedAttemptRef.current) return;
+    loggedAttemptRef.current = true;
+    await logFeatureAttempt(userId, "detailedMap", { groupId: group.id }).catch(() => undefined);
+  }, [group.id, userId]);
+
   useEffect(() => {
     async function load() {
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -442,9 +478,11 @@ function GroupCatchMap({ items, memberNames, group, member, userId, pinNumbers, 
       const map = new google.maps.Map(mapRef.current as HTMLDivElement, {
         center: { lat: positioned[0].displayLocation.latitude, lng: positioned[0].displayLocation.longitude },
         zoom: 10,
+        maxZoom: detailedMapAllowed ? undefined : FREE_MAP_MAX_ZOOM,
         streetViewControl: false,
         mapTypeControl: false,
-        fullscreenControl: false
+        fullscreenControl: false,
+        gestureHandling: detailedMapAllowed ? "auto" : "cooperative"
       });
       const bounds = new google.maps.LatLngBounds();
       const info = new google.maps.InfoWindow();
@@ -470,18 +508,33 @@ function GroupCatchMap({ items, memberNames, group, member, userId, pinNumbers, 
       });
       if (positioned.length === 1) {
         map.setCenter(bounds.getCenter());
-        map.setZoom(14);
+        map.setZoom(detailedMapAllowed ? 14 : FREE_MAP_MAX_ZOOM);
       } else {
         map.fitBounds(bounds, 56);
         google.maps.event.addListenerOnce(map, "idle", () => {
           const zoom = map.getZoom();
           if (zoom != null && zoom > 15) map.setZoom(15);
+          if (!detailedMapAllowed && zoom != null && zoom > FREE_MAP_MAX_ZOOM) map.setZoom(FREE_MAP_MAX_ZOOM);
+          mapInteractionArmedRef.current = true;
         });
       }
+      if (positioned.length === 1) {
+        google.maps.event.addListenerOnce(map, "idle", () => {
+          mapInteractionArmedRef.current = true;
+        });
+      }
+      map.addListener("zoom_changed", () => {
+        if (detailedMapAllowed || !mapInteractionArmedRef.current) return;
+        const zoom = map.getZoom();
+        if (zoom != null && zoom >= FREE_MAP_MAX_ZOOM) {
+          map.setZoom(FREE_MAP_MAX_ZOOM);
+          showDetailedMapLock();
+        }
+      });
       setMessage("");
     }
     load().catch((error) => setMessage(error instanceof Error ? error.message : "地図を表示できませんでした。"));
-  }, [items, memberNames, group, member, userId, pinNumbers]);
+  }, [items, memberNames, group, member, userId, pinNumbers, detailedMapAllowed, showDetailedMapLock]);
 
   useEffect(() => {
     if (!selectedCatchId || !mapInstanceRef.current || !infoWindowRef.current) return;
@@ -489,12 +542,28 @@ function GroupCatchMap({ items, memberNames, group, member, userId, pinNumbers, 
     if (!entry) return;
     mapInstanceRef.current.panTo(entry.position);
     const zoom = mapInstanceRef.current.getZoom();
-    if (zoom != null && zoom < 14) mapInstanceRef.current.setZoom(14);
+    const targetZoom = detailedMapAllowed ? 14 : FREE_MAP_MAX_ZOOM;
+    if (zoom != null && zoom < targetZoom) mapInstanceRef.current.setZoom(targetZoom);
     infoWindowRef.current.setContent(entry.content);
     infoWindowRef.current.open({ map: mapInstanceRef.current, anchor: entry.marker });
-  }, [selectedCatchId]);
+  }, [selectedCatchId, detailedMapAllowed]);
 
-  return <div>{message ? <p className="mb-3 rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}<div ref={mapRef} className="h-[52vh] min-h-[340px] rounded border border-teal-100 bg-white shadow-soft" /></div>;
+  return (
+    <div>
+      {message ? <p className="mb-3 rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
+      <div ref={mapRef} className="h-[52vh] min-h-[340px] rounded border border-teal-100 bg-white shadow-soft" />
+      {!detailedMapAllowed ? (
+        <p className="mt-2 rounded bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
+          Freeプランではグループマップの拡大を一部制限しています。ピンと釣果情報はこのまま確認できます。
+        </p>
+      ) : null}
+      {showMapLock ? (
+        <div className="mt-3">
+          <FeatureLock userId={userId} featureKey="detailedMap" compact />
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function buildMapPinNumbers(items: Catch[], userId: string, group: Group | null, member: GroupMember | null) {
