@@ -6,10 +6,10 @@ type TsuriLogLogoProps = {
 const logoMarkup = String.raw`
   <text
     fill="currentColor"
-    font-family="RaleighBT-ExtraBold, 'Raleigh XBd BT'"
-    font-size="117.41"
-    font-weight="700"
-    letter-spacing=".1em"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Arial, sans-serif"
+    font-size="112"
+    font-weight="900"
+    letter-spacing=".08em"
     transform="translate(368.92 893.46)"
   >
     <tspan x="0" y="0">TSURILOG </tspan>
