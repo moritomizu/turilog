@@ -16,6 +16,16 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
           <div className="flex h-full items-center justify-center text-sm text-slate-500">写真なし</div>
         )}
         {rank ? <span className="absolute left-3 top-3 rounded bg-coral px-3 py-1 text-sm font-black text-white">#{rank}</span> : null}
+        {mapPinNumber ? (
+          <button
+            type="button"
+            onClick={onMapPinClick}
+            className="absolute bottom-3 right-3 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-coral text-base font-black text-white shadow-soft ring-2 ring-white after:absolute after:-bottom-1 after:left-1/2 after:h-3 after:w-3 after:-translate-x-1/2 after:rotate-45 after:rounded-sm after:bg-coral"
+            aria-label={`地図ピン ${mapPinNumber} を表示`}
+          >
+            <span className="relative z-10">{mapPinNumber}</span>
+          </button>
+        ) : null}
       </div>
       <div className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
@@ -23,19 +33,7 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
             <h2 className="text-xl font-black">{item.fishType}</h2>
             <p className="mt-0.5 text-sm text-slate-600">{formatDate(item.caughtAt)}</p>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            <p className="text-2xl font-black text-water">{item.sizeCm}cm</p>
-            {mapPinNumber ? (
-              <button
-                type="button"
-                onClick={onMapPinClick}
-                className="tap-target rounded-full border border-water/20 bg-foam px-3 py-1.5 text-sm font-black text-water shadow-sm"
-                aria-label={`地図ピン ${mapPinNumber} を表示`}
-              >
-                📍{mapPinNumber}
-              </button>
-            ) : null}
-          </div>
+          <p className="shrink-0 text-2xl font-black text-water">{item.sizeCm}cm</p>
         </div>
         {item.comment ? <p className="text-sm leading-6 text-slate-700">{item.comment}</p> : null}
         {hasTackle(item) ? (
