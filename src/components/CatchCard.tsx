@@ -21,21 +21,21 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-black">{item.fishType}</h2>
-            <div className="mt-0.5 flex flex-wrap items-center gap-2">
-              <p className="text-sm text-slate-600">{formatDate(item.caughtAt)}</p>
-              {mapPinNumber ? (
-                <button
-                  type="button"
-                  onClick={onMapPinClick}
-                  className="rounded-full border border-teal-100 bg-foam px-2 py-0.5 text-[11px] font-black text-water"
-                  aria-label={`地図ピン ${mapPinNumber} を表示`}
-                >
-                  📍{mapPinNumber}
-                </button>
-              ) : null}
-            </div>
+            <p className="mt-0.5 text-sm text-slate-600">{formatDate(item.caughtAt)}</p>
           </div>
-          <p className="shrink-0 text-2xl font-black text-water">{item.sizeCm}cm</p>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <p className="text-2xl font-black text-water">{item.sizeCm}cm</p>
+            {mapPinNumber ? (
+              <button
+                type="button"
+                onClick={onMapPinClick}
+                className="tap-target rounded-full border border-water/20 bg-foam px-3 py-1.5 text-sm font-black text-water shadow-sm"
+                aria-label={`地図ピン ${mapPinNumber} を表示`}
+              >
+                📍{mapPinNumber}
+              </button>
+            ) : null}
+          </div>
         </div>
         {item.comment ? <p className="text-sm leading-6 text-slate-700">{item.comment}</p> : null}
         {hasTackle(item) ? (
