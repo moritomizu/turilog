@@ -279,10 +279,14 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
 }
 
 function Field({ label, value, onChange, type = "text", required }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
+  const inputClass = type === "datetime-local"
+    ? "mt-2 block w-full min-w-0 max-w-full appearance-none rounded border border-slate-300 bg-white p-3 text-left text-[16px] font-bold leading-tight"
+    : "mt-2 block w-full rounded border border-slate-300 bg-white p-3 text-base font-bold";
+
   return (
     <label className="block">
       <span className="text-sm font-bold">{label}</span>
-      <input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold" />
+      <input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} className={inputClass} />
     </label>
   );
 }

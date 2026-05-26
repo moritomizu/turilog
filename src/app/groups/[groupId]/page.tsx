@@ -404,10 +404,14 @@ function GroupCatch({
 }
 
 function EditField({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
+  const inputClass = type === "datetime-local"
+    ? "mt-1 block w-full min-w-0 max-w-full appearance-none rounded border border-slate-300 bg-white p-2 text-left text-[16px] font-bold leading-tight"
+    : "mt-1 block w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold";
+
   return (
     <label className="block">
       <span className="text-xs font-black text-slate-600">{label}</span>
-      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold" />
+      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className={inputClass} />
     </label>
   );
 }
@@ -430,12 +434,21 @@ function GroupCatchMap({ items, memberNames, group, member, userId, pinNumbers }
         return;
       }
       const google = await new Loader({ apiKey, version: "weekly" }).load();
-      const map = new google.maps.Map(mapRef.current as HTMLDivElement, { center: { lat: positioned[0].displayLocation.latitude, lng: positioned[0].displayLocation.longitude }, zoom: 10 });
+      const map = new google.maps.Map(mapRef.current as HTMLDivElement, {
+        center: { lat: positioned[0].displayLocation.latitude, lng: positioned[0].displayLocation.longitude },
+        zoom: 10,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false
+      });
+      const bounds = new google.maps.LatLngBounds();
       const info = new google.maps.InfoWindow();
       positioned.forEach(({ item, displayLocation }) => {
         const pinNumber = pinNumbers.get(item.id);
+        const position = { lat: displayLocation.latitude, lng: displayLocation.longitude };
+        bounds.extend(position);
         const marker = new google.maps.Marker({
-          position: { lat: displayLocation.latitude, lng: displayLocation.longitude },
+          position,
           map,
           title: `${pinNumber ? `#${pinNumber} ` : ""}${item.fishType} ${item.sizeCm}cm`,
           label: pinNumber ? { text: String(pinNumber), color: "#ffffff", fontWeight: "900" } : undefined
@@ -445,6 +458,16 @@ function GroupCatchMap({ items, memberNames, group, member, userId, pinNumbers }
           info.open({ map, anchor: marker });
         });
       });
+      if (positioned.length === 1) {
+        map.setCenter(bounds.getCenter());
+        map.setZoom(14);
+      } else {
+        map.fitBounds(bounds, 56);
+        google.maps.event.addListenerOnce(map, "idle", () => {
+          const zoom = map.getZoom();
+          if (zoom != null && zoom > 15) map.setZoom(15);
+        });
+      }
       setMessage("");
     }
     load().catch((error) => setMessage(error instanceof Error ? error.message : "地図を表示できませんでした。"));
