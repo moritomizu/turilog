@@ -66,6 +66,11 @@ function TournamentMembers({ tournamentId, userId }: { tournamentId: string; use
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-5">
         {message ? <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
         {tournament ? <h1 className="text-2xl font-black">{tournament.name} 参加者管理</h1> : null}
+        {tournament?.requiresParticipantInfo ? (
+          <p className="rounded border border-orange-100 bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700">
+            この大会は参加者情報の入力を求めています。氏名・住所・年齢・性別・非常連絡先は賞品発送や安全管理のための管理情報です。
+          </p>
+        ) : null}
         <div className="grid gap-3">
           {participants.map((participant) => {
             const locked = participant.role === "owner";
@@ -98,6 +103,7 @@ function TournamentMembers({ tournamentId, userId }: { tournamentId: string; use
                   <Toggle label="詳細釣果情報" checked={participant.canViewPrivateCatchDetails} disabled={locked} onChange={(value) => updateParticipant(participant, { canViewPrivateCatchDetails: value })} />
                   <Toggle label="承認/却下" checked={participant.canApproveEntries} disabled={locked} onChange={(value) => updateParticipant(participant, { canApproveEntries: value })} />
                 </div>
+                {tournament?.requiresParticipantInfo ? <SafetyInfoView participant={participant} /> : null}
               </article>
             );
           })}
@@ -105,6 +111,33 @@ function TournamentMembers({ tournamentId, userId }: { tournamentId: string; use
       </main>
     </>
   );
+}
+
+function SafetyInfoView({ participant }: { participant: TournamentParticipant }) {
+  const info = participant.safetyInfo;
+  if (!info) {
+    return <p className="mt-3 rounded bg-yellow-50 p-3 text-xs font-bold text-yellow-800">参加者情報は未入力です。</p>;
+  }
+  return (
+    <div className="mt-3 rounded bg-foam p-3 text-sm font-bold leading-6 text-slate-700">
+      <p className="text-xs font-black text-slate-500">参加者情報</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <p><span className="text-xs text-slate-500">氏名:</span> {info.fullName || "未入力"}</p>
+        <p><span className="text-xs text-slate-500">年齢:</span> {info.age == null ? "未入力" : `${info.age}歳`}</p>
+        <p><span className="text-xs text-slate-500">性別:</span> {getGenderLabel(info.gender)}</p>
+        <p><span className="text-xs text-slate-500">非常連絡先:</span> {info.emergencyContact || "未入力"}</p>
+        <p className="sm:col-span-2"><span className="text-xs text-slate-500">住所:</span> {info.address || "未入力"}</p>
+      </div>
+      {participant.safetyInfoSubmittedAt ? <p className="mt-2 text-xs text-slate-500">入力日時: {formatDate(participant.safetyInfoSubmittedAt)}</p> : null}
+    </div>
+  );
+}
+
+function getGenderLabel(value: TournamentParticipant["safetyInfo"] extends infer T ? T extends { gender: infer G } ? G : never : never) {
+  if (value === "male") return "男性";
+  if (value === "female") return "女性";
+  if (value === "other") return "その他";
+  return "回答しない";
 }
 
 function Toggle({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled: boolean; onChange: (value: boolean) => void }) {

@@ -11,7 +11,7 @@ import { getDisplayLocation } from "@/lib/locationBlur";
 import { getPreferredParticipantName, rememberParticipantName } from "@/lib/participantName";
 import { canManageApprovals, canManageMembers, canSeeExactLocation, canSeePrivateCatchDetails, findParticipant } from "@/lib/tournamentPermissions";
 import { getRankingTypeLabel, getTournament, getTournamentParticipants, getTournamentStatus, joinTournament, leaveTournament, uploadTournamentParticipantIcon } from "@/lib/tournaments";
-import type { Catch, DisplayLocation, Tournament, TournamentParticipant } from "@/types";
+import type { Catch, DisplayLocation, Tournament, TournamentParticipant, TournamentParticipantGender, TournamentParticipantSafetyInfo } from "@/types";
 
 export default function TournamentDetailPage({ params }: { params: { tournamentId: string } }) {
   return (
@@ -26,6 +26,13 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
   const [participants, setParticipants] = useState<TournamentParticipant[]>([]);
   const [catches, setCatches] = useState<Catch[]>([]);
   const [joinName, setJoinName] = useState(userName);
+  const [safetyInfo, setSafetyInfo] = useState<TournamentParticipantSafetyInfo>({
+    fullName: "",
+    address: "",
+    age: null,
+    gender: "preferNotToSay",
+    emergencyContact: ""
+  });
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [message, setMessage] = useState("読み込み中です。");
@@ -71,10 +78,15 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
 
   async function handleJoin() {
     if (!tournament) return;
+    const nextSafetyInfo = tournament.requiresParticipantInfo ? sanitizeSafetyInfo(safetyInfo) : null;
+    if (tournament.requiresParticipantInfo && !isSafetyInfoComplete(nextSafetyInfo)) {
+      setMessage("大会参加に必要な参加者情報を入力してください。");
+      return;
+    }
     try {
       const avatarUrl = iconFile ? await uploadTournamentParticipantIcon(userId, iconFile) : null;
       const nextName = joinName.trim() || userName;
-      await joinTournament(tournament, userId, nextName, avatarUrl, email);
+      await joinTournament(tournament, userId, nextName, { avatarUrl, email, safetyInfo: nextSafetyInfo });
       rememberParticipantName(nextName);
       setParticipants(await getTournamentParticipants(tournament.id));
       setCatches(await getTournamentCatches(tournament.id));
@@ -117,6 +129,7 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
                 <InfoItem label="参加人数" value={`${participants.length}${tournament.maxParticipants ? ` / ${tournament.maxParticipants}` : ""}人`} />
                 <InfoItem label="公開設定" value={getVisibilityLabel(tournament.visibility)} />
                 <InfoItem label="位置情報" value={getTournamentLocationLabel(tournament.locationVisibilityDefault)} />
+                <InfoItem label="参加者情報" value={tournament.requiresParticipantInfo ? "参加時に入力必須" : "取得しない"} />
                 <InfoItem label="主催者" value={isOwner ? "あなた" : "大会作成者"} />
               </div>
               <p className="mt-3 rounded bg-white/80 p-3 text-xs font-bold leading-5 text-slate-600">
@@ -148,6 +161,9 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
                           </span>
                           <input type="file" accept="image/*" onChange={(event) => setIconFile(event.target.files?.[0] ?? null)} className="hidden" />
                         </label>
+                        {tournament.requiresParticipantInfo ? (
+                          <SafetyInfoForm value={safetyInfo} onChange={setSafetyInfo} />
+                        ) : null}
                       </>
                     )}
                     <button disabled={isParticipant} onClick={handleJoin} className="tap-target rounded bg-coral px-4 py-3 font-black text-white disabled:opacity-50">
@@ -360,6 +376,69 @@ function InfoItem({ label, value }: { label: string; value: string }) {
       <span className="mr-1 text-xs font-black text-slate-500">{label}:</span>
       {value}
     </p>
+  );
+}
+
+function SafetyInfoForm({ value, onChange }: { value: TournamentParticipantSafetyInfo; onChange: (value: TournamentParticipantSafetyInfo) => void }) {
+  return (
+    <section className="rounded border border-orange-100 bg-white p-3 sm:col-span-2">
+      <p className="text-sm font-black text-coral">参加者情報</p>
+      <p className="mt-1 text-xs font-bold leading-5 text-slate-600">賞品発送や安全管理のため、乗船名簿に準じた情報を入力してください。主催者・管理者向けの管理情報として扱います。</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <SafetyField label="氏名" value={value.fullName} onChange={(fullName) => onChange({ ...value, fullName })} required />
+        <SafetyField label="年齢" type="number" value={value.age == null ? "" : String(value.age)} onChange={(age) => onChange({ ...value, age: age ? Number(age) : null })} required />
+        <label className="block">
+          <span className="text-xs font-black text-slate-600">性別</span>
+          <select
+            value={value.gender}
+            onChange={(event) => onChange({ ...value, gender: event.target.value as TournamentParticipantGender })}
+            className="mt-1 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold"
+            required
+          >
+            <option value="preferNotToSay">回答しない</option>
+            <option value="male">男性</option>
+            <option value="female">女性</option>
+            <option value="other">その他</option>
+          </select>
+        </label>
+        <SafetyField label="非常連絡先" value={value.emergencyContact} onChange={(emergencyContact) => onChange({ ...value, emergencyContact })} placeholder="電話番号など" required />
+        <label className="block sm:col-span-2">
+          <span className="text-xs font-black text-slate-600">住所</span>
+          <textarea value={value.address} onChange={(event) => onChange({ ...value, address: event.target.value })} className="mt-1 min-h-20 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold" required />
+        </label>
+      </div>
+    </section>
+  );
+}
+
+function SafetyField({ label, value, onChange, type = "text", placeholder, required }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; required?: boolean }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black text-slate-600">{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} type={type} placeholder={placeholder} required={required} className="mt-1 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold" />
+    </label>
+  );
+}
+
+function sanitizeSafetyInfo(value: TournamentParticipantSafetyInfo): TournamentParticipantSafetyInfo {
+  return {
+    fullName: value.fullName.trim(),
+    address: value.address.trim(),
+    age: value.age == null ? null : Number(value.age),
+    gender: value.gender,
+    emergencyContact: value.emergencyContact.trim()
+  };
+}
+
+function isSafetyInfoComplete(value: TournamentParticipantSafetyInfo | null) {
+  return Boolean(
+    value &&
+      value.fullName &&
+      value.address &&
+      value.emergencyContact &&
+      value.age != null &&
+      Number.isFinite(value.age) &&
+      value.age > 0
   );
 }
 

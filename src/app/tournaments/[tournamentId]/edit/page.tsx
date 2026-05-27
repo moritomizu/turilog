@@ -28,6 +28,7 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
   const [visibility, setVisibility] = useState<TournamentVisibility>("public");
   const [locationVisibilityDefault, setLocationVisibilityDefault] = useState<TournamentLocationVisibility>("exactForOrganizersOnly");
   const [maxParticipants, setMaxParticipants] = useState("");
+  const [requiresParticipantInfo, setRequiresParticipantInfo] = useState(false);
   const [message, setMessage] = useState("読み込み中です。");
   const [busy, setBusy] = useState(false);
 
@@ -49,6 +50,7 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
         setVisibility(result.visibility);
         setLocationVisibilityDefault(result.locationVisibilityDefault);
         setMaxParticipants(result.maxParticipants == null ? "" : String(result.maxParticipants));
+        setRequiresParticipantInfo(result.requiresParticipantInfo);
         setMessage("");
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "大会を読み込めませんでした。"));
@@ -69,6 +71,7 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
         rules,
         visibility,
         locationVisibilityDefault,
+        requiresParticipantInfo,
         maxParticipants: maxParticipants ? Number(maxParticipants) : null
       });
       router.push(`/tournaments/${tournamentId}`);
@@ -141,6 +144,13 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
             </select>
           </label>
           <Field label="参加上限人数" type="number" value={maxParticipants} onChange={setMaxParticipants} />
+          <label className="flex items-start gap-3 rounded border border-orange-100 bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700">
+            <input type="checkbox" checked={requiresParticipantInfo} onChange={(event) => setRequiresParticipantInfo(event.target.checked)} className="mt-1 h-5 w-5 shrink-0" />
+            <span>
+              <span className="block font-black text-coral">参加者情報を取得する</span>
+              <span className="mt-1 block text-xs">賞品発送や安全管理のため、参加時に氏名・住所・年齢・性別・非常連絡先の入力を求めます。</span>
+            </span>
+          </label>
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
           <button disabled={busy || !tournament} className="tap-target w-full rounded bg-coral px-5 py-4 text-lg font-black text-white disabled:opacity-60">
             {busy ? "保存中..." : "大会を保存する"}

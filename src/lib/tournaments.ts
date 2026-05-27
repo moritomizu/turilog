@@ -3,7 +3,17 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
-import type { Tournament, TournamentLocationVisibility, TournamentParticipant, TournamentRankingType, TournamentRole, TournamentStatus, TournamentVisibility } from "@/types";
+import type {
+  Tournament,
+  TournamentLocationVisibility,
+  TournamentParticipant,
+  TournamentParticipantGender,
+  TournamentParticipantSafetyInfo,
+  TournamentRankingType,
+  TournamentRole,
+  TournamentStatus,
+  TournamentVisibility
+} from "@/types";
 
 export type TournamentInput = {
   ownerId: string;
@@ -17,9 +27,16 @@ export type TournamentInput = {
   rules: string;
   visibility: TournamentVisibility;
   maxParticipants: number | null;
+  requiresParticipantInfo?: boolean;
   locationVisibilityDefault?: TournamentLocationVisibility;
   ownerUserName?: string;
   ownerEmail?: string | null;
+};
+
+export type JoinTournamentOptions = {
+  avatarUrl?: string | null;
+  email?: string | null;
+  safetyInfo?: TournamentParticipantSafetyInfo | null;
 };
 
 export async function createTournament(input: TournamentInput) {
@@ -39,6 +56,8 @@ export async function createTournament(input: TournamentInput) {
     userName: ownerUserName || "主催者",
     email: ownerEmail ?? null,
     avatarUrl: null,
+    safetyInfo: null,
+    safetyInfoSubmittedAt: null,
     ...getRoleDefaults("owner"),
     joinedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -112,7 +131,7 @@ export async function uploadTournamentParticipantIcon(userId: string, file: File
   return getDownloadURL(storageRef);
 }
 
-export async function joinTournament(tournament: Tournament, userId: string, userName: string, avatarUrl: string | null = null, email: string | null = null) {
+export async function joinTournament(tournament: Tournament, userId: string, userName: string, options: JoinTournamentOptions = {}) {
   const participantRef = doc(getFirebaseDb(), "tournamentParticipants", `${tournament.id}_${userId}`);
   const existing = await getDoc(participantRef);
   if (existing.exists()) return;
@@ -126,8 +145,10 @@ export async function joinTournament(tournament: Tournament, userId: string, use
     tournamentId: tournament.id,
     userId,
     userName,
-    email,
-    avatarUrl,
+    email: options.email ?? null,
+    avatarUrl: options.avatarUrl ?? null,
+    safetyInfo: options.safetyInfo ?? null,
+    safetyInfoSubmittedAt: options.safetyInfo ? new Date().toISOString() : null,
     ...getRoleDefaults("participant"),
     joinedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -195,6 +216,7 @@ function normalizeTournament(id: string, data: Record<string, unknown>): Tournam
     rules: typeof data.rules === "string" ? data.rules : "",
     visibility: data.visibility === "private" ? "private" : "public",
     maxParticipants: typeof data.maxParticipants === "number" ? data.maxParticipants : null,
+    requiresParticipantInfo: data.requiresParticipantInfo === true,
     locationVisibilityDefault:
       data.locationVisibilityDefault === "blurredForParticipants" || data.locationVisibilityDefault === "areaOnlyForParticipants" || data.locationVisibilityDefault === "hiddenForParticipants"
         ? data.locationVisibilityDefault
@@ -216,6 +238,8 @@ function normalizeParticipant(id: string, data: Record<string, unknown>): Tourna
     userName: typeof data.userName === "string" ? data.userName : "参加者",
     email: typeof data.email === "string" ? data.email : null,
     avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : null,
+    safetyInfo: normalizeSafetyInfo(data.safetyInfo),
+    safetyInfoSubmittedAt: data.safetyInfoSubmittedAt == null ? null : normalizeDate(data.safetyInfoSubmittedAt),
     role,
     canViewExactLocation: typeof data.canViewExactLocation === "boolean" ? data.canViewExactLocation : defaults.canViewExactLocation,
     canViewPrivateCatchDetails: typeof data.canViewPrivateCatchDetails === "boolean" ? data.canViewPrivateCatchDetails : defaults.canViewPrivateCatchDetails,
@@ -224,6 +248,24 @@ function normalizeParticipant(id: string, data: Record<string, unknown>): Tourna
     updatedAt: data.updatedAt == null ? null : normalizeDate(data.updatedAt),
     status: "active"
   };
+}
+
+function normalizeSafetyInfo(value: unknown): TournamentParticipantSafetyInfo | null {
+  if (!value || typeof value !== "object") return null;
+  const data = value as Record<string, unknown>;
+  const age = Number(data.age ?? NaN);
+  return {
+    fullName: typeof data.fullName === "string" ? data.fullName : "",
+    address: typeof data.address === "string" ? data.address : "",
+    age: Number.isFinite(age) ? age : null,
+    gender: normalizeGender(data.gender),
+    emergencyContact: typeof data.emergencyContact === "string" ? data.emergencyContact : ""
+  };
+}
+
+function normalizeGender(value: unknown): TournamentParticipantGender {
+  if (value === "male" || value === "female" || value === "other" || value === "preferNotToSay") return value;
+  return "preferNotToSay";
 }
 
 export function getRoleDefaults(role: TournamentRole) {

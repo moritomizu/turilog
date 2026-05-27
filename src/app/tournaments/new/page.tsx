@@ -32,6 +32,7 @@ function TournamentForm({ userId, userName, email }: { userId: string; userName:
   const [visibility, setVisibility] = useState<TournamentVisibility>("public");
   const [locationVisibilityDefault, setLocationVisibilityDefault] = useState<TournamentLocationVisibility>("exactForOrganizersOnly");
   const [maxParticipants, setMaxParticipants] = useState("");
+  const [requiresParticipantInfo, setRequiresParticipantInfo] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -65,6 +66,7 @@ function TournamentForm({ userId, userName, email }: { userId: string; userName:
         rules,
         visibility,
         locationVisibilityDefault,
+        requiresParticipantInfo,
         maxParticipants: maxParticipants ? Number(maxParticipants) : null,
         ownerUserName: userName,
         ownerEmail: email
@@ -118,6 +120,13 @@ function TournamentForm({ userId, userName, email }: { userId: string; userName:
             </select>
           </label>
           <Field label="参加上限人数" type="number" value={maxParticipants} onChange={setMaxParticipants} placeholder="未入力なら上限なし" />
+          <label className="flex items-start gap-3 rounded border border-orange-100 bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700">
+            <input type="checkbox" checked={requiresParticipantInfo} onChange={(event) => setRequiresParticipantInfo(event.target.checked)} className="mt-1 h-5 w-5 shrink-0" />
+            <span>
+              <span className="block font-black text-coral">参加者情報を取得する</span>
+              <span className="mt-1 block text-xs">賞品発送や安全管理のため、参加時に氏名・住所・年齢・性別・非常連絡先の入力を求めます。</span>
+            </span>
+          </label>
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
           <button disabled={busy} className="tap-target w-full rounded bg-coral px-5 py-4 text-lg font-black text-white disabled:opacity-60">
             {busy ? "作成中..." : "大会を作成する"}

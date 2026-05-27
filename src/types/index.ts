@@ -9,6 +9,7 @@ export type TournamentVisibility = "public" | "private";
 export type TournamentStatus = "upcoming" | "active" | "ended";
 export type TournamentEntryStatus = "none" | "pending" | "approved" | "rejected";
 export type TournamentRole = "owner" | "admin" | "subAdmin" | "participant" | "viewer";
+export type TournamentParticipantGender = "male" | "female" | "other" | "preferNotToSay";
 export type LocationVisibility = "exact" | "public" | "hidden";
 export type GroupRole = "owner" | "admin" | "moderator" | "member" | "viewer";
 export type GroupVisibility = "private" | "inviteOnly" | "public";
@@ -479,11 +480,20 @@ export type Tournament = {
   rules: string;
   visibility: TournamentVisibility;
   maxParticipants: number | null;
+  requiresParticipantInfo: boolean;
   locationVisibilityDefault: TournamentLocationVisibility;
   allowedAreaCodes?: string[];
   allowedAreas?: string[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type TournamentParticipantSafetyInfo = {
+  fullName: string;
+  address: string;
+  age: number | null;
+  gender: TournamentParticipantGender;
+  emergencyContact: string;
 };
 
 export type TournamentParticipant = {
@@ -493,6 +503,8 @@ export type TournamentParticipant = {
   userName: string;
   email: string | null;
   avatarUrl: string | null;
+  safetyInfo?: TournamentParticipantSafetyInfo | null;
+  safetyInfoSubmittedAt?: string | null;
   role: TournamentRole;
   canViewExactLocation: boolean;
   canViewPrivateCatchDetails: boolean;
