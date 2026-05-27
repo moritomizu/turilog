@@ -142,10 +142,13 @@ export function calculateVerificationScore(proofPackage: CatchProofPackage): Ver
     if (!messages.includes(finding.message)) messages.push(finding.message);
   });
 
-  const total = clampScore(mediaScore + gpsScore + timeScore + tideScore + fishScore + measurementScore + tournamentScore);
+  const positiveScore = clampScore(mediaScore + gpsScore + timeScore + tideScore + fishScore + measurementScore + tournamentScore);
+  const penaltyScore = calculateAnomalyPenalty(anomalyFindings);
+  const total = clampScore(positiveScore - penaltyScore);
   const normalizedFlags = [...flags];
-  const majorFlags = normalizedFlags.filter((flag) => criticalFlags.includes(flag));
-  const level = getVerificationLevel(total, normalizedFlags);
+  const criticalAnomalyFlags = anomalyFindings.filter((finding) => finding.severity === "critical").map((finding) => finding.flag);
+  const majorFlags = [...new Set([...normalizedFlags.filter((flag) => criticalFlags.includes(flag)), ...criticalAnomalyFlags])];
+  const level = getVerificationLevelWithAnomalies(total, normalizedFlags, anomalyFindings);
   const breakdown = [
     scoreItem("mediaScore", "メディア証明", mediaScore),
     scoreItem("gpsScore", "GPS証明", gpsScore),
@@ -153,7 +156,8 @@ export function calculateVerificationScore(proofPackage: CatchProofPackage): Ver
     scoreItem("tideScore", "潮位証明", tideScore),
     scoreItem("fishScore", "魚種・サイズ", fishScore),
     scoreItem("measurementScore", "計測証明", measurementScore),
-    scoreItem("tournamentScore", "大会条件", tournamentScore)
+    scoreItem("tournamentScore", "大会条件", tournamentScore),
+    scoreItem("anomalyPenalty", "異常検知減点", -penaltyScore)
   ];
 
   const result: VerificationScore = {
@@ -171,13 +175,13 @@ export function calculateVerificationScore(proofPackage: CatchProofPackage): Ver
     measurementScore,
     tournamentScore,
     anomalyFindings,
-    positiveScore: total,
-    penaltyScore: 0,
+    positiveScore,
+    penaltyScore,
     breakdown,
     calculatedAt: new Date().toISOString()
   };
 
-  debugVerification("verificationScore", { breakdown, flags: normalizedFlags, level });
+  debugVerification("verificationScore", { breakdown, flags: normalizedFlags, anomalyFindings, penaltyScore, level });
   return result;
 }
 
@@ -186,6 +190,23 @@ export function getVerificationLevel(totalScore: number, flags: ProofFlag[]): Ve
   if (totalScore >= 80) return "high";
   if (totalScore >= 60) return "medium";
   return "low";
+}
+
+function getVerificationLevelWithAnomalies(
+  totalScore: number,
+  flags: ProofFlag[],
+  anomalyFindings: CatchProofPackage["anomalyFindings"] = []
+): VerificationLevel {
+  if (anomalyFindings.some((finding) => finding.severity === "critical")) return "needs_review";
+  return getVerificationLevel(totalScore, flags);
+}
+
+function calculateAnomalyPenalty(anomalyFindings: CatchProofPackage["anomalyFindings"] = []) {
+  return anomalyFindings.reduce((total, finding) => {
+    if (finding.severity === "critical") return total + 15;
+    if (finding.severity === "warning") return total + 5;
+    return total;
+  }, 0);
 }
 
 export function checkRankingEligibility(catchData: CatchLike, verificationScore: VerificationScore, options: RankingEligibilityOptions = {}) {
@@ -207,6 +228,8 @@ export function checkRankingEligibility(catchData: CatchLike, verificationScore:
     result = { eligible: false, reason: "対象魚種不一致", checkedAt };
   } else if (flags.includes("tournament_area_mismatch")) {
     result = { eligible: false, reason: "大会対象エリア外の可能性", checkedAt };
+  } else if (verificationScore.anomalyFindings?.some((finding) => finding.severity === "critical")) {
+    result = { eligible: false, reason: "重大な異常検知があります", checkedAt };
   } else if (hasCriticalFlag(flags)) {
     result = { eligible: false, reason: "重大な確認項目があります", checkedAt };
   } else {
