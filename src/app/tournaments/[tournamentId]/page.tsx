@@ -31,6 +31,7 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
     address: "",
     age: null,
     gender: "preferNotToSay",
+    phoneNumber: "",
     emergencyContact: ""
   });
   const [iconFile, setIconFile] = useState<File | null>(null);
@@ -413,10 +414,11 @@ function SafetyInfoForm({ value, onChange }: { value: TournamentParticipantSafet
             <option value="other">その他</option>
           </select>
         </label>
-        <SafetyField label="非常連絡先" value={value.emergencyContact} onChange={(emergencyContact) => onChange({ ...value, emergencyContact })} placeholder="電話番号など" required />
+        <SafetyField label="電話番号" value={value.phoneNumber} onChange={(phoneNumber) => onChange({ ...value, phoneNumber })} placeholder="例: 090-1234-5678" required />
+        <SafetyField label="非常連絡先(万一の際連絡の取れる連絡先)" value={value.emergencyContact} onChange={(emergencyContact) => onChange({ ...value, emergencyContact })} placeholder="例: 家族の電話番号など" required />
         <label className="block sm:col-span-2">
           <span className="text-xs font-black text-slate-600">住所</span>
-          <textarea value={value.address} onChange={(event) => onChange({ ...value, address: event.target.value })} className="mt-1 min-h-20 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold" required />
+          <textarea value={value.address} onChange={(event) => onChange({ ...value, address: event.target.value })} placeholder="例: 大阪府大阪市港区〇〇 1-2-3" className="mt-1 min-h-20 w-full rounded border border-orange-200 bg-white p-3 text-sm font-bold" required />
         </label>
       </div>
     </section>
@@ -438,6 +440,7 @@ function sanitizeSafetyInfo(value: TournamentParticipantSafetyInfo): TournamentP
     address: value.address.trim(),
     age: value.age == null ? null : Number(value.age),
     gender: value.gender,
+    phoneNumber: value.phoneNumber.trim(),
     emergencyContact: value.emergencyContact.trim()
   };
 }
@@ -447,6 +450,7 @@ function isSafetyInfoComplete(value: TournamentParticipantSafetyInfo | null) {
     value &&
       value.fullName &&
       value.address &&
+      value.phoneNumber &&
       value.emergencyContact &&
       value.age != null &&
       Number.isFinite(value.age) &&

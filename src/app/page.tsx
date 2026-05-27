@@ -8,7 +8,7 @@ import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 import { getGroupCatchComments } from "@/lib/groupCatchComments";
 import { canManageGroupMembersSync, findGroupMember } from "@/lib/groupPermissions";
 import { getGroupJoinRequests, getGroupMembers, getGroupsForUser } from "@/lib/groups";
-import { canManageApprovals, findParticipant } from "@/lib/tournamentPermissions";
+import { canManageApprovals, canManageMembers, findParticipant } from "@/lib/tournamentPermissions";
 import { getTournamentParticipants, getTournaments } from "@/lib/tournaments";
 import { getUserProfile } from "@/lib/userProfiles";
 import { TsuriLogLogo } from "@/components/TsuriLogLogo";
@@ -50,7 +50,7 @@ export default function Home() {
       .catch(() => setApprovalSummary(emptyApprovalSummary()));
   }, [user]);
 
-  const approvalCount = approvalSummary.groupRequests + approvalSummary.tournamentEntries;
+  const approvalCount = approvalSummary.groupRequests + approvalSummary.tournamentEntries + approvalSummary.tournamentPaymentReviews;
   const commentCount = approvalSummary.commentDetails.reduce((sum, item) => sum + item.count, 0);
 
   return (
@@ -84,7 +84,7 @@ export default function Home() {
                 <p className="text-xs font-black text-coral">APPROVAL</p>
                 <h2 className="mt-1 text-xl font-black text-ink">承認待ちがあります</h2>
                 <p className="mt-1 text-sm font-bold leading-6 text-slate-700">
-                  グループ参加申請 {approvalSummary.groupRequests}件 / 大会投稿承認 {approvalSummary.tournamentEntries}件
+                  グループ参加申請 {approvalSummary.groupRequests}件 / 大会投稿承認 {approvalSummary.tournamentEntries}件 / 大会参加確認 {approvalSummary.tournamentPaymentReviews}件
                 </p>
               </div>
               <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-coral px-3 text-sm font-black text-white">{approvalCount}</span>
@@ -99,6 +99,12 @@ export default function Home() {
               {approvalSummary.tournamentDetails.map((tournament) => (
                 <Link key={tournament.id} href={`/tournaments/${tournament.id}/admin`} className="tap-target flex items-center justify-between gap-3 rounded bg-white px-4 py-3 font-black text-coral">
                   <span className="min-w-0 truncate">{tournament.name}</span>
+                  <span className="shrink-0 rounded-full bg-coral px-2 py-1 text-xs text-white">{tournament.count}件</span>
+                </Link>
+              ))}
+              {approvalSummary.tournamentPaymentDetails.map((tournament) => (
+                <Link key={tournament.id} href={`/tournaments/${tournament.id}/members`} className="tap-target flex items-center justify-between gap-3 rounded bg-white px-4 py-3 font-black text-coral">
+                  <span className="min-w-0 truncate">{tournament.name} 参加確認</span>
                   <span className="shrink-0 rounded-full bg-coral px-2 py-1 text-xs text-white">{tournament.count}件</span>
                 </Link>
               ))}
@@ -147,13 +153,15 @@ export default function Home() {
 type ApprovalSummary = {
   groupRequests: number;
   tournamentEntries: number;
+  tournamentPaymentReviews: number;
   groupDetails: { id: string; name: string; count: number }[];
   tournamentDetails: { id: string; name: string; count: number }[];
+  tournamentPaymentDetails: { id: string; name: string; count: number }[];
   commentDetails: { id: string; name: string; count: number }[];
 };
 
 function emptyApprovalSummary(): ApprovalSummary {
-  return { groupRequests: 0, tournamentEntries: 0, groupDetails: [], tournamentDetails: [], commentDetails: [] };
+  return { groupRequests: 0, tournamentEntries: 0, tournamentPaymentReviews: 0, groupDetails: [], tournamentDetails: [], tournamentPaymentDetails: [], commentDetails: [] };
 }
 
 function getInitial(value: string | null | undefined) {
@@ -189,6 +197,19 @@ async function loadApprovalSummary(userId: string) {
     )
   ).filter((item): item is { id: string; name: string; count: number } => Boolean(item));
 
+  const tournamentPaymentDetails = (
+    await Promise.all(
+      tournaments.map(async (tournament) => {
+        if (!tournament.entryFeeEnabled) return null;
+        const participants = await getTournamentParticipants(tournament.id);
+        const currentParticipant = findParticipant(participants, userId, tournament.ownerId);
+        if (!canManageMembers(currentParticipant)) return null;
+        const count = participants.filter((participant) => participant.role !== "owner" && participant.paymentStatus === "unpaid").length;
+        return count > 0 ? { id: tournament.id, name: tournament.name, count } : null;
+      })
+    )
+  ).filter((item): item is { id: string; name: string; count: number } => Boolean(item));
+
   const commentDetails = (
     await Promise.all(
       groups.map(async (group) => {
@@ -202,8 +223,10 @@ async function loadApprovalSummary(userId: string) {
   return {
     groupRequests: groupDetails.reduce((sum, item) => sum + item.count, 0),
     tournamentEntries: tournamentDetails.reduce((sum, item) => sum + item.count, 0),
+    tournamentPaymentReviews: tournamentPaymentDetails.reduce((sum, item) => sum + item.count, 0),
     groupDetails,
     tournamentDetails,
+    tournamentPaymentDetails,
     commentDetails
   };
 }

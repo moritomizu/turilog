@@ -291,6 +291,7 @@ function normalizeSafetyInfo(value: unknown): TournamentParticipantSafetyInfo | 
     address: typeof data.address === "string" ? data.address : "",
     age: Number.isFinite(age) ? age : null,
     gender: normalizeGender(data.gender),
+    phoneNumber: typeof data.phoneNumber === "string" ? data.phoneNumber : "",
     emergencyContact: typeof data.emergencyContact === "string" ? data.emergencyContact : ""
   };
 }

@@ -500,6 +500,7 @@ export type TournamentParticipantSafetyInfo = {
   address: string;
   age: number | null;
   gender: TournamentParticipantGender;
+  phoneNumber: string;
   emergencyContact: string;
 };
 
