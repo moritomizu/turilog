@@ -42,7 +42,8 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
   const flags = buildFlags(catchData, caughtAt, createdAt, context);
 
   return {
-    catchId: catchData.id,
+    proofVersion: "v1",
+    catchId: catchData.id ?? null,
     userId: catchData.userId,
     image: {
       hasImage: Boolean(catchData.imageUrl),
@@ -88,11 +89,11 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
     context: {
       tournamentId: catchData.tournamentId ?? null,
       isTournamentEntry: catchData.isTournamentEntry === true,
-      tournamentEntryStatus: catchData.tournamentEntryStatus,
+      tournamentEntryStatus: catchData.tournamentEntryStatus ?? "none",
       groupIds: catchData.groupIds ?? [],
       primaryGroupId: catchData.primaryGroupId ?? null,
-      postedByUserId: catchData.postedByUserId,
-      actualAnglerUserId: catchData.actualAnglerUserId,
+      postedByUserId: catchData.postedByUserId ?? null,
+      actualAnglerUserId: catchData.actualAnglerUserId ?? null,
       isProxyPost: catchData.isProxyPost === true,
       tournamentStartAt: toIsoString(context.tournamentStartAt) ?? null,
       tournamentEndAt: toIsoString(context.tournamentEndAt) ?? null,

@@ -110,7 +110,8 @@ export type ProofFlag =
 export type VerificationLevel = "high" | "medium" | "low" | "needs_review" | "unverified" | "basic" | "standard" | "strong" | "highTrust";
 
 export type CatchProofPackage = {
-  catchId?: string;
+  proofVersion: "v1";
+  catchId?: string | null;
   userId: string;
   image: {
     hasImage: boolean;
@@ -159,8 +160,8 @@ export type CatchProofPackage = {
     tournamentEntryStatus?: TournamentEntryStatus;
     groupIds: string[];
     primaryGroupId?: string | null;
-    postedByUserId?: string;
-    actualAnglerUserId?: string;
+    postedByUserId?: string | null;
+    actualAnglerUserId?: string | null;
     isProxyPost: boolean;
     tournamentStartAt?: string | null;
     tournamentEndAt?: string | null;
@@ -392,6 +393,8 @@ export type Catch = TideInfo &
   tackle: TackleInfo;
   tackleId?: string | null;
   tackleName?: string;
+  measurementPhotoUrl?: string | null;
+  measurementMethod?: "manual" | "measurePhoto";
   rod?: string;
   reel?: string;
   line?: string;

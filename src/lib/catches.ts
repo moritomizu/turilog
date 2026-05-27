@@ -50,6 +50,18 @@ export async function getGroupCatches(groupId: string): Promise<Catch[]> {
   return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
 }
 
+export async function getAllCatchesForAdmin(): Promise<Catch[]> {
+  const snapshot = await getDocs(collection(getFirebaseDb(), "catches"));
+  return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
+}
+
+export async function updateCatchVerificationData(
+  catchId: string,
+  data: Pick<Catch, "catchProof" | "verificationScore" | "rankingEligibility">
+) {
+  await updateDoc(doc(getFirebaseDb(), "catches", catchId), data);
+}
+
 export async function updateCatch(
   catchId: string,
   data: Partial<
@@ -164,6 +176,8 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
     tackle: normalizeTackle(data.tackle),
     tackleId: typeof data.tackleId === "string" ? data.tackleId : null,
     tackleName: typeof data.tackleName === "string" ? data.tackleName : "",
+    measurementPhotoUrl: typeof data.measurementPhotoUrl === "string" ? data.measurementPhotoUrl : null,
+    measurementMethod: data.measurementMethod === "measurePhoto" ? "measurePhoto" : "manual",
     rod: typeof data.rod === "string" ? data.rod : "",
     reel: typeof data.reel === "string" ? data.reel : "",
     line: typeof data.line === "string" ? data.line : "",

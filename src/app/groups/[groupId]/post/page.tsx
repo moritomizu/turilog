@@ -36,6 +36,7 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
   const [caughtAt, setCaughtAt] = useState(toLocalInputValue(new Date()));
   const [comment, setComment] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [measurementFile, setMeasurementFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -59,6 +60,7 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
       const location = await getCurrentLocation().catch(() => null);
       const caughtAtIso = new Date(caughtAt).toISOString();
       const imageUrl = file ? await uploadCatchImage(userId, file) : null;
+      const measurementPhotoUrl = measurementFile ? await uploadCatchImage(userId, measurementFile) : null;
       const isProxyPost = actualAnglerUserId !== userId;
       const blurRadiusMeters = location ? getDefaultBlurRadius() : null;
       const blurredLocation = location && blurRadiusMeters ? generateBlurredLocation(location.latitude, location.longitude, blurRadiusMeters) : null;
@@ -94,6 +96,8 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
         actualAnglerUserId,
         isProxyPost,
         proxyPostReason: isProxyPost ? "グループ管理者による代理投稿" : "",
+        measurementPhotoUrl,
+        measurementMethod: measurementPhotoUrl ? "measurePhoto" : "manual",
         weather: emptyWeatherInfo(),
         seaTemperature: emptySeaTemperatureInfo(),
         lunar: getLunarInfo(caughtAtIso),
@@ -140,6 +144,11 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
           <Field label="釣った日時" value={caughtAt} onChange={setCaughtAt} type="datetime-local" required />
           <TextArea label="コメント" value={comment} onChange={setComment} />
           <label className="block"><span className="text-sm font-bold">写真</span><input type="file" accept="image/*" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3" /></label>
+          <label className="block">
+            <span className="text-sm font-bold">サイズ確認用写真（任意）</span>
+            <input type="file" accept="image/*" onChange={(event) => setMeasurementFile(event.target.files?.[0] ?? null)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3" />
+            <span className="mt-2 block text-xs font-bold leading-5 text-slate-500">大会やランキングでサイズ確認が必要な場合に使用します。メジャーと魚が一緒に写った写真を推奨します。</span>
+          </label>
           {canProxy ? (
             <label className="block">
               <span className="text-sm font-bold">釣った人</span>

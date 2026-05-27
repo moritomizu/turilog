@@ -1084,6 +1084,120 @@ AIレポートは釣果を保証するものではありません。天候、水
 - グループAIレポート
 - 大会AIレポート
 
+## 釣果デジタル証明β
+
+釣果デジタル証明βは、釣果投稿を「後から検証・再評価・再スコアリングできる証拠データ」として保存するための基盤です。
+
+投稿時に `catches` ドキュメントへ以下を保存します。
+
+```text
+catchProof
+verificationScore
+rankingEligibility
+```
+
+### catchProof の構造
+
+`catchProof` は、釣果の証明に使う情報をまとめたパッケージです。
+
+主な内容:
+
+```text
+proofVersion: "v1"
+image: 写真、EXIF有無、EXIF撮影日時有無
+size: 魚種、サイズ、計測方法、サイズ確認用写真
+time: 釣った日時、投稿日時、時間差
+location: GPS、ぼかし位置、エリア、ポイント名、精度
+environment: 潮位、天候、水温、月齢
+context: 大会、グループ、代理投稿、対象魚種
+flags: 確認事項
+generatedAt
+```
+
+`proofVersion` は初期値 `"v1"` です。将来スコアリング仕様を変える場合も、保存済み証明情報を再評価できるようにします。
+
+### verificationScore の計算方法
+
+`verificationScore` は以下のカテゴリで最大100点です。
+
+```text
+mediaScore: 最大15点
+gpsScore: 最大20点
+timeScore: 最大15点
+tideScore: 最大15点
+fishScore: 最大10点
+measurementScore: 最大10点
+tournamentScore: 最大15点
+```
+
+重大flagがある場合は `needs_review` になります。
+
+重大flag:
+
+```text
+missing_photo
+missing_gps
+tournament_out_of_period
+tournament_target_fish_mismatch
+```
+
+### rankingEligibility の仕様
+
+ランキング反映可否は以下をもとに判定します。
+
+```text
+verificationScore.total >= 60
+重大flagなし
+大会期間外ではない
+対象魚種不一致ではない
+```
+
+満たす場合は `eligible: true`、満たさない場合は `eligible: false` と `reason` を保存します。
+
+### サイズ確認用写真
+
+釣果投稿フォームには「サイズ確認用写真（任意）」があります。
+
+メジャーと魚が一緒に写った写真を登録すると、以下のように保存されます。
+
+```text
+measurementPhotoUrl
+measurementMethod: "measurePhoto"
+```
+
+登録しない場合は以下です。
+
+```text
+measurementMethod: "manual"
+```
+
+### 既存釣果への後付け生成
+
+管理者は以下のページから、既存釣果の証明情報を後付け生成・再計算できます。
+
+```text
+/admin/generate-catch-proof
+```
+
+機能:
+
+- catchProof 未生成一覧
+- 個別再生成
+- 未生成を一括生成
+- 全件を一括再計算
+- 管理者向け詳細JSON表示
+
+### 今後の拡張予定
+
+- EXIF撮影日時の自動抽出
+- EXIF GPSの自動抽出
+- GPS精度の保存
+- メジャー画像AI解析
+- 画像重複検知
+- 大会エリア判定
+- 承認履歴の保存
+- スコアリング仕様のバージョン管理
+
 ## 今後の拡張候補
 
 - 釣り大会モード

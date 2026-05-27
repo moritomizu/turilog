@@ -3,7 +3,7 @@
 import { getVerificationFlagLabel, getVerificationScoreLabel } from "@/lib/catchVerification";
 import type { Catch, ProofFlag, VerificationLevel } from "@/types";
 
-export function CatchVerificationPanel({ item, compact = false }: { item: Catch; compact?: boolean }) {
+export function CatchVerificationPanel({ item, compact = false, showRawJson = false }: { item: Catch; compact?: boolean; showRawJson?: boolean }) {
   const score = item.verificationScore;
   if (!score) {
     return (
@@ -55,6 +55,11 @@ export function CatchVerificationPanel({ item, compact = false }: { item: Catch;
           <p>潮位: {item.catchProof?.environment.hasTideData ? "あり" : "なし"} / {item.catchProof?.environment.tidePhaseLabel ?? "潮未取得"}</p>
           <p>大会: {item.catchProof?.context.isTournamentEntry ? "大会投稿" : "通常投稿"} / {item.catchProof?.context.tournamentEntryStatus ?? "none"}</p>
           <ScoreBreakdown item={item} />
+          {showRawJson ? (
+            <pre className="mt-2 max-h-80 overflow-auto rounded bg-slate-950 p-3 text-[11px] leading-5 text-white">
+              {JSON.stringify({ catchProof: item.catchProof, verificationScore: item.verificationScore, rankingEligibility: item.rankingEligibility }, null, 2)}
+            </pre>
+          ) : null}
         </div>
       </details>
 

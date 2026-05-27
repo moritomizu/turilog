@@ -50,6 +50,7 @@ function PostForm({ userId }: { userId: string }) {
   const [tackleOptions, setTackleOptions] = useState<Tackle[]>([]);
   const [selectedTackleId, setSelectedTackleId] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [measurementFile, setMeasurementFile] = useState<File | null>(null);
   const [location, setLocation] = useState<LocationPoint | null>(null);
   const [manualLatitude, setManualLatitude] = useState("");
   const [manualLongitude, setManualLongitude] = useState("");
@@ -211,6 +212,8 @@ function PostForm({ userId }: { userId: string }) {
     try {
       let imageUrl: string | null = null;
       if (file) imageUrl = await uploadCatchImage(userId, file);
+      let measurementPhotoUrl: string | null = null;
+      if (measurementFile) measurementPhotoUrl = await uploadCatchImage(userId, measurementFile);
       setSubmitStage("釣果を保存しています。");
       const caughtAtIso = new Date(caughtAt).toISOString();
       const emptyTideInfo = getEmptyTideInfo();
@@ -262,6 +265,8 @@ function PostForm({ userId }: { userId: string }) {
         proxyPostReason: "",
         tackleId: selectedTackle?.id ?? null,
         tackleName: selectedTackle?.name ?? "",
+        measurementPhotoUrl,
+        measurementMethod: measurementPhotoUrl ? "measurePhoto" : "manual",
         rod: tackle.rodName,
         reel: tackle.reelName,
         line: tackle.lineName,
@@ -300,6 +305,7 @@ function PostForm({ userId }: { userId: string }) {
       setSizeCm("");
       setComment("");
       setFile(null);
+      setMeasurementFile(null);
       setCaughtAt(toLocalInputValue(new Date()));
       setSuccessSummary(`${savedFishType} ${savedSizeCm}cm を投稿しました。`);
       setMessage(`${buildPostMessage(selectedTournament, tournamentCheck, selectedGroup)} 潮位・天候・水温は裏側で追記中です。`);
@@ -322,6 +328,12 @@ function PostForm({ userId }: { userId: string }) {
             <p className="mt-2 text-xs font-bold text-slate-500">カメラ撮影または写真ライブラリから選択できます。</p>
           </label>
           {preview ? <SizeEstimator imageUrl={preview} onApply={(value) => setSizeCm(value)} /> : null}
+
+          <label className="block rounded border border-teal-100 bg-white p-4 shadow-soft">
+            <span className="text-sm font-black">サイズ確認用写真（任意）</span>
+            <input className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(e) => setMeasurementFile(e.target.files?.[0] ?? null)} />
+            <p className="mt-2 text-xs font-bold leading-5 text-slate-500">大会やランキングでサイズ確認が必要な場合に使用します。メジャーと魚が一緒に写った写真を推奨します。</p>
+          </label>
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
             <Field label="魚種" value={fishType} onChange={setFishType} placeholder="例: シーバス" required listId="fish-suggestions" autoFocus />
