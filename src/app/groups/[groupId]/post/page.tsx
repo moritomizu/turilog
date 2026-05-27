@@ -6,7 +6,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { FeatureLock } from "@/components/FeatureLock";
 import { PageHeader } from "@/components/PageHeader";
 import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
-import { createCatch, emptyTackleInfo, uploadCatchImage } from "@/lib/catches";
+import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
 import { canProxyPostToGroup } from "@/lib/groupPermissions";
 import { getGroup, getGroupMembers } from "@/lib/groups";
 import { getFeatureAccess } from "@/lib/features";
@@ -117,13 +117,15 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
         tideApiProvider: "none"
       };
       const proofGeneratedAt = new Date().toISOString();
-      const catchProof = buildCatchProofPackage({ ...baseCatchData, createdAt: proofGeneratedAt }, { generatedAt: proofGeneratedAt });
+      const previousCatches = await getUserCatches(actualAnglerUserId).catch(() => []);
+      const catchProof = buildCatchProofPackage({ ...baseCatchData, createdAt: proofGeneratedAt }, { generatedAt: proofGeneratedAt, previousCatches });
       const verificationScore = calculateVerificationScore(catchProof);
       const rankingEligibility = checkRankingEligibility(baseCatchData, verificationScore);
       await createCatch({
         ...baseCatchData,
         catchProof,
         verificationScore,
+        anomalyFindings: catchProof.anomalyFindings,
         rankingEligibility
       });
       rememberLastPostGroupId(group.id);

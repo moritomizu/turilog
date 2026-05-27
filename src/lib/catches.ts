@@ -7,7 +7,7 @@ import { emptyLunarInfo } from "@/lib/lunar";
 import { emptyOfficialCurrentReference } from "@/lib/officialCurrent";
 import { emptySeaTemperatureInfo } from "@/lib/seaTemperature";
 import { emptyWeatherInfo } from "@/lib/weather";
-import type { Catch, CatchProofPackage, LunarInfo, OfficialCurrentReference, OfficialTideReference, SeaTemperatureInfo, TackleInfo, TideInfo, VerificationScore, WeatherInfo } from "@/types";
+import type { AnomalyFinding, Catch, CatchProofPackage, LunarInfo, OfficialCurrentReference, OfficialTideReference, SeaTemperatureInfo, TackleInfo, TideInfo, VerificationScore, WeatherInfo } from "@/types";
 
 export async function uploadCatchImage(userId: string, file: File) {
   const storageRef = ref(getFirebaseStorage(), `catches/${userId}/${crypto.randomUUID()}-${file.name}`);
@@ -57,7 +57,7 @@ export async function getAllCatchesForAdmin(): Promise<Catch[]> {
 
 export async function updateCatchVerificationData(
   catchId: string,
-  data: Pick<Catch, "catchProof" | "verificationScore" | "rankingEligibility">
+  data: Pick<Catch, "catchProof" | "verificationScore" | "rankingEligibility"> & { anomalyFindings?: AnomalyFinding[] }
 ) {
   await updateDoc(doc(getFirebaseDb(), "catches", catchId), data);
 }
@@ -88,6 +88,7 @@ export async function updateCatch(
       | "measurementMethod"
       | "catchProof"
       | "verificationScore"
+      | "anomalyFindings"
       | "rankingEligibility"
     >
   >
@@ -173,6 +174,7 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
     proxyPostReason: typeof data.proxyPostReason === "string" ? data.proxyPostReason : "",
     catchProof: normalizeCatchProof(data.catchProof),
     verificationScore: normalizeVerificationScore(data.verificationScore),
+    anomalyFindings: normalizeAnomalyFindings(data.anomalyFindings),
     rankingEligibility: normalizeRankingEligibility(data.rankingEligibility),
     createdAt: normalizeDate(data.createdAt),
     weather: normalizeWeather(data.weather),
@@ -240,6 +242,10 @@ function normalizeCatchProof(value: unknown) {
 
 function normalizeVerificationScore(value: unknown) {
   return value && typeof value === "object" ? (value as VerificationScore) : undefined;
+}
+
+function normalizeAnomalyFindings(value: unknown) {
+  return Array.isArray(value) ? (value as AnomalyFinding[]) : undefined;
 }
 
 function normalizeRankingEligibility(value: unknown) {

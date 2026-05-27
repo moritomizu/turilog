@@ -57,12 +57,15 @@ function GenerateCatchProof({ userId }: { userId: string }) {
       generatedAt,
       tournamentStartAt: tournament?.startAt ?? null,
       tournamentEndAt: tournament?.endAt ?? null,
-      tournamentTargetFishTypes: tournament?.targetFishTypes ?? []
+      tournamentTargetFishTypes: tournament?.targetFishTypes ?? [],
+      tournamentAllowedAreaCodes: tournament?.allowedAreaCodes ?? [],
+      tournamentAllowedAreas: tournament?.allowedAreas ?? [],
+      previousCatches: items.filter((row) => row.userId === item.userId && row.id !== item.id)
     });
     const verificationScore = calculateVerificationScore(catchProof);
     const rankingEligibility = checkRankingEligibility(item, verificationScore);
-    await updateCatchVerificationData(item.id, { catchProof, verificationScore, rankingEligibility });
-    return { ...item, catchProof, verificationScore, rankingEligibility };
+    await updateCatchVerificationData(item.id, { catchProof, verificationScore, anomalyFindings: catchProof.anomalyFindings, rankingEligibility });
+    return { ...item, catchProof, verificationScore, anomalyFindings: catchProof.anomalyFindings, rankingEligibility };
   }
 
   async function handleOne(item: Catch) {

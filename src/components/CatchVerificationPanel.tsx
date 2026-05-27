@@ -68,7 +68,7 @@ export function CatchVerificationPanel({ item, compact = false, showRawJson = fa
           <ScoreBreakdown item={item} />
           {showRawJson ? (
             <pre className="mt-2 max-h-80 overflow-auto rounded bg-slate-950 p-3 text-[11px] leading-5 text-white">
-              {JSON.stringify({ catchProof: item.catchProof, verificationScore: item.verificationScore, rankingEligibility: item.rankingEligibility }, null, 2)}
+              {JSON.stringify({ catchProof: item.catchProof, verificationScore: item.verificationScore, anomalyFindings: item.anomalyFindings, rankingEligibility: item.rankingEligibility }, null, 2)}
             </pre>
           ) : null}
         </div>
@@ -116,6 +116,7 @@ function getConcernFlags(flags: ProofFlag[]) {
     flag.startsWith("missing_") ||
     flag.startsWith("low_") ||
     flag.includes("mismatch") ||
+    flag.includes("suspected") ||
     flag.includes("out_of_period") ||
     flag.includes("manual") ||
     flag.includes("far_from") ||
@@ -140,7 +141,7 @@ function getLevelClass(level: ReturnType<typeof normalizeLevel>) {
 function getEligibilityLabel(item: Catch) {
   if (item.rankingEligibility?.eligible) return { label: "可", className: "bg-emerald-100 text-emerald-700" };
   const flags = item.verificationScore?.criticalFlags ?? item.verificationScore?.flags ?? [];
-  const blocked = flags.some((flag) => ["missing_photo", "missing_gps", "tournament_out_of_period", "tournament_target_fish_mismatch"].includes(flag));
+  const blocked = flags.some((flag) => ["missing_photo", "missing_gps", "tournament_out_of_period", "tournament_target_fish_mismatch", "tournament_area_mismatch"].includes(flag));
   return blocked
     ? { label: "不可", className: "bg-red-100 text-red-700" }
     : { label: "要確認", className: "bg-yellow-100 text-yellow-700" };

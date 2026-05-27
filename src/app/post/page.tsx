@@ -280,13 +280,17 @@ function PostForm({ userId }: { userId: string }) {
         ...emptyTideInfo
       };
       const proofGeneratedAt = new Date().toISOString();
+      const previousCatches = await getUserCatches(userId).catch(() => []);
       const catchProof = buildCatchProofPackage(
         { ...baseCatchData, createdAt: proofGeneratedAt },
         {
           generatedAt: proofGeneratedAt,
           tournamentStartAt: selectedTournament?.startAt ?? null,
           tournamentEndAt: selectedTournament?.endAt ?? null,
-          tournamentTargetFishTypes: selectedTournament?.targetFishTypes ?? []
+          tournamentTargetFishTypes: selectedTournament?.targetFishTypes ?? [],
+          tournamentAllowedAreaCodes: selectedTournament?.allowedAreaCodes ?? [],
+          tournamentAllowedAreas: selectedTournament?.allowedAreas ?? [],
+          previousCatches
         }
       );
       const verificationScore = calculateVerificationScore(catchProof);
@@ -295,6 +299,7 @@ function PostForm({ userId }: { userId: string }) {
         ...baseCatchData,
         catchProof,
         verificationScore,
+        anomalyFindings: catchProof.anomalyFindings,
         rankingEligibility
       });
 

@@ -86,6 +86,10 @@ export type ProofFlag =
   | "measurement_photo_missing"
   | "tournament_out_of_period"
   | "tournament_target_fish_mismatch"
+  | "duplicate_image_suspected"
+  | "impossible_travel_suspected"
+  | "abnormal_size_suspected"
+  | "tournament_area_mismatch"
   | "hasPhoto"
   | "hasExactLocation"
   | "hasBlurredLocation"
@@ -109,6 +113,15 @@ export type ProofFlag =
   | "manualLocationOnly"
   | "lowExternalData";
 export type VerificationLevel = "high" | "medium" | "low" | "needs_review" | "unverified" | "basic" | "standard" | "strong" | "highTrust";
+export type AnomalySeverity = "info" | "warning" | "critical";
+
+export interface AnomalyFinding {
+  flag: ProofFlag;
+  severity: AnomalySeverity;
+  message: string;
+  details?: Record<string, unknown>;
+  detectedAt: Date;
+}
 
 export type CatchProofPackage = {
   proofVersion: "v1";
@@ -173,8 +186,11 @@ export type CatchProofPackage = {
     tournamentStartAt?: string | null;
     tournamentEndAt?: string | null;
     tournamentTargetFishTypes?: string[];
+    tournamentAllowedAreaCodes?: string[];
+    tournamentAllowedAreas?: string[];
   };
   flags: ProofFlag[];
+  anomalyFindings?: AnomalyFinding[];
   generatedAt: string;
 };
 
@@ -192,6 +208,7 @@ export type VerificationScore = {
   fishScore: number;
   measurementScore: number;
   tournamentScore: number;
+  anomalyFindings?: AnomalyFinding[];
   positiveScore: number;
   penaltyScore: number;
   breakdown: Array<{
@@ -439,6 +456,7 @@ export type Catch = TideInfo &
   proxyPostReason: string;
   catchProof?: CatchProofPackage;
   verificationScore?: VerificationScore;
+  anomalyFindings?: AnomalyFinding[];
   rankingEligibility?: { eligible: boolean; reason?: string; checkedAt: Date };
   createdAt: string;
 };
@@ -462,6 +480,8 @@ export type Tournament = {
   visibility: TournamentVisibility;
   maxParticipants: number | null;
   locationVisibilityDefault: TournamentLocationVisibility;
+  allowedAreaCodes?: string[];
+  allowedAreas?: string[];
   createdAt: string;
   updatedAt: string;
 };

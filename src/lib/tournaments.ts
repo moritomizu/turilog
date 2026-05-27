@@ -199,6 +199,8 @@ function normalizeTournament(id: string, data: Record<string, unknown>): Tournam
       data.locationVisibilityDefault === "blurredForParticipants" || data.locationVisibilityDefault === "areaOnlyForParticipants" || data.locationVisibilityDefault === "hiddenForParticipants"
         ? data.locationVisibilityDefault
         : "exactForOrganizersOnly",
+    allowedAreaCodes: Array.isArray(data.allowedAreaCodes) ? data.allowedAreaCodes.filter((item): item is string => typeof item === "string") : [],
+    allowedAreas: Array.isArray(data.allowedAreas) ? data.allowedAreas.filter((item): item is string => typeof item === "string") : [],
     createdAt: normalizeDate(data.createdAt),
     updatedAt: normalizeDate(data.updatedAt)
   };

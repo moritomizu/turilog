@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
-import { getCatchById, updateCatch, uploadCatchImage } from "@/lib/catches";
+import { getCatchById, getUserCatches, updateCatch, uploadCatchImage } from "@/lib/catches";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { formatCoordinate } from "@/lib/location";
 import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
@@ -140,11 +140,15 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
       const updatedForProof = { ...item, ...basePatch };
       const tournament = updatedForProof.tournamentId ? await getTournament(updatedForProof.tournamentId).catch(() => null) : null;
       const generatedAt = new Date().toISOString();
+      const previousCatches = await getUserCatches(updatedForProof.userId).catch(() => []);
       const catchProof = buildCatchProofPackage(updatedForProof, {
         generatedAt,
         tournamentStartAt: tournament?.startAt ?? null,
         tournamentEndAt: tournament?.endAt ?? null,
-        tournamentTargetFishTypes: tournament?.targetFishTypes ?? []
+        tournamentTargetFishTypes: tournament?.targetFishTypes ?? [],
+        tournamentAllowedAreaCodes: tournament?.allowedAreaCodes ?? [],
+        tournamentAllowedAreas: tournament?.allowedAreas ?? [],
+        previousCatches
       });
       const verificationScore = calculateVerificationScore(catchProof);
       const rankingEligibility = checkRankingEligibility(updatedForProof, verificationScore);
@@ -152,6 +156,7 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
         ...basePatch,
         catchProof,
         verificationScore,
+        anomalyFindings: catchProof.anomalyFindings,
         rankingEligibility
       });
       window.location.href = "/catches";

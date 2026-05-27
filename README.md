@@ -1111,6 +1111,7 @@ location: GPS、ぼかし位置、エリア、ポイント名、精度
 environment: 潮位、天候、水温、月齢
 context: 大会、グループ、代理投稿、対象魚種
 flags: 確認事項
+anomalyFindings: 異常検知結果
 generatedAt
 ```
 
@@ -1153,6 +1154,46 @@ verificationScore.total >= 60
 ```
 
 満たす場合は `eligible: true`、満たさない場合は `eligible: false` と `reason` を保存します。
+
+### 異常検知エンジン Phase 5
+
+AI画像認識を使わず、既存データで判定できるルールベースの異常検知を追加しています。
+
+検知結果は `catchProof.anomalyFindings` と `verificationScore.anomalyFindings` に保存され、該当するものは `verificationScore.flags` / `messages` にも反映されます。
+
+現在の検知項目:
+
+```text
+duplicate_image_suspected: 同じユーザーによる同一画像URL投稿の疑い
+impossible_travel_suspected: 2時間以内に50km以上離れた釣果投稿の疑い
+abnormal_size_suspected: 魚種別上限を超えるサイズ、または0cm以下のサイズ
+tournament_area_mismatch: 大会に allowedAreaCodes / allowedAreas がある場合の対象エリア外疑い
+posted_at_far_from_caught_at: 釣った日時と投稿日時の差が24時間以上
+```
+
+初期閾値:
+
+```text
+短時間移動: 2時間以内 / 50km以上
+投稿時刻乖離: 24時間以上
+```
+
+魚種別サイズ上限は `src/lib/fishSizeRules.ts` で管理しています。代表例は以下です。
+
+```text
+真鯛: 100cm
+ブリ: 120cm
+サワラ: 120cm
+シーバス: 110cm
+アジ: 60cm
+カワハギ: 45cm
+アオリイカ: 50cm
+タチウオ: 150cm
+```
+
+同一画像検知は、将来的な perceptual hash 実装を見据えつつ、MVPでは `imageHash` があれば優先し、未実装の場合は `imageUrl` / `photoUrl` の一致で簡易判定します。
+
+異常検知は「不正確定」ではなく、大会運営者が確認しやすくするための補助情報です。
 
 ### サイズ確認用写真
 

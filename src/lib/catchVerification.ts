@@ -1,3 +1,4 @@
+import { detectCatchAnomalies } from "@/lib/catchAnomalyDetection";
 import type { Catch, CatchProofPackage, ProofFlag, VerificationLevel, VerificationScore } from "@/types";
 
 type MeasurementMethod = "manual" | "measurePhoto" | "aiAssisted" | "unknown";
@@ -15,6 +16,8 @@ type CatchLike = Partial<Catch> & {
   accuracyMeters?: number | null;
   measurementMethod?: MeasurementMethod;
   measurementPhotoUrl?: string | null;
+  imageHash?: string | null;
+  photoUrl?: string | null;
 };
 
 type ProofContext = {
@@ -24,6 +27,9 @@ type ProofContext = {
   tournamentStartAt?: string | Date | null;
   tournamentEndAt?: string | Date | null;
   tournamentTargetFishTypes?: string[];
+  tournamentAllowedAreaCodes?: string[];
+  tournamentAllowedAreas?: string[];
+  previousCatches?: CatchLike[];
 };
 
 type RankingEligibilityOptions = {
@@ -40,6 +46,12 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
   const createdAt = toIsoString(catchData.postedAt ?? catchData.createdAt);
   const exifCapturedAt = toIsoString(catchData.exifCapturedAt ?? catchData.exif?.capturedAt);
   const flags = buildFlags(catchData, caughtAt, createdAt, context);
+  const anomalyFindings = detectCatchAnomalies(catchData, {
+    previousCatches: context.previousCatches ?? [],
+    tournamentAllowedAreaCodes: context.tournamentAllowedAreaCodes ?? [],
+    tournamentAllowedAreas: context.tournamentAllowedAreas ?? []
+  });
+  anomalyFindings.forEach((finding) => flags.push(finding.flag));
 
   return {
     proofVersion: "v1",
@@ -103,9 +115,12 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
       isProxyPost: catchData.isProxyPost === true,
       tournamentStartAt: toIsoString(context.tournamentStartAt) ?? null,
       tournamentEndAt: toIsoString(context.tournamentEndAt) ?? null,
-      tournamentTargetFishTypes: context.tournamentTargetFishTypes ?? []
+      tournamentTargetFishTypes: context.tournamentTargetFishTypes ?? [],
+      tournamentAllowedAreaCodes: context.tournamentAllowedAreaCodes ?? [],
+      tournamentAllowedAreas: context.tournamentAllowedAreas ?? []
     },
-    flags,
+    flags: [...new Set(flags)],
+    anomalyFindings,
     generatedAt: toIsoString(context.generatedAt) ?? new Date().toISOString()
   };
 }
@@ -121,6 +136,11 @@ export function calculateVerificationScore(proofPackage: CatchProofPackage): Ver
   const fishScore = scoreFish(proofPackage, flags, messages);
   const measurementScore = scoreMeasurement(proofPackage, flags, messages);
   const tournamentScore = scoreTournament(proofPackage, flags, messages);
+  const anomalyFindings = proofPackage.anomalyFindings ?? [];
+  anomalyFindings.forEach((finding) => {
+    flags.add(finding.flag);
+    if (!messages.includes(finding.message)) messages.push(finding.message);
+  });
 
   const total = clampScore(mediaScore + gpsScore + timeScore + tideScore + fishScore + measurementScore + tournamentScore);
   const normalizedFlags = [...flags];
@@ -150,6 +170,7 @@ export function calculateVerificationScore(proofPackage: CatchProofPackage): Ver
     fishScore,
     measurementScore,
     tournamentScore,
+    anomalyFindings,
     positiveScore: total,
     penaltyScore: 0,
     breakdown,
@@ -184,6 +205,8 @@ export function checkRankingEligibility(catchData: CatchLike, verificationScore:
     result = { eligible: false, reason: "大会期間外", checkedAt };
   } else if (flags.includes("tournament_target_fish_mismatch")) {
     result = { eligible: false, reason: "対象魚種不一致", checkedAt };
+  } else if (flags.includes("tournament_area_mismatch")) {
+    result = { eligible: false, reason: "大会対象エリア外の可能性", checkedAt };
   } else if (hasCriticalFlag(flags)) {
     result = { eligible: false, reason: "重大な確認項目があります", checkedAt };
   } else {
@@ -234,6 +257,10 @@ export function getVerificationFlagLabel(flag: ProofFlag) {
     measurement_photo_missing: "サイズ確認用写真なし",
     tournament_out_of_period: "大会期間外",
     tournament_target_fish_mismatch: "大会対象魚種と不一致",
+    duplicate_image_suspected: "同一画像の重複疑い",
+    impossible_travel_suspected: "短時間の遠距離移動疑い",
+    abnormal_size_suspected: "異常サイズ疑い",
+    tournament_area_mismatch: "大会対象エリア外の疑い",
     hasPhoto: "釣果写真あり",
     hasExactLocation: "正確位置あり",
     hasBlurredLocation: "ぼかし位置あり",
