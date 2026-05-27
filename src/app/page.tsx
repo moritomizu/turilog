@@ -24,7 +24,7 @@ const links = [
 
 const bannerSlides = [
   {
-    title: "心に残る一枚を、あとから強くする。",
+    title: "心に残る１枚を",
     body: "写真、潮、水温、タックルをまとめて残す個人用釣りログ。",
     href: "/post",
     action: "釣果を投稿"

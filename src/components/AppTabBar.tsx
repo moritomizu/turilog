@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const tabs = [
-  { href: "/post", label: "投稿", icon: PlusIcon },
   { href: "/catches", label: "一覧", icon: ListIcon },
   { href: "/ranking", label: "順位", icon: TrophyIcon },
+  { href: "/post", label: "投稿", icon: PlusIcon },
   { href: "/map", label: "マップ", icon: PinIcon },
   { href: "/analysis", label: "分析", icon: ChartIcon }
 ];
