@@ -119,8 +119,8 @@ function FeatureDescriptionDialog({ featureKey, onClose }: { featureKey: Feature
         </div>
         <p className="mt-4 text-sm font-bold leading-6 text-slate-700">{feature.description}</p>
         <div className="mt-4 rounded bg-foam p-3 text-sm font-bold leading-6 text-slate-700">
-          <p className="text-xs font-black text-slate-500">想定プラン</p>
-          <p className="mt-1">{plan?.label ?? feature.suggestedPlan}</p>
+          <p className="text-xs font-black text-slate-500">利用できるプラン</p>
+          <p className="mt-1">{plan?.label ?? feature.suggestedPlan}プラン以上</p>
         </div>
         <button type="button" onClick={onClose} className="tap-target mt-4 w-full rounded bg-water px-4 py-3 font-black text-white">
           閉じる
