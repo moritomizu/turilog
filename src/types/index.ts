@@ -54,6 +54,96 @@ export type FeatureEventType =
   | "clickLearnMore"
   | "attemptUseFeature"
   | "useFeature";
+export type ProofFlag =
+  | "hasPhoto"
+  | "hasExactLocation"
+  | "hasBlurredLocation"
+  | "hasCaughtAt"
+  | "hasCreatedAt"
+  | "hasTideData"
+  | "hasWeatherData"
+  | "hasSeaTemperatureData"
+  | "hasLunarData"
+  | "hasTackleData"
+  | "hasTournamentEntry"
+  | "hasGroupContext"
+  | "hasPointName"
+  | "missingPhoto"
+  | "missingLocation"
+  | "missingCaughtAt"
+  | "missingSize"
+  | "suspiciousFutureCaughtAt"
+  | "suspiciousCreatedBeforeCaught"
+  | "suspiciousHugeSize"
+  | "manualLocationOnly"
+  | "lowExternalData";
+export type VerificationLevel = "unverified" | "basic" | "standard" | "strong" | "highTrust";
+
+export type CatchProofPackage = {
+  catchId?: string;
+  userId: string;
+  image: {
+    hasImage: boolean;
+    imageUrl?: string | null;
+  };
+  size: {
+    sizeCm: number;
+    hasValidSize: boolean;
+  };
+  time: {
+    caughtAt?: string | null;
+    createdAt?: string | null;
+    minutesFromCaughtToCreated: number | null;
+  };
+  location: {
+    hasExactLocation: boolean;
+    hasBlurredLocation: boolean;
+    latitude?: number | null;
+    longitude?: number | null;
+    publicLatitude?: number | null;
+    publicLongitude?: number | null;
+    areaName?: string;
+    areaCode?: string;
+    pointName?: string;
+    blurRadiusMeters?: number | null;
+  };
+  environment: {
+    hasTideData: boolean;
+    hasWeatherData: boolean;
+    hasSeaTemperatureData: boolean;
+    hasLunarData: boolean;
+    tidePhaseLabel?: string;
+    weatherLabel?: string;
+    seaTemperatureC?: number | null;
+    moonAge?: number | null;
+  };
+  context: {
+    tournamentId?: string | null;
+    isTournamentEntry: boolean;
+    tournamentEntryStatus?: TournamentEntryStatus;
+    groupIds: string[];
+    primaryGroupId?: string | null;
+    postedByUserId?: string;
+    actualAnglerUserId?: string;
+    isProxyPost: boolean;
+  };
+  flags: ProofFlag[];
+  generatedAt: string;
+};
+
+export type VerificationScore = {
+  totalScore: number;
+  level: VerificationLevel;
+  flags: ProofFlag[];
+  positiveScore: number;
+  penaltyScore: number;
+  breakdown: Array<{
+    key: string;
+    label: string;
+    score: number;
+  }>;
+  calculatedAt: string;
+};
 
 export type DisplayLocation = {
   type: DisplayLocationType;
@@ -288,6 +378,9 @@ export type Catch = TideInfo &
   actualAnglerUserId: string;
   isProxyPost: boolean;
   proxyPostReason: string;
+  catchProof?: CatchProofPackage;
+  verificationScore?: VerificationScore;
+  rankingEligibility?: { eligible: boolean; reason?: string; checkedAt: Date };
   createdAt: string;
 };
 
