@@ -24,7 +24,8 @@ export type FishingFrequency =
   | "onceEveryFewMonths"
   | "fewTimesPerYear";
 export type FishingMotivation = "casual" | "improve" | "serious" | "competitive" | "business";
-export type AiReportPeriod = "all" | "last30" | "last90" | "thisYear";
+export type AiReportPeriod = "all" | "last7" | "last30" | "last90" | "last180" | "thisYear" | "sameSeason";
+export type AiReportPlannedTimeBand = "allDay" | "morning" | "daytime" | "evening" | "night" | "custom";
 export type AiReportSourceScope = "personal" | "group";
 export type SubscriptionPlan = "free" | "premium" | "organizer" | "groupPro" | "tester";
 export type FeatureKey =
@@ -124,6 +125,9 @@ export type AiReportFilters = {
   fishType: string;
   period: AiReportPeriod;
   plannedDate?: string;
+  plannedTimeBand?: AiReportPlannedTimeBand;
+  plannedStartTime?: string;
+  plannedEndTime?: string;
   plannedArea?: string;
   sourceScope?: AiReportSourceScope;
   groupId?: string;
@@ -138,6 +142,9 @@ export type AiReport = {
   groupId: string | null;
   groupName: string | null;
   plannedDate: string | null;
+  plannedTimeBand: AiReportPlannedTimeBand | null;
+  plannedStartTime: string | null;
+  plannedEndTime: string | null;
   plannedArea: string | null;
   catchCount: number;
   reportText: string;

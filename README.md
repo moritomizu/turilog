@@ -1004,6 +1004,22 @@ Group Pro または Tester のユーザーは、参加中グループの釣果�
 
 生成したレポートは画面からコピーできます。PDF保存したい場合は、レポートカードの「PDF保存」からブラウザの印刷画面を開き、スマホやPCの「PDFとして保存」を利用します。
 
+次回釣行予定日には時間帯も指定できます。予定日と予定エリアがある場合、代表地点をもとに予定時間帯の潮位、天候、気温、風、降水、月齢、潮回り目安もAIに渡します。
+
+分析期間は以下から選択できます。
+
+```text
+全期間
+直近7日
+直近30日
+直近90日
+直近180日
+今年
+同じ季節
+```
+
+「同じ季節」は現在月の前後1か月を対象にする簡易判定です。潮回りは月齢からの目安であり、地域ごとの厳密な潮汐表分類ではありません。
+
 ### OpenAI APIキー設定
 
 `.env.local` に以下を追加してください。
@@ -1029,6 +1045,9 @@ sourceScope
 groupId
 groupName
 plannedDate
+plannedTimeBand
+plannedStartTime
+plannedEndTime
 plannedArea
 catchCount
 reportText

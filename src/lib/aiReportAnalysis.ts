@@ -1,4 +1,4 @@
-import type { AiReportFilters, Catch } from "@/types";
+import type { AiReportFilters, Catch, LunarInfo, WeatherInfo } from "@/types";
 
 export type ReportCatch = Pick<
   Catch,
@@ -45,6 +45,8 @@ export type AiReportSummary = {
   byArea: AreaSummary[];
   byTackle: TackleSummary[];
   plannedTideHints?: PlannedTideHint[];
+  plannedWeatherHints?: PlannedWeatherHint[];
+  plannedLunarHint?: PlannedLunarHint | null;
 };
 
 export type SummaryCount = {
@@ -72,18 +74,33 @@ export type PlannedTideHint = {
   tidePhaseLabel: string;
 };
 
+export type PlannedWeatherHint = {
+  time: string;
+  weatherLabel: string;
+  temperatureC: number | null;
+  windSpeedMs: number | null;
+  windDirectionLabel: string | null;
+  precipitationMm: number | null;
+  cloudCoverPercent: number | null;
+};
+
+export type PlannedLunarHint = {
+  lunarDateLabel: string | null;
+  moonAge: number | null;
+  moonPhaseLabel: string | null;
+  tideCycleLabel: string;
+};
+
 export async function getUserCatchesForReport(userId: string, filters: AiReportFilters, source: ReportCatch[] = []) {
   return filterReportCatches(source.filter((item) => Boolean(userId)), filters);
 }
 
 export function filterReportCatches(items: ReportCatch[], filters: AiReportFilters) {
   const now = new Date();
-  const from = getPeriodStart(filters.period, now);
   return items.filter((item) => {
     if (filters.fishType && filters.fishType !== "all" && item.fishType !== filters.fishType) return false;
     if (filters.plannedArea && item.areaName !== filters.plannedArea) return false;
-    if (!from) return true;
-    return new Date(item.caughtAt).getTime() >= from.getTime();
+    return isInPeriod(item.caughtAt, filters.period, now);
   });
 }
 
@@ -91,6 +108,8 @@ export function summarizeCatches(
   catches: ReportCatch[],
   filters: AiReportFilters,
   plannedTideHints: PlannedTideHint[] = [],
+  plannedWeatherHints: PlannedWeatherHint[] = [],
+  plannedLunarHint: PlannedLunarHint | null = null,
   source: AiReportSummary["source"] = {
     scope: "personal",
     label: "自分の釣果",
@@ -116,7 +135,9 @@ export function summarizeCatches(
     byTimeOfDay,
     byArea,
     byTackle: summarizeByTackle(catches),
-    plannedTideHints
+    plannedTideHints,
+    plannedWeatherHints,
+    plannedLunarHint
   };
 }
 
@@ -187,6 +208,7 @@ export function buildAiReportPrompt(summary: AiReportSummary, options: { planned
 
 次回釣行予定:
 ${options.plannedDate ? `予定日: ${options.plannedDate}` : "未入力"}
+${summary.filters.plannedTimeBand ? `予定時間帯: ${getPlannedTimeBandLabel(summary.filters.plannedTimeBand)}${summary.filters.plannedTimeBand === "custom" ? ` ${summary.filters.plannedStartTime ?? ""}-${summary.filters.plannedEndTime ?? ""}` : ""}` : "予定時間帯: 未入力"}
 ${options.plannedArea ? `予定エリア: ${options.plannedArea}` : "未入力"}
 
 集計データ:
@@ -214,11 +236,21 @@ function summarizeCount(items: ReportCatch[], getKey: (item: ReportCatch) => str
     .slice(0, 10);
 }
 
-function getPeriodStart(period: AiReportFilters["period"], now: Date) {
-  if (period === "last30") return new Date(now.getTime() - 30 * 86400000);
-  if (period === "last90") return new Date(now.getTime() - 90 * 86400000);
-  if (period === "thisYear") return new Date(now.getFullYear(), 0, 1);
-  return null;
+function isInPeriod(value: string, period: AiReportFilters["period"], now: Date) {
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return false;
+  if (period === "last7") return time >= now.getTime() - 7 * 86400000;
+  if (period === "last30") return time >= now.getTime() - 30 * 86400000;
+  if (period === "last90") return time >= now.getTime() - 90 * 86400000;
+  if (period === "last180") return time >= now.getTime() - 180 * 86400000;
+  if (period === "thisYear") return time >= new Date(now.getFullYear(), 0, 1).getTime();
+  if (period === "sameSeason") {
+    const targetMonth = new Date(value).getMonth();
+    const currentMonth = now.getMonth();
+    const diff = Math.min(Math.abs(targetMonth - currentMonth), 12 - Math.abs(targetMonth - currentMonth));
+    return diff <= 1;
+  }
+  return true;
 }
 
 function getDataLevel(count: number) {
@@ -249,4 +281,44 @@ function getTimeBand(hour: number) {
 
 function round(value: number) {
   return Math.round(value * 10) / 10;
+}
+
+export function toPlannedWeatherHint(time: string, weather: WeatherInfo): PlannedWeatherHint {
+  return {
+    time,
+    weatherLabel: weather.weatherLabel,
+    temperatureC: weather.temperatureC,
+    windSpeedMs: weather.windSpeedMs,
+    windDirectionLabel: weather.windDirectionLabel,
+    precipitationMm: weather.precipitationMm,
+    cloudCoverPercent: weather.cloudCoverPercent
+  };
+}
+
+export function toPlannedLunarHint(lunar: LunarInfo): PlannedLunarHint {
+  return {
+    lunarDateLabel: lunar.lunarDateLabel,
+    moonAge: lunar.moonAge,
+    moonPhaseLabel: lunar.moonPhaseLabel,
+    tideCycleLabel: getTideCycleLabel(lunar.moonAge)
+  };
+}
+
+function getTideCycleLabel(moonAge: number | null) {
+  if (moonAge == null) return "潮回り未取得";
+  const age = moonAge % 29.530588853;
+  const distanceFromSpring = Math.min(Math.abs(age - 0), Math.abs(age - 14.8), Math.abs(age - 29.5));
+  if (distanceFromSpring <= 1.8) return "大潮目安";
+  if (distanceFromSpring <= 4.2) return "中潮目安";
+  if (distanceFromSpring <= 6.2) return "小潮目安";
+  return "長潮/若潮目安";
+}
+
+function getPlannedTimeBandLabel(value: NonNullable<AiReportFilters["plannedTimeBand"]>) {
+  if (value === "morning") return "朝";
+  if (value === "daytime") return "昼";
+  if (value === "evening") return "夕方";
+  if (value === "night") return "夜";
+  if (value === "custom") return "時間指定";
+  return "終日";
 }

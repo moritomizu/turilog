@@ -3,12 +3,17 @@ import {
   buildAiReportPrompt,
   filterReportCatches,
   summarizeCatches,
+  toPlannedLunarHint,
+  toPlannedWeatherHint,
   type PlannedTideHint,
+  type PlannedWeatherHint,
   type ReportCatch
 } from "@/lib/aiReportAnalysis";
+import { getLunarInfo } from "@/lib/lunar";
 import { fetchTideInfoFromProvider } from "@/lib/tide";
+import { fetchWeatherInfo } from "@/lib/weather";
 import { planDefinitions } from "@/lib/plans";
-import type { AiReport, AiReportFilters, AiReportPeriod, FeatureKey, SubscriptionPlan } from "@/types";
+import type { AiReport, AiReportFilters, AiReportPeriod, AiReportPlannedTimeBand, FeatureKey, SubscriptionPlan } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -43,8 +48,8 @@ export async function POST(request: Request) {
     const source = await resolveReportSource(uid, token, userDoc, filters);
     const allCatches = source.scope === "group" && source.groupId ? await fetchGroupCatches(source.groupId, token) : await fetchUserCatches(uid, token);
     const filtered = filterReportCatches(allCatches, filters);
-    const plannedTideHints = await fetchPlannedTideHints(allCatches, filtered, filters);
-    const summary = summarizeCatches(filtered, filters, plannedTideHints, {
+    const plannedContext = await fetchPlannedContext(allCatches, filtered, filters);
+    const summary = summarizeCatches(filtered, filters, plannedContext.tideHints, plannedContext.weatherHints, plannedContext.lunarHint, {
       scope: source.scope,
       label: source.label,
       note: source.note
@@ -285,6 +290,9 @@ async function saveAiReport(
     groupId: source.groupId,
     groupName: source.groupName,
     plannedDate: filters.plannedDate || null,
+    plannedTimeBand: filters.plannedTimeBand || null,
+    plannedStartTime: filters.plannedStartTime || null,
+    plannedEndTime: filters.plannedEndTime || null,
     plannedArea: filters.plannedArea || null,
     catchCount,
     reportText,
@@ -301,12 +309,13 @@ async function saveAiReport(
   return normalizeAiReport(data.name?.split("/").pop() ?? "", fromFirestoreFields(data.fields ?? {}));
 }
 
-async function fetchPlannedTideHints(allCatches: ReportCatch[], filtered: ReportCatch[], filters: AiReportFilters): Promise<PlannedTideHint[]> {
-  if (!filters.plannedDate) return [];
+async function fetchPlannedContext(allCatches: ReportCatch[], filtered: ReportCatch[], filters: AiReportFilters) {
+  if (!filters.plannedDate) return { tideHints: [] as PlannedTideHint[], weatherHints: [] as PlannedWeatherHint[], lunarHint: null };
   const base = findRepresentativeLocation(filtered, filters.plannedArea) ?? findRepresentativeLocation(allCatches, filters.plannedArea) ?? findRepresentativeLocation(allCatches);
-  if (!base) return [];
-  const times = ["06:00", "12:00", "18:00"];
-  const results: Array<PlannedTideHint | null> = await Promise.all(
+  const lunarHint = toPlannedLunarHint(getLunarInfo(`${filters.plannedDate}T12:00:00+09:00`));
+  if (!base) return { tideHints: [] as PlannedTideHint[], weatherHints: [] as PlannedWeatherHint[], lunarHint };
+  const times = getPlannedHintTimes(filters);
+  const tideResults: Array<PlannedTideHint | null> = await Promise.all(
     times.map(async (time) => {
       try {
         const tide = await fetchTideInfoFromProvider(base.latitude, base.longitude, `${filters.plannedDate}T${time}:00+09:00`);
@@ -321,7 +330,21 @@ async function fetchPlannedTideHints(allCatches: ReportCatch[], filtered: Report
       }
     })
   );
-  return results.filter((item): item is PlannedTideHint => Boolean(item));
+  const weatherResults: Array<PlannedWeatherHint | null> = await Promise.all(
+    times.map(async (time) => {
+      try {
+        const weather = await fetchWeatherInfo(base.latitude, base.longitude, `${filters.plannedDate}T${time}:00+09:00`);
+        return toPlannedWeatherHint(time, weather);
+      } catch {
+        return null;
+      }
+    })
+  );
+  return {
+    tideHints: tideResults.filter((item): item is PlannedTideHint => Boolean(item)),
+    weatherHints: weatherResults.filter((item): item is PlannedWeatherHint => Boolean(item)),
+    lunarHint
+  };
 }
 
 function findRepresentativeLocation(catches: ReportCatch[], areaName?: string) {
@@ -330,12 +353,47 @@ function findRepresentativeLocation(catches: ReportCatch[], areaName?: string) {
   return { latitude: item.latitude, longitude: item.longitude };
 }
 
+function getPlannedHintTimes(filters: AiReportFilters) {
+  if (filters.plannedTimeBand === "morning") return ["05:00", "07:00", "09:00"];
+  if (filters.plannedTimeBand === "daytime") return ["10:00", "12:00", "14:00"];
+  if (filters.plannedTimeBand === "evening") return ["16:00", "18:00", "20:00"];
+  if (filters.plannedTimeBand === "night") return ["19:00", "21:00", "23:00"];
+  if (filters.plannedTimeBand === "custom" && filters.plannedStartTime && filters.plannedEndTime) {
+    return getCustomHintTimes(filters.plannedStartTime, filters.plannedEndTime);
+  }
+  return ["06:00", "12:00", "18:00"];
+}
+
+function getCustomHintTimes(start: string, end: string) {
+  const startMinutes = parseTimeMinutes(start);
+  let endMinutes = parseTimeMinutes(end);
+  if (endMinutes <= startMinutes) endMinutes += 24 * 60;
+  const middle = Math.round((startMinutes + endMinutes) / 2);
+  return [startMinutes, middle, endMinutes].map((minutes) => formatTimeMinutes(minutes));
+}
+
+function parseTimeMinutes(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+function formatTimeMinutes(value: number) {
+  const normalized = ((value % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hour = Math.floor(normalized / 60);
+  const minute = normalized % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 function normalizeFilters(body: Record<string, unknown>): AiReportFilters {
   const sourceScope = body.sourceScope === "group" ? "group" : "personal";
+  const plannedTimeBand = normalizePlannedTimeBand(body.plannedTimeBand);
   return {
     fishType: typeof body.fishType === "string" && body.fishType ? body.fishType : "all",
     period: normalizePeriod(body.period),
     plannedDate: typeof body.plannedDate === "string" && body.plannedDate ? body.plannedDate : undefined,
+    plannedTimeBand,
+    plannedStartTime: plannedTimeBand === "custom" && isTimeValue(body.plannedStartTime) ? body.plannedStartTime : undefined,
+    plannedEndTime: plannedTimeBand === "custom" && isTimeValue(body.plannedEndTime) ? body.plannedEndTime : undefined,
     plannedArea: typeof body.plannedArea === "string" && body.plannedArea ? body.plannedArea : undefined,
     sourceScope,
     groupId: sourceScope === "group" && typeof body.groupId === "string" && body.groupId ? body.groupId : undefined
@@ -343,8 +401,17 @@ function normalizeFilters(body: Record<string, unknown>): AiReportFilters {
 }
 
 function normalizePeriod(value: unknown): AiReportPeriod {
-  if (value === "last30" || value === "last90" || value === "thisYear") return value;
+  if (value === "last7" || value === "last30" || value === "last90" || value === "last180" || value === "thisYear" || value === "sameSeason") return value;
   return "all";
+}
+
+function normalizePlannedTimeBand(value: unknown): AiReportPlannedTimeBand {
+  if (value === "morning" || value === "daytime" || value === "evening" || value === "night" || value === "custom") return value;
+  return "allDay";
+}
+
+function isTimeValue(value: unknown): value is string {
+  return typeof value === "string" && /^\d{2}:\d{2}$/.test(value);
 }
 
 function normalizeReportCatch(id: string, data: Record<string, unknown>): ReportCatch {
@@ -378,6 +445,9 @@ function normalizeAiReport(id: string, data: Record<string, unknown>): AiReport 
     groupId: text(data.groupId) || null,
     groupName: text(data.groupName) || null,
     plannedDate: text(data.plannedDate) || null,
+    plannedTimeBand: text(data.plannedTimeBand) ? normalizePlannedTimeBand(data.plannedTimeBand) : null,
+    plannedStartTime: text(data.plannedStartTime) || null,
+    plannedEndTime: text(data.plannedEndTime) || null,
     plannedArea: text(data.plannedArea) || null,
     catchCount: number(data.catchCount),
     reportText: text(data.reportText),

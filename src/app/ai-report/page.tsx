@@ -8,13 +8,25 @@ import { getFirebaseAuth } from "@/lib/firebase";
 import { getGroupCatches, getUserCatches } from "@/lib/catches";
 import { getFeatureAccess } from "@/lib/features";
 import { getGroupsForUser } from "@/lib/groups";
-import type { AiReport, AiReportFilters, AiReportPeriod, AiReportSourceScope, Catch, Group } from "@/types";
+import type { AiReport, AiReportFilters, AiReportPeriod, AiReportPlannedTimeBand, AiReportSourceScope, Catch, Group } from "@/types";
 
 const periodOptions: { value: AiReportPeriod; label: string }[] = [
   { value: "all", label: "全期間" },
+  { value: "last7", label: "直近7日" },
   { value: "last30", label: "直近30日" },
   { value: "last90", label: "直近90日" },
-  { value: "thisYear", label: "今年" }
+  { value: "last180", label: "直近180日" },
+  { value: "thisYear", label: "今年" },
+  { value: "sameSeason", label: "同じ季節" }
+];
+
+const plannedTimeBandOptions: { value: AiReportPlannedTimeBand; label: string }[] = [
+  { value: "allDay", label: "終日" },
+  { value: "morning", label: "朝" },
+  { value: "daytime", label: "昼" },
+  { value: "evening", label: "夕方" },
+  { value: "night", label: "夜" },
+  { value: "custom", label: "時間指定" }
 ];
 
 export default function AiReportPage() {
@@ -39,6 +51,9 @@ function AiReportContent({ userId }: { userId: string }) {
   const [sourceScope, setSourceScope] = useState<AiReportSourceScope>("personal");
   const [groupId, setGroupId] = useState("");
   const [plannedDate, setPlannedDate] = useState("");
+  const [plannedTimeBand, setPlannedTimeBand] = useState<AiReportPlannedTimeBand>("allDay");
+  const [plannedStartTime, setPlannedStartTime] = useState("06:00");
+  const [plannedEndTime, setPlannedEndTime] = useState("12:00");
   const [plannedArea, setPlannedArea] = useState("");
   const [activeReport, setActiveReport] = useState<AiReport | null>(null);
   const [message, setMessage] = useState("読み込み中です。");
@@ -107,6 +122,9 @@ function AiReportContent({ userId }: { userId: string }) {
         sourceScope,
         groupId: sourceScope === "group" ? groupId : undefined,
         plannedDate: plannedDate || undefined,
+        plannedTimeBand,
+        plannedStartTime: plannedTimeBand === "custom" ? plannedStartTime : undefined,
+        plannedEndTime: plannedTimeBand === "custom" ? plannedEndTime : undefined,
         plannedArea: plannedArea || undefined
       };
       const response = await fetch("/api/ai-report", {
@@ -200,11 +218,35 @@ function AiReportContent({ userId }: { userId: string }) {
             <select value={period} onChange={(event) => setPeriod(event.target.value as AiReportPeriod)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 font-bold">
               {periodOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
+            <span className="mt-2 block text-xs font-bold leading-5 text-slate-500">
+              季節や潮回りの違いを見たい時は、直近だけでなく「同じ季節」も試せます。
+            </span>
           </label>
           <label className="block">
             <span className="text-sm font-bold">次回釣行予定日（任意）</span>
             <input type="date" value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 font-bold" />
           </label>
+          <div>
+            <span className="text-sm font-bold">次回釣行の時間帯（任意）</span>
+            <select value={plannedTimeBand} onChange={(event) => setPlannedTimeBand(event.target.value as AiReportPlannedTimeBand)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 font-bold">
+              {plannedTimeBandOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            {plannedTimeBand === "custom" ? (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-xs font-bold text-slate-500">開始</span>
+                  <input type="time" value={plannedStartTime} onChange={(event) => setPlannedStartTime(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white p-3 font-bold" />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold text-slate-500">終了</span>
+                  <input type="time" value={plannedEndTime} onChange={(event) => setPlannedEndTime(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white p-3 font-bold" />
+                </label>
+              </div>
+            ) : null}
+            <span className="mt-2 block text-xs font-bold leading-5 text-slate-500">
+              予定日と時間帯を入れると、その時間に近い潮位・天候・風・月齢も参考データとしてAIに渡します。
+            </span>
+          </div>
           <label className="block">
             <span className="text-sm font-bold">予定エリア（任意）</span>
             <select value={plannedArea} onChange={(event) => setPlannedArea(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 font-bold">
