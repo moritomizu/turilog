@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AppFooter } from "@/components/AppFooter";
+import { AppTabBar } from "@/components/AppTabBar";
 import { createPageMetadata, getSiteUrl } from "@/lib/metadata";
 import "./globals.css";
 
@@ -56,6 +57,7 @@ export default function RootLayout({
     <html lang="ja">
       <body className="min-h-screen bg-foam text-ink">
         {children}
+        <AppTabBar />
         <AppFooter />
       </body>
     </html>

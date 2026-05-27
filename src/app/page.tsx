@@ -15,21 +15,39 @@ import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 import type { Catch, GroupCatchComment } from "@/types";
 
 const links = [
-  { href: "/post", label: "釣果を投稿", body: "写真・魚種・サイズ・場所・潮位を記録" },
-  { href: "/catches", label: "釣果一覧", body: "新着順で自分の釣果を確認" },
   { href: "/tournaments", label: "釣り大会", body: "大会に参加してランキングを競う" },
   { href: "/groups", label: "グループ", body: "釣り仲間と釣果・ランキング・マップを共有" },
-  { href: "/ranking", label: "ランキング", body: "年間・魚種別・月別の最大サイズ" },
-  { href: "/map", label: "マップ", body: "釣れた地点を地図で振り返る" },
-  { href: "/analysis", label: "潮位分析", body: "上げ潮・下げ潮・何分目の傾向" },
   { href: "/ai-report", label: "AIレポートβ", body: "釣果傾向から次回釣行のヒントを作成" },
+  { href: "/settings/notifications", label: "通知設定", body: "大会・グループ・AIレポートの通知を管理" },
   { href: "/plans", label: "プラン", body: "準備中の便利機能と候補プランを見る" }
+];
+
+const bannerSlides = [
+  {
+    title: "心に残る一枚を、あとから強くする。",
+    body: "写真、潮、水温、タックルをまとめて残す個人用釣りログ。",
+    href: "/post",
+    action: "釣果を投稿"
+  },
+  {
+    title: "仲間の釣果が動き出す。",
+    body: "グループで釣果、ランキング、マップ、コメントを共有。",
+    href: "/groups",
+    action: "グループを見る"
+  },
+  {
+    title: "大会も、日常の釣りも。",
+    body: "承認、ランキング、参加者管理までMVPで運用できます。",
+    href: "/tournaments",
+    action: "大会を見る"
+  }
 ];
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [approvalSummary, setApprovalSummary] = useState<ApprovalSummary>(emptyApprovalSummary());
+  const [activeBanner, setActiveBanner] = useState(0);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -50,32 +68,55 @@ export default function Home() {
       .catch(() => setApprovalSummary(emptyApprovalSummary()));
   }, [user]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveBanner((current) => (current + 1) % bannerSlides.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const approvalCount = approvalSummary.groupRequests + approvalSummary.tournamentEntries + approvalSummary.tournamentPaymentReviews;
   const commentCount = approvalSummary.commentDetails.reduce((sum, item) => sum + item.count, 0);
 
   return (
-    <main className="min-h-screen bg-foam px-4 py-6">
+    <main className="min-h-screen bg-foam px-4 py-5">
       <section className="mx-auto max-w-2xl">
-        <div className="py-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold text-water">Personal fishing log</p>
-              <h1 className="mt-2 text-ink">
-                <TsuriLogLogo className="h-9 w-32 max-w-[34vw] sm:h-[3.6rem] sm:w-[13.2rem] sm:max-w-[48vw]" />
-              </h1>
-            </div>
-            <Link href={user ? "/profile" : "/login"} aria-label="プロフィール設定" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-teal-100 bg-white text-base font-black text-water shadow-soft">
-              {profileAvatarUrl ? <img src={profileAvatarUrl} alt="" className="h-full w-full object-cover" /> : user ? getInitial(user.displayName ?? user.email) : "人"}
-            </Link>
-          </div>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-700">
-            created by TaPiYoTa
-            <br />
-            心に残る一枚のために。釣果を残して振り返ろう。
-            <br />
-            潮位や水温、釣行データなどデータから振り返ることができる個人用釣りログです。
-          </p>
+        <div className="flex items-center justify-between gap-4 py-3">
+          <TsuriLogLogo className="h-9 w-32 max-w-[34vw] sm:h-[3.6rem] sm:w-[13.2rem] sm:max-w-[48vw]" />
+          <Link href={user ? "/profile" : "/login"} aria-label="プロフィール設定" className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-teal-100 bg-white text-base font-black text-water shadow-soft">
+            {profileAvatarUrl ? <img src={profileAvatarUrl} alt="" className="h-full w-full object-cover" /> : user ? getInitial(user.displayName ?? user.email) : "人"}
+          </Link>
         </div>
+
+        <section className="relative mb-4 overflow-hidden rounded bg-ink text-white shadow-soft">
+          <div className="flex transition-transform duration-500 ease-out" style={{ transform: `translateX(-${activeBanner * 100}%)` }}>
+            {bannerSlides.map((slide, index) => (
+              <article key={slide.title} className="relative min-w-full">
+                <div className="absolute inset-0 bg-[url('/icons/tsurilog-icon.png')] bg-cover bg-center opacity-60" aria-hidden="true" />
+                <div className={`absolute inset-0 ${index === 0 ? "bg-gradient-to-r from-black/75 via-black/30 to-transparent" : index === 1 ? "bg-gradient-to-r from-teal-950/80 via-teal-900/35 to-black/20" : "bg-gradient-to-r from-slate-950/80 via-slate-900/35 to-black/20"}`} aria-hidden="true" />
+                <div className="relative flex min-h-44 flex-col justify-end p-5 sm:min-h-56 sm:p-7">
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/80">Personal fishing log</p>
+                  <h1 className="mt-2 max-w-sm text-2xl font-black leading-tight sm:text-3xl">{slide.title}</h1>
+                  <p className="mt-2 max-w-md text-sm font-bold leading-6 text-white/90">{slide.body}</p>
+                  <Link href={slide.href} className="tap-target mt-4 inline-flex w-fit items-center rounded bg-white px-4 py-2 text-sm font-black text-ink">
+                    {slide.action}
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="absolute bottom-3 right-4 flex gap-1.5">
+            {bannerSlides.map((slide, index) => (
+              <button
+                key={slide.title}
+                type="button"
+                onClick={() => setActiveBanner(index)}
+                className={`h-2 rounded-full transition-all ${activeBanner === index ? "w-6 bg-white" : "w-2 bg-white/50"}`}
+                aria-label={`${index + 1}枚目のバナーを表示`}
+              />
+            ))}
+          </div>
+        </section>
 
         {user && approvalCount > 0 ? (
           <section className="mb-4 rounded border border-coral/30 bg-orange-50 p-4 shadow-soft">
