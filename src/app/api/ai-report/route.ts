@@ -323,6 +323,7 @@ async function fetchPlannedContext(allCatches: ReportCatch[], filtered: ReportCa
           time,
           tideHeight: tide.tideHeight,
           tideDirection: tide.tideDirection,
+          tidePhase: tide.tidePhase,
           tidePhaseLabel: tide.tidePhaseLabel
         };
       } catch {
@@ -426,6 +427,7 @@ function normalizeReportCatch(id: string, data: Record<string, unknown>): Report
     tideHeight: typeof data.tideHeight === "number" ? data.tideHeight : null,
     areaName: text(data.areaName) || "未分類エリア",
     areaCode: text(data.areaCode),
+    pointName: text(data.pointName),
     tackleName: text(data.tackleName),
     rod: text(data.rod),
     reel: text(data.reel),

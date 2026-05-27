@@ -12,6 +12,7 @@ export type ReportCatch = Pick<
   | "tideHeight"
   | "areaName"
   | "areaCode"
+  | "pointName"
   | "tackleName"
   | "rod"
   | "reel"
@@ -43,6 +44,7 @@ export type AiReportSummary = {
   };
   byTimeOfDay: SummaryCount[];
   byArea: AreaSummary[];
+  byPoint: AreaSummary[];
   byTackle: TackleSummary[];
   plannedTideHints?: PlannedTideHint[];
   plannedWeatherHints?: PlannedWeatherHint[];
@@ -71,6 +73,7 @@ export type PlannedTideHint = {
   time: string;
   tideHeight: number | null;
   tideDirection: string;
+  tidePhase?: number | null;
   tidePhaseLabel: string;
 };
 
@@ -117,6 +120,7 @@ export function summarizeCatches(
   }
 ): AiReportSummary {
   const sizes = catches.map((item) => item.sizeCm).filter((value) => Number.isFinite(value) && value > 0);
+  const byPoint = summarizeByPoint(catches);
   const byArea = summarizeByArea(catches);
   const byTimeOfDay = summarizeByTimeOfDay(catches);
   return {
@@ -127,13 +131,14 @@ export function summarizeCatches(
     overall: {
       maxSizeCm: sizes.length ? Math.max(...sizes) : null,
       averageSizeCm: sizes.length ? round(sizes.reduce((sum, value) => sum + value, 0) / sizes.length) : null,
-      topArea: byArea[0]?.label ?? "未取得",
+      topArea: byPoint[0]?.label ?? byArea[0]?.label ?? "未取得",
       topTimeBand: byTimeOfDay[0]?.label ?? "未取得"
     },
     byFishType: summarizeByFishType(catches),
     byTide: summarizeByTide(catches),
     byTimeOfDay,
     byArea,
+    byPoint,
     byTackle: summarizeByTackle(catches),
     plannedTideHints,
     plannedWeatherHints,
@@ -165,6 +170,13 @@ export function summarizeByArea(catches: ReportCatch[]): AreaSummary[] {
   }));
 }
 
+export function summarizeByPoint(catches: ReportCatch[]): AreaSummary[] {
+  return summarizeCount(catches, (item) => getPointLabel(item)).map((row) => ({
+    ...row,
+    areaCode: catches.find((item) => getPointLabel(item) === row.label)?.areaCode
+  }));
+}
+
 export function summarizeByTackle(catches: ReportCatch[]): TackleSummary[] {
   return summarizeCount(catches, (item) => item.tackleName || item.lure || item.rod || "タックル未記録")
     .filter((row) => row.label !== "タックル未記録" || row.count > 0)
@@ -190,9 +202,13 @@ export function buildAiReportPrompt(summary: AiReportSummary, options: { planned
 - 「傾向」「可能性」「参考」「仮説」という表現を使ってください。
 - データ数が少ない場合は正直に伝えてください。
 - 正確な緯度経度や秘密ポイントは出さず、エリア単位で説明してください。
+- ポイント名が summary.byPoint にある場合、「エリアの傾向」ではエリア名よりポイント名を優先して言及してください。
+- ポイント名がない場合だけ areaName を使ってください。
 - source.scope が "group" の場合は、個人の予測ではなく「グループ全体の参考傾向」として説明してください。
 - グループ母数はデータ量が増える一方で、釣り方や腕前の違いも混ざることを必要に応じて補足してください。
-- 次回釣行への提案は最大3つにしてください。
+- 次回釣行への提案は最大3つにしてください。ただし、ユーザーが入力した予定時間帯の外へ変更する提案はしないでください。
+- 次回釣行予定日と予定時間帯がある場合、「何時に行くべき」ではなく、その予定時間帯の中で潮位、上げ/下げ、何分目、風、天候をどう読むかを提案してください。
+- 予定時間帯内の plannedTideHints を必ず確認し、潮回り・潮位・潮の動きについて具体的に言及してください。
 - 釣果を保証しない注意点を必ず入れてください。
 - 出力は以下の見出しを必ず使ってください。
 
@@ -277,6 +293,11 @@ function getTimeBand(hour: number) {
   if (hour >= 10 && hour < 16) return "昼";
   if (hour >= 16 && hour < 20) return "夕方";
   return "夜";
+}
+
+function getPointLabel(item: ReportCatch) {
+  if (item.pointName) return item.areaName ? `${item.pointName}（${item.areaName}）` : item.pointName;
+  return item.areaName || "未分類エリア";
 }
 
 function round(value: number) {
