@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
+import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
 import { createCatch, emptyTackleInfo, getUserCatches, updateCatchEnrichment, uploadCatchImage } from "@/lib/catches";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { getPostableGroupsForUser } from "@/lib/groups";
@@ -228,7 +229,7 @@ function PostForm({ userId }: { userId: string }) {
       const savedFishType = fishType.trim();
       const savedSizeCm = Number(sizeCm);
 
-      const catchId = await createCatch({
+      const baseCatchData: Omit<Catch, "id" | "createdAt"> = {
         userId,
         imageUrl,
         fishType: savedFishType,
@@ -272,6 +273,16 @@ function PostForm({ userId }: { userId: string }) {
         ...getOfficialCurrentReference(location?.latitude, location?.longitude, caughtAtIso),
         ...getOfficialTideReference(location?.latitude, location?.longitude, caughtAtIso),
         ...emptyTideInfo
+      };
+      const proofGeneratedAt = new Date().toISOString();
+      const catchProof = buildCatchProofPackage({ ...baseCatchData, createdAt: proofGeneratedAt }, { generatedAt: proofGeneratedAt });
+      const verificationScore = calculateVerificationScore(catchProof);
+      const rankingEligibility = checkRankingEligibility(baseCatchData, verificationScore, { allowPendingTournamentEntry: true });
+      const catchId = await createCatch({
+        ...baseCatchData,
+        catchProof,
+        verificationScore,
+        rankingEligibility
       });
 
       rememberLastPostGroupId(selectedGroup?.id ?? "");

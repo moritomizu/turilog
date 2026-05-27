@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { FeatureLock } from "@/components/FeatureLock";
 import { PageHeader } from "@/components/PageHeader";
+import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
 import { createCatch, emptyTackleInfo, uploadCatchImage } from "@/lib/catches";
 import { canProxyPostToGroup } from "@/lib/groupPermissions";
 import { getGroup, getGroupMembers } from "@/lib/groups";
@@ -17,7 +18,7 @@ import { getOfficialTideReference } from "@/lib/officialTide";
 import { rememberLastPostGroupId } from "@/lib/postPreferences";
 import { emptySeaTemperatureInfo } from "@/lib/seaTemperature";
 import { emptyWeatherInfo } from "@/lib/weather";
-import type { Group, GroupMember } from "@/types";
+import type { Catch, Group, GroupMember } from "@/types";
 
 export default function GroupPostPage({ params }: { params: { groupId: string } }) {
   return <AuthGate>{(user) => <GroupPost groupId={params.groupId} userId={user.uid} />}</AuthGate>;
@@ -62,7 +63,7 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
       const blurRadiusMeters = location ? getDefaultBlurRadius() : null;
       const blurredLocation = location && blurRadiusMeters ? generateBlurredLocation(location.latitude, location.longitude, blurRadiusMeters) : null;
       const inferredArea = location ? getAreaFromLocation(location.latitude, location.longitude) : { areaName: "", areaCode: "" };
-      await createCatch({
+      const baseCatchData: Omit<Catch, "id" | "createdAt"> = {
         userId: actualAnglerUserId,
         imageUrl,
         fishType,
@@ -110,6 +111,16 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
         tideStationName: null,
         tideStationDistance: null,
         tideApiProvider: "none"
+      };
+      const proofGeneratedAt = new Date().toISOString();
+      const catchProof = buildCatchProofPackage({ ...baseCatchData, createdAt: proofGeneratedAt }, { generatedAt: proofGeneratedAt });
+      const verificationScore = calculateVerificationScore(catchProof);
+      const rankingEligibility = checkRankingEligibility(baseCatchData, verificationScore);
+      await createCatch({
+        ...baseCatchData,
+        catchProof,
+        verificationScore,
+        rankingEligibility
       });
       rememberLastPostGroupId(group.id);
       router.push(`/groups/${group.id}`);

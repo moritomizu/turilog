@@ -7,7 +7,7 @@ import { emptyLunarInfo } from "@/lib/lunar";
 import { emptyOfficialCurrentReference } from "@/lib/officialCurrent";
 import { emptySeaTemperatureInfo } from "@/lib/seaTemperature";
 import { emptyWeatherInfo } from "@/lib/weather";
-import type { Catch, LunarInfo, OfficialCurrentReference, OfficialTideReference, SeaTemperatureInfo, TackleInfo, TideInfo, WeatherInfo } from "@/types";
+import type { Catch, CatchProofPackage, LunarInfo, OfficialCurrentReference, OfficialTideReference, SeaTemperatureInfo, TackleInfo, TideInfo, VerificationScore, WeatherInfo } from "@/types";
 
 export async function uploadCatchImage(userId: string, file: File) {
   const storageRef = ref(getFirebaseStorage(), `catches/${userId}/${crypto.randomUUID()}-${file.name}`);
@@ -154,6 +154,9 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
     actualAnglerUserId: typeof data.actualAnglerUserId === "string" ? data.actualAnglerUserId : typeof data.userId === "string" ? data.userId : "",
     isProxyPost: data.isProxyPost === true,
     proxyPostReason: typeof data.proxyPostReason === "string" ? data.proxyPostReason : "",
+    catchProof: normalizeCatchProof(data.catchProof),
+    verificationScore: normalizeVerificationScore(data.verificationScore),
+    rankingEligibility: normalizeRankingEligibility(data.rankingEligibility),
     createdAt: normalizeDate(data.createdAt),
     weather: normalizeWeather(data.weather),
     seaTemperature: normalizeSeaTemperature(data.seaTemperature),
@@ -197,6 +200,37 @@ function normalizeDate(value: unknown) {
     if (typeof timestamp.toDate === "function") return timestamp.toDate().toISOString();
   }
   return new Date().toISOString();
+}
+
+function normalizeDateObject(value: unknown) {
+  if (value instanceof Date) return value;
+  if (typeof value === "string") {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date : new Date();
+  }
+  if (value && typeof value === "object" && "toDate" in value) {
+    const timestamp = value as { toDate?: () => Date };
+    if (typeof timestamp.toDate === "function") return timestamp.toDate();
+  }
+  return new Date();
+}
+
+function normalizeCatchProof(value: unknown) {
+  return value && typeof value === "object" ? (value as CatchProofPackage) : undefined;
+}
+
+function normalizeVerificationScore(value: unknown) {
+  return value && typeof value === "object" ? (value as VerificationScore) : undefined;
+}
+
+function normalizeRankingEligibility(value: unknown) {
+  if (!value || typeof value !== "object") return undefined;
+  const data = value as Record<string, unknown>;
+  return {
+    eligible: data.eligible === true,
+    reason: typeof data.reason === "string" ? data.reason : undefined,
+    checkedAt: normalizeDateObject(data.checkedAt)
+  };
 }
 
 function normalizeTide(data: Record<string, unknown>): TideInfo {
