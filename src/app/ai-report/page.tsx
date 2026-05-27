@@ -5,8 +5,10 @@ import { AuthGate } from "@/components/AuthGate";
 import { FeatureGate } from "@/components/FeatureGate";
 import { PageHeader } from "@/components/PageHeader";
 import { getFirebaseAuth } from "@/lib/firebase";
-import { getUserCatches } from "@/lib/catches";
-import type { AiReport, AiReportFilters, AiReportPeriod, Catch } from "@/types";
+import { getGroupCatches, getUserCatches } from "@/lib/catches";
+import { getFeatureAccess } from "@/lib/features";
+import { getGroupsForUser } from "@/lib/groups";
+import type { AiReport, AiReportFilters, AiReportPeriod, AiReportSourceScope, Catch, Group } from "@/types";
 
 const periodOptions: { value: AiReportPeriod; label: string }[] = [
   { value: "all", label: "全期間" },
@@ -29,17 +31,23 @@ export default function AiReportPage() {
 
 function AiReportContent({ userId }: { userId: string }) {
   const [catches, setCatches] = useState<Catch[]>([]);
+  const [groupCatches, setGroupCatches] = useState<Catch[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [reports, setReports] = useState<AiReport[]>([]);
   const [fishType, setFishType] = useState("all");
   const [period, setPeriod] = useState<AiReportPeriod>("all");
+  const [sourceScope, setSourceScope] = useState<AiReportSourceScope>("personal");
+  const [groupId, setGroupId] = useState("");
   const [plannedDate, setPlannedDate] = useState("");
   const [plannedArea, setPlannedArea] = useState("");
   const [activeReport, setActiveReport] = useState<AiReport | null>(null);
   const [message, setMessage] = useState("読み込み中です。");
   const [busy, setBusy] = useState(false);
+  const [groupAnalysisAllowed, setGroupAnalysisAllowed] = useState(false);
 
-  const fishTypes = useMemo(() => unique(catches.map((item) => item.fishType).filter(Boolean)), [catches]);
-  const areaNames = useMemo(() => unique(catches.map((item) => item.areaName).filter(Boolean)), [catches]);
+  const sourceCatches = sourceScope === "group" ? groupCatches : catches;
+  const fishTypes = useMemo(() => unique(sourceCatches.map((item) => item.fishType).filter(Boolean)), [sourceCatches]);
+  const areaNames = useMemo(() => unique(sourceCatches.map((item) => item.areaName).filter(Boolean)), [sourceCatches]);
 
   useEffect(() => {
     getUserCatches(userId)
@@ -53,6 +61,30 @@ function AiReportContent({ userId }: { userId: string }) {
   useEffect(() => {
     loadReports().catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    Promise.all([getFeatureAccess(userId, "groupAnalysis"), getGroupsForUser(userId)])
+      .then(([access, items]) => {
+        setGroupAnalysisAllowed(access.allowed);
+        setGroups(items);
+        if (access.allowed && items[0]) setGroupId((current) => current || items[0].id);
+      })
+      .catch(() => undefined);
+  }, [userId]);
+
+  useEffect(() => {
+    if (sourceScope !== "group" || !groupId) {
+      setGroupCatches([]);
+      return;
+    }
+    setMessage("グループ釣果を読み込んでいます。");
+    getGroupCatches(groupId)
+      .then((items) => {
+        setGroupCatches(items);
+        setMessage("");
+      })
+      .catch((error) => setMessage(error instanceof Error ? error.message : "グループ釣果を読み込めませんでした。"));
+  }, [sourceScope, groupId]);
 
   async function loadReports() {
     const token = await getIdToken();
@@ -72,6 +104,8 @@ function AiReportContent({ userId }: { userId: string }) {
       const filters: AiReportFilters = {
         fishType,
         period,
+        sourceScope,
+        groupId: sourceScope === "group" ? groupId : undefined,
         plannedDate: plannedDate || undefined,
         plannedArea: plannedArea || undefined
       };
@@ -112,6 +146,48 @@ function AiReportContent({ userId }: { userId: string }) {
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded border border-teal-100 bg-white p-4 shadow-soft">
           <h2 className="text-lg font-black">分析条件</h2>
+          <div>
+            <span className="text-sm font-bold">分析する母数データ</span>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSourceScope("personal");
+                  setFishType("all");
+                  setPlannedArea("");
+                }}
+                className={`tap-target rounded border px-4 py-3 text-left font-black ${sourceScope === "personal" ? "border-water bg-foam text-water" : "border-slate-200 bg-white text-slate-700"}`}
+              >
+                自分の釣果
+                <span className="mt-1 block text-xs font-bold text-slate-500">自分の釣り方に寄せて分析</span>
+              </button>
+              <button
+                type="button"
+                disabled={!groupAnalysisAllowed || groups.length === 0}
+                onClick={() => {
+                  setSourceScope("group");
+                  setFishType("all");
+                  setPlannedArea("");
+                }}
+                className={`tap-target rounded border px-4 py-3 text-left font-black disabled:opacity-50 ${sourceScope === "group" ? "border-coral bg-orange-50 text-coral" : "border-slate-200 bg-white text-slate-700"}`}
+              >
+                グループ釣果
+                <span className="mt-1 block text-xs font-bold text-slate-500">Group Pro向け。母数を増やして参考傾向を分析</span>
+              </button>
+            </div>
+            {!groupAnalysisAllowed ? <p className="mt-2 text-xs font-bold text-slate-500">グループ釣果を母数にしたAIレポートはGroup Pro向け機能です。</p> : null}
+          </div>
+          {sourceScope === "group" ? (
+            <label className="block">
+              <span className="text-sm font-bold">対象グループ</span>
+              <select value={groupId} onChange={(event) => setGroupId(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 font-bold">
+                {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+              </select>
+              <span className="mt-2 block text-xs font-bold leading-5 text-slate-500">
+                グループ全体の釣果は母数が増えるため傾向を見つけやすくなりますが、釣り方や腕前の違いも混ざるため参考傾向として扱います。
+              </span>
+            </label>
+          ) : null}
           <label className="block">
             <span className="text-sm font-bold">対象魚種</span>
             <select value={fishType} onChange={(event) => setFishType(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 font-bold">
@@ -160,15 +236,50 @@ function ReportCard({ report, title, compact = false }: { report: AiReport; titl
         <div>
           <p className="text-xs font-black text-water">{title ?? "AI REPORT"}</p>
           <h2 className="mt-1 text-lg font-black">{report.fishType === "all" ? "全魚種" : report.fishType} / {getPeriodLabel(report.period)}</h2>
+          <p className="mt-1 text-xs font-black text-water">{report.sourceScope === "group" ? report.groupName ?? "グループ釣果" : "自分の釣果"}を母数に分析</p>
           <p className="mt-1 text-xs font-bold text-slate-500">{formatDate(report.createdAt)} 生成 / 釣果 {report.catchCount}件</p>
         </div>
-        {report.plannedDate ? <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-coral">予定日あり</span> : null}
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {report.plannedDate ? <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-coral">予定日あり</span> : null}
+          <button type="button" onClick={() => copyReport(report)} className="rounded border border-teal-100 px-3 py-2 text-xs font-black text-water">コピー</button>
+          <button type="button" onClick={() => printReport(report)} className="rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-600">PDF保存</button>
+        </div>
       </div>
       <div className={`mt-4 space-y-3 text-sm font-bold leading-7 text-slate-700 ${compact ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
         {renderReportText(report.reportText)}
       </div>
     </article>
   );
+}
+
+async function copyReport(report: AiReport) {
+  await navigator.clipboard.writeText(getReportPlainText(report));
+}
+
+function printReport(report: AiReport) {
+  const popup = window.open("", "_blank", "width=720,height=900");
+  if (!popup) return;
+  popup.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>AI釣果レポート</title><style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;line-height:1.8;padding:24px;color:#102a2a}
+    h1{font-size:22px;margin:0 0 8px} pre{white-space:pre-wrap;font-family:inherit;font-size:14px}
+    .meta{font-size:12px;color:#667;margin-bottom:18px}
+  </style></head><body><h1>AI釣果レポートβ</h1><div class="meta">${escapeHtml(getReportMeta(report))}</div><pre>${escapeHtml(report.reportText)}</pre><script>window.print();</script></body></html>`);
+  popup.document.close();
+}
+
+function getReportPlainText(report: AiReport) {
+  return `AI釣果レポートβ
+${getReportMeta(report)}
+
+${report.reportText}`;
+}
+
+function getReportMeta(report: AiReport) {
+  return `${report.fishType === "all" ? "全魚種" : report.fishType} / ${getPeriodLabel(report.period)} / ${report.sourceScope === "group" ? report.groupName ?? "グループ釣果" : "自分の釣果"} / 釣果${report.catchCount}件`;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char] ?? char);
 }
 
 function renderReportText(text: string) {

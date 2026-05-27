@@ -24,6 +24,11 @@ export type AiReportSummary = {
   catchCount: number;
   dataLevel: string;
   filters: AiReportFilters;
+  source: {
+    scope: "personal" | "group";
+    label: string;
+    note: string;
+  };
   overall: {
     maxSizeCm: number | null;
     averageSizeCm: number | null;
@@ -82,7 +87,16 @@ export function filterReportCatches(items: ReportCatch[], filters: AiReportFilte
   });
 }
 
-export function summarizeCatches(catches: ReportCatch[], filters: AiReportFilters, plannedTideHints: PlannedTideHint[] = []): AiReportSummary {
+export function summarizeCatches(
+  catches: ReportCatch[],
+  filters: AiReportFilters,
+  plannedTideHints: PlannedTideHint[] = [],
+  source: AiReportSummary["source"] = {
+    scope: "personal",
+    label: "自分の釣果",
+    note: "ユーザー本人の釣果だけを母数にした分析です。"
+  }
+): AiReportSummary {
   const sizes = catches.map((item) => item.sizeCm).filter((value) => Number.isFinite(value) && value > 0);
   const byArea = summarizeByArea(catches);
   const byTimeOfDay = summarizeByTimeOfDay(catches);
@@ -90,6 +104,7 @@ export function summarizeCatches(catches: ReportCatch[], filters: AiReportFilter
     catchCount: catches.length,
     dataLevel: getDataLevel(catches.length),
     filters,
+    source,
     overall: {
       maxSizeCm: sizes.length ? Math.max(...sizes) : null,
       averageSizeCm: sizes.length ? round(sizes.reduce((sum, value) => sum + value, 0) / sizes.length) : null,
@@ -154,6 +169,8 @@ export function buildAiReportPrompt(summary: AiReportSummary, options: { planned
 - 「傾向」「可能性」「参考」「仮説」という表現を使ってください。
 - データ数が少ない場合は正直に伝えてください。
 - 正確な緯度経度や秘密ポイントは出さず、エリア単位で説明してください。
+- source.scope が "group" の場合は、個人の予測ではなく「グループ全体の参考傾向」として説明してください。
+- グループ母数はデータ量が増える一方で、釣り方や腕前の違いも混ざることを必要に応じて補足してください。
 - 次回釣行への提案は最大3つにしてください。
 - 釣果を保証しない注意点を必ず入れてください。
 - 出力は以下の見出しを必ず使ってください。

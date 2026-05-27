@@ -1000,6 +1000,10 @@ planUpdatedAt: serverTimestamp()
 
 AIが生データから勝手に断定するのではなく、まずアプリ側で釣果数、最大サイズ、時間帯、潮位、エリア、タックルを集計し、その要約をOpenAI APIへ渡して文章化します。釣果数が少ない場合は「参考傾向」「仮説」として表示します。
 
+Group Pro または Tester のユーザーは、参加中グループの釣果を母数にしたAIレポートも生成できます。母数が増えることで傾向は見つけやすくなりますが、メンバーごとの釣り方、腕前、狙い方の違いも混ざるため、レポートでは「グループ全体の参考傾向」として扱います。
+
+生成したレポートは画面からコピーできます。PDF保存したい場合は、レポートカードの「PDF保存」からブラウザの印刷画面を開き、スマホやPCの「PDFとして保存」を利用します。
+
 ### OpenAI APIキー設定
 
 `.env.local` に以下を追加してください。
@@ -1021,6 +1025,9 @@ Vercelに公開している場合は、Vercelの Project Settings → Environmen
 userId
 fishType
 period
+sourceScope
+groupId
+groupName
 plannedDate
 plannedArea
 catchCount

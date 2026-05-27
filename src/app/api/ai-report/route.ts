@@ -29,9 +29,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ error: "OPENAI_API_KEY が未設定です。Vercelまたは.env.localに設定してください。" }, { status: 500 });
-    }
+    getOpenAiApiKey();
 
     const token = getBearerToken(request);
     const uid = await verifyFirebaseToken(token);
@@ -42,20 +40,25 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const filters = normalizeFilters(body);
-    const allCatches = await fetchUserCatches(uid, token);
+    const source = await resolveReportSource(uid, token, userDoc, filters);
+    const allCatches = source.scope === "group" && source.groupId ? await fetchGroupCatches(source.groupId, token) : await fetchUserCatches(uid, token);
     const filtered = filterReportCatches(allCatches, filters);
     const plannedTideHints = await fetchPlannedTideHints(allCatches, filtered, filters);
-    const summary = summarizeCatches(filtered, filters, plannedTideHints);
+    const summary = summarizeCatches(filtered, filters, plannedTideHints, {
+      scope: source.scope,
+      label: source.label,
+      note: source.note
+    });
 
     if (filtered.length === 0) {
       const reportText = buildEmptyReport(summary);
-      const saved = await saveAiReport(uid, token, filters, filtered.length, reportText, summary);
+      const saved = await saveAiReport(uid, token, filters, source, filtered.length, reportText, summary);
       return NextResponse.json({ report: saved });
     }
 
     const prompt = buildAiReportPrompt(summary, { plannedDate: filters.plannedDate, plannedArea: filters.plannedArea });
     const reportText = await generateReportText(prompt);
-    const saved = await saveAiReport(uid, token, filters, filtered.length, reportText, summary);
+    const saved = await saveAiReport(uid, token, filters, source, filtered.length, reportText, summary);
     return NextResponse.json({ report: saved });
   } catch (error) {
     return NextResponse.json({ error: getErrorMessage(error, "AIレポートを生成できませんでした。") }, { status: getStatus(error) });
@@ -63,11 +66,12 @@ export async function POST(request: Request) {
 }
 
 async function generateReportText(prompt: string) {
+  const apiKey = getOpenAiApiKey();
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      Authorization: `Bearer ${apiKey}`
     },
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
@@ -82,6 +86,17 @@ async function generateReportText(prompt: string) {
     throw new Error(typeof data.error?.message === "string" ? data.error.message : "OpenAI APIでレポート生成に失敗しました。");
   }
   return extractOutputText(data) || "AIレポートを生成できませんでした。時間をおいてもう一度お試しください。";
+}
+
+function getOpenAiApiKey() {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY が未設定です。Vercelまたは.env.localに設定してください。");
+  }
+  if (!apiKey.startsWith("sk-") || /\s/.test(apiKey)) {
+    throw new Error("OPENAI_API_KEY の値が正しくありません。APIキーだけを1行で設定してください。ほかの環境変数や空白が混ざっていないか確認してください。");
+  }
+  return apiKey;
 }
 
 async function verifyFirebaseToken(token: string) {
@@ -128,6 +143,33 @@ async function fetchUserCatches(uid: string, token: string): Promise<ReportCatch
     .sort((a, b) => new Date(b.caughtAt).getTime() - new Date(a.caughtAt).getTime());
 }
 
+async function fetchGroupCatches(groupId: string, token: string): Promise<ReportCatch[]> {
+  ensureFirestoreConfig();
+  const response = await fetch(`${firestoreBaseUrl}:runQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: "catches" }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "groupIds" },
+            op: "ARRAY_CONTAINS",
+            value: { stringValue: groupId }
+          }
+        }
+      }
+    })
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error("グループ釣果データを取得できませんでした。");
+  return (Array.isArray(data) ? data : [])
+    .map((row) => row.document)
+    .filter(Boolean)
+    .map((doc) => normalizeReportCatch(doc.name?.split("/").pop() ?? "", fromFirestoreFields(doc.fields ?? {})))
+    .sort((a, b) => new Date(b.caughtAt).getTime() - new Date(a.caughtAt).getTime());
+}
+
 async function fetchUserDoc(uid: string, token: string) {
   ensureFirestoreConfig();
   const response = await fetch(`${firestoreBaseUrl}/users/${uid}`, {
@@ -136,6 +178,64 @@ async function fetchUserDoc(uid: string, token: string) {
   if (response.status === 404) return {};
   const data = await response.json();
   if (!response.ok) throw new Error("ユーザー情報を取得できませんでした。");
+  return fromFirestoreFields(data.fields ?? {});
+}
+
+async function resolveReportSource(uid: string, token: string, userDoc: Record<string, unknown>, filters: AiReportFilters) {
+  if (filters.sourceScope !== "group") {
+    return {
+      scope: "personal" as const,
+      groupId: null,
+      groupName: null,
+      label: "自分の釣果",
+      note: "ユーザー本人の釣果だけを母数にした分析です。"
+    };
+  }
+
+  if (!filters.groupId) throw new Error("グループ分析には対象グループを選択してください。");
+  if (!hasFeatureFromUserDoc(userDoc, "groupAnalysis")) {
+    const error = new Error("グループ釣果を母数にしたAIレポートはGroup Pro向け機能です。") as Error & { status?: number };
+    error.status = 403;
+    throw error;
+  }
+
+  const [member, group] = await Promise.all([fetchActiveGroupMember(uid, filters.groupId, token), fetchGroupDoc(filters.groupId, token)]);
+  if (!member) {
+    const error = new Error("このグループの釣果を分析する権限がありません。") as Error & { status?: number };
+    error.status = 403;
+    throw error;
+  }
+
+  const groupName = text(group.name) || "グループ";
+  return {
+    scope: "group" as const,
+    groupId: filters.groupId,
+    groupName,
+    label: `${groupName}のグループ釣果`,
+    note: "グループメンバーの釣果を母数にした参考分析です。データ量は増えますが、釣り方や腕前の違いも混ざります。"
+  };
+}
+
+async function fetchActiveGroupMember(uid: string, groupId: string, token: string) {
+  ensureFirestoreConfig();
+  const response = await fetch(`${firestoreBaseUrl}/groupMembers/${groupId}_${uid}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (response.status === 404) return null;
+  const data = await response.json();
+  if (!response.ok) throw new Error("グループ参加情報を確認できませんでした。");
+  const member = fromFirestoreFields(data.fields ?? {});
+  return member.status === "active" ? member : null;
+}
+
+async function fetchGroupDoc(groupId: string, token: string) {
+  ensureFirestoreConfig();
+  const response = await fetch(`${firestoreBaseUrl}/groups/${groupId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (response.status === 404) throw new Error("グループが見つかりませんでした。");
+  const data = await response.json();
+  if (!response.ok) throw new Error("グループ情報を取得できませんでした。");
   return fromFirestoreFields(data.fields ?? {});
 }
 
@@ -170,6 +270,7 @@ async function saveAiReport(
   uid: string,
   token: string,
   filters: AiReportFilters,
+  source: Awaited<ReturnType<typeof resolveReportSource>>,
   catchCount: number,
   reportText: string,
   summaryJson: Record<string, unknown>
@@ -180,6 +281,9 @@ async function saveAiReport(
     userId: uid,
     fishType: filters.fishType,
     period: filters.period,
+    sourceScope: source.scope,
+    groupId: source.groupId,
+    groupName: source.groupName,
     plannedDate: filters.plannedDate || null,
     plannedArea: filters.plannedArea || null,
     catchCount,
@@ -227,11 +331,14 @@ function findRepresentativeLocation(catches: ReportCatch[], areaName?: string) {
 }
 
 function normalizeFilters(body: Record<string, unknown>): AiReportFilters {
+  const sourceScope = body.sourceScope === "group" ? "group" : "personal";
   return {
     fishType: typeof body.fishType === "string" && body.fishType ? body.fishType : "all",
     period: normalizePeriod(body.period),
     plannedDate: typeof body.plannedDate === "string" && body.plannedDate ? body.plannedDate : undefined,
-    plannedArea: typeof body.plannedArea === "string" && body.plannedArea ? body.plannedArea : undefined
+    plannedArea: typeof body.plannedArea === "string" && body.plannedArea ? body.plannedArea : undefined,
+    sourceScope,
+    groupId: sourceScope === "group" && typeof body.groupId === "string" && body.groupId ? body.groupId : undefined
   };
 }
 
@@ -267,6 +374,9 @@ function normalizeAiReport(id: string, data: Record<string, unknown>): AiReport 
     userId: text(data.userId),
     fishType: text(data.fishType) || "all",
     period: normalizePeriod(data.period),
+    sourceScope: data.sourceScope === "group" ? "group" : "personal",
+    groupId: text(data.groupId) || null,
+    groupName: text(data.groupName) || null,
     plannedDate: text(data.plannedDate) || null,
     plannedArea: text(data.plannedArea) || null,
     catchCount: number(data.catchCount),

@@ -90,7 +90,7 @@ export const featureDefinitions: Record<FeatureKey, FeatureDefinition> = {
   aiReport: {
     key: "aiReport",
     name: "AIレポート",
-    description: "釣果データから次の釣行に役立つ振り返りを作成します。",
+    description: "釣果データから次の釣行に役立つ振り返りを作成します。Group Proではグループ釣果を母数にした分析も利用できます。",
     suggestedPlan: "premium"
   },
   privateGroup: {
@@ -153,8 +153,8 @@ export const planDefinitions: Record<SubscriptionPlan, PlanDefinition> = {
   groupPro: {
     key: "groupPro",
     label: "Group Pro",
-    description: "日常の釣り仲間コミュニティを運営したい方向けです。グループ分析、代理投稿、詳細マップ拡大をまとめて使えます。",
-    features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "groupAnalysis", "proxyPost", "privateGroup", "detailedMap", "unlimitedGroups"]
+    description: "日常の釣り仲間コミュニティを運営したい方向けです。グループ分析、グループ母数のAIレポート、代理投稿、詳細マップ拡大をまとめて使えます。",
+    features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "groupAnalysis", "aiReport", "proxyPost", "privateGroup", "detailedMap", "unlimitedGroups"]
   },
   tester: {
     key: "tester",
