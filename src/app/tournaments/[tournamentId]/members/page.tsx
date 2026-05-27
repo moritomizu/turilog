@@ -93,7 +93,10 @@ function TournamentMembers({ tournamentId, userId }: { tournamentId: string; use
                     <p className="mt-1 text-xs font-bold text-slate-500">参加日: {formatDate(participant.joinedAt)}</p>
                   </div>
                   <label className="block min-w-40">
-                    <span className="text-xs font-black text-slate-600">権限</span>
+                    <span className="flex items-center gap-1 text-xs font-black text-slate-600">
+                      権限
+                      <HelpButton title="権限" body={permissionHelp.role} />
+                    </span>
                     <select
                       disabled={locked}
                       value={participant.role}
@@ -109,9 +112,9 @@ function TournamentMembers({ tournamentId, userId }: { tournamentId: string; use
                   </label>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm font-bold text-slate-700 sm:grid-cols-3">
-                  <Toggle label="正確位置マップ" checked={participant.canViewExactLocation} disabled={locked} onChange={(value) => updateParticipant(participant, { canViewExactLocation: value })} />
-                  <Toggle label="詳細釣果情報" checked={participant.canViewPrivateCatchDetails} disabled={locked} onChange={(value) => updateParticipant(participant, { canViewPrivateCatchDetails: value })} />
-                  <Toggle label="承認/却下" checked={participant.canApproveEntries} disabled={locked} onChange={(value) => updateParticipant(participant, { canApproveEntries: value })} />
+                  <Toggle label="正確位置マップ" help={permissionHelp.canViewExactLocation} checked={participant.canViewExactLocation} disabled={locked} onChange={(value) => updateParticipant(participant, { canViewExactLocation: value })} />
+                  <Toggle label="詳細釣果情報" help={permissionHelp.canViewPrivateCatchDetails} checked={participant.canViewPrivateCatchDetails} disabled={locked} onChange={(value) => updateParticipant(participant, { canViewPrivateCatchDetails: value })} />
+                  <Toggle label="承認/却下" help={permissionHelp.canApproveEntries} checked={participant.canApproveEntries} disabled={locked} onChange={(value) => updateParticipant(participant, { canApproveEntries: value })} />
                 </div>
                 {tournament?.entryFeeEnabled ? <PaymentStatusControl participant={participant} disabled={locked} onChange={(status) => updatePaymentStatus(participant, status)} /> : null}
                 {tournament?.requiresParticipantInfo ? <SafetyInfoView participant={participant} /> : null}
@@ -129,7 +132,10 @@ function PaymentStatusControl({ participant, disabled, onChange }: { participant
     <div className="mt-3 rounded border border-orange-100 bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-black text-coral">参加費</p>
+          <p className="flex items-center gap-1 text-xs font-black text-coral">
+            参加費
+            <HelpButton title="参加費の支払い状態" body={permissionHelp.paymentStatus} />
+          </p>
           <p>支払い状態: {getPaymentStatusLabel(participant.paymentStatus)}</p>
           {participant.paymentConfirmedAt ? <p className="text-xs text-slate-500">確認日時: {formatDate(participant.paymentConfirmedAt)}</p> : null}
         </div>
@@ -184,14 +190,63 @@ function getPaymentStatusLabel(status: TournamentPaymentStatus) {
   return "不要";
 }
 
-function Toggle({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled: boolean; onChange: (value: boolean) => void }) {
+function Toggle({ label, help, checked, disabled, onChange }: { label: string; help: string; checked: boolean; disabled: boolean; onChange: (value: boolean) => void }) {
   return (
-    <label className="flex items-center justify-between gap-3 rounded bg-foam p-3">
-      <span>{label}</span>
-      <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="h-5 w-5" />
-    </label>
+    <div className="flex items-center justify-between gap-3 rounded bg-foam p-3">
+      <span className="flex items-center gap-1">
+        {label}
+        <HelpButton title={label} body={help} />
+      </span>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="h-5 w-5" aria-label={label} />
+    </div>
   );
 }
+
+function HelpButton({ title, body }: { title: string; body: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(true);
+        }}
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-teal-100 bg-white text-[11px] font-black text-water shadow-sm"
+        aria-label={`${title}の説明を見る`}
+      >
+        ?
+      </button>
+      {open ? <HelpDialog title={title} body={body} onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+}
+
+function HelpDialog({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 py-5 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="permission-help-title">
+      <div className="w-full max-w-md rounded bg-white p-5 shadow-soft">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black text-water">項目説明</p>
+            <h2 id="permission-help-title" className="mt-1 text-xl font-black text-ink">{title}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-full border border-slate-200 px-3 py-1 text-sm font-black text-slate-600">閉じる</button>
+        </div>
+        <p className="mt-4 whitespace-pre-line text-sm font-bold leading-7 text-slate-700">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+const permissionHelp = {
+  role: "参加者の基本的な立場です。\n主催者は大会作成者で、原則変更できません。管理者・副管理者は大会運営を補助できます。参加者は通常参加、閲覧のみは投稿せず閲覧だけできるユーザーです。",
+  canViewExactLocation: "オンにすると、その参加者は大会釣果ポイントマップで正確な釣果位置を確認できます。\n釣り場保護のため、信頼できる運営メンバーや許可ユーザーだけに付与する想定です。",
+  canViewPrivateCatchDetails: "オンにすると、通常参加者には伏せる詳細情報を確認できます。\n例: 正確な緯度経度、位置情報の取得状況、承認状態など、大会運営の確認に必要な情報です。",
+  canApproveEntries: "オンにすると、大会投稿を承認または却下できます。\n承認された投稿だけが大会ランキングに反映されるため、運営メンバー向けの重要な権限です。",
+  paymentStatus: "有料大会で参加費の確認状態を管理します。\n未確認の参加者は大会投稿できない設計です。入金確認後に「支払い確認済み」、主催者判断で無料参加にする場合は「免除」を選びます。"
+};
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
