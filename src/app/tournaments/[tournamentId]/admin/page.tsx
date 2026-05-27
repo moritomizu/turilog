@@ -6,6 +6,7 @@ import { CatchVerificationPanel } from "@/components/CatchVerificationPanel";
 import { FeatureGate } from "@/components/FeatureGate";
 import { PageHeader } from "@/components/PageHeader";
 import { getTournamentCatches, updateTournamentEntryStatus } from "@/lib/catches";
+import { sendNotificationRequest } from "@/lib/notificationSettings";
 import { canManageApprovals, findParticipant } from "@/lib/tournamentPermissions";
 import { getTournament, getTournamentParticipants } from "@/lib/tournaments";
 import type { Catch, Tournament, TournamentParticipant } from "@/types";
@@ -40,7 +41,17 @@ function TournamentAdmin({ tournamentId, userId }: { tournamentId: string; userI
   }, [tournamentId]);
 
   async function updateStatus(catchId: string, status: "approved" | "rejected") {
+    const item = items.find((catchItem) => catchItem.id === catchId);
     await updateTournamentEntryStatus(catchId, status);
+    if (status === "approved" && item) {
+      await sendNotificationRequest({
+        userId: item.userId,
+        category: "tournamentEntryApproved",
+        title: "大会投稿が承認されました",
+        body: tournament ? `${tournament.name} の投稿が承認されました。` : "大会投稿が承認されました。",
+        url: `/tournaments/${tournamentId}`
+      });
+    }
     setItems((current) => current.filter((item) => item.id !== catchId));
   }
 

@@ -50,6 +50,9 @@ function ProfileEditor({ userId, fallbackName }: { userId: string; fallbackName:
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
           <h1 className="text-2xl font-black">プロフィール編集</h1>
           <p className="mt-2 text-sm font-bold leading-6 text-slate-600">釣りスタイルを更新しておくと、投稿や分析を少しずつ自分仕様にできます。</p>
+          <Link href="/settings/notifications" className="tap-target mt-4 inline-flex rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
+            通知設定
+          </Link>
           <div className="mt-3 grid gap-2 text-xs font-bold text-slate-600 sm:grid-cols-3">
             <p className="rounded bg-foam p-2">年代: {getAgeRangeLabel(profile.ageRange)}</p>
             <p className="rounded bg-foam p-2">頻度: {getFishingFrequencyLabel(profile.fishingFrequency)}</p>

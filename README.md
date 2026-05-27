@@ -1305,6 +1305,103 @@ TsuriLog はスマートフォンのホーム画面に追加して、アプリ�
 
 ブラウザの開発者ツールでは、Application タブから Manifest の内容を確認できます。
 
+## PWA通知機能 MVP
+
+TsuriLog は Firebase Cloud Messaging を使った Web Push 通知の土台を用意しています。
+
+通知対象の例:
+
+- 大会投稿が承認された時
+- グループに新しい釣果が投稿された時
+- AI釣果レポートが生成された時
+- 将来的な大会開始、終了間近、ランキング更新、運営お知らせ
+
+通知設定ページ:
+
+```text
+/settings/notifications
+```
+
+このページでできること:
+
+- 通知許可の取得
+- FCM token の保存
+- 通知カテゴリのON/OFF
+- テスト通知の送信
+
+### Firebase Cloud Messaging の設定
+
+Firebase Console で対象プロジェクトを開き、Cloud Messaging の設定から Web Push 証明書を作成します。
+
+取得した VAPID key を `.env.local` と Vercel の環境変数に設定します。
+
+```text
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=your_firebase_web_push_vapid_key
+```
+
+通知送信用 API では Firebase サービスアカウントを使います。
+
+```text
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your_project_id.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour_private_key\n-----END PRIVATE KEY-----\n"
+ADMIN_UIDS=operator_uid_1,operator_uid_2
+```
+
+`FIREBASE_PRIVATE_KEY` は改行を `\n` として1行で設定してください。Vercelでも同じ形式で設定します。
+
+### 保存される users フィールド
+
+```text
+notificationEnabled: boolean
+fcmTokens: string[]
+notificationPreferences: {
+  tournamentStart: boolean
+  tournamentEndingSoon: boolean
+  tournamentRankingUpdated: boolean
+  tournamentEntryApproved: boolean
+  groupCatchPosted: boolean
+  aiReportReady: boolean
+  systemNotice: boolean
+}
+notificationUpdatedAt
+```
+
+同じ token は Firestore の `arrayUnion` で重複保存されないようにしています。
+
+### テスト通知
+
+1. `/settings/notifications` を開きます。
+2. 「通知を有効にする」を押します。
+3. ブラウザの通知許可を許可します。
+4. 「テスト通知を送る」を押します。
+
+通知が届かない場合は、OS・ブラウザ・サイト単位の通知設定を確認してください。
+
+### iOS PWA の注意点
+
+iPhone / iPad では Web Push の挙動に制約があります。
+
+- Safariで開いただけでは通知が使えない場合があります。
+- ホーム画面に追加したPWAとして起動した場合のみ通知が使えることがあります。
+- iOS、Safari、PWAのバージョンによって挙動が変わります。
+- 通知許可を拒否した場合、ブラウザ設定から許可し直す必要があります。
+
+### Android / Chrome の確認方法
+
+Android Chrome では、通常のWebページまたはホーム画面追加後のPWAで通知を確認できます。
+
+確認ポイント:
+
+- サイトの通知権限が「許可」になっている
+- `/firebase-messaging-sw.js` が配信されている
+- `/manifest.json` が配信されている
+- Vercelに `NEXT_PUBLIC_FIREBASE_VAPID_KEY` とサービスアカウント環境変数が設定されている
+
+### 実装上の方針
+
+通知は補助機能です。通知送信に失敗しても、釣果投稿、大会承認、グループ投稿、AIレポート生成などの本体機能は止めない設計にしています。
+
 ## 今後の拡張候補
 
 - 釣り大会モード

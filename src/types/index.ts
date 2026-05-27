@@ -30,6 +30,15 @@ export type AiReportPeriod = "all" | "last7" | "last30" | "last90" | "last180" |
 export type AiReportPlannedTimeBand = "allDay" | "morning" | "daytime" | "evening" | "night" | "custom";
 export type AiReportSourceScope = "personal" | "group";
 export type SubscriptionPlan = "free" | "premium" | "organizer" | "groupPro" | "tester";
+export type NotificationCategory =
+  | "tournamentStart"
+  | "tournamentEndingSoon"
+  | "tournamentRankingUpdated"
+  | "tournamentEntryApproved"
+  | "groupCatchPosted"
+  | "aiReportReady"
+  | "systemNotice";
+export type NotificationPreferences = Record<NotificationCategory, boolean>;
 export type FeatureKey =
   | "basicCatchLog"
   | "basicRanking"
@@ -275,6 +284,10 @@ export type UserProfile = {
   disabledFeatures?: FeatureKey[];
   trialEndsAt?: string | null;
   planUpdatedAt?: string | null;
+  notificationEnabled?: boolean;
+  fcmTokens?: string[];
+  notificationPreferences?: NotificationPreferences;
+  notificationUpdatedAt?: string | null;
   updatedAt?: string | null;
 };
 

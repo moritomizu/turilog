@@ -13,6 +13,7 @@ import { getFeatureAccess } from "@/lib/features";
 import { getCurrentLocation } from "@/lib/location";
 import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
 import { getLunarInfo } from "@/lib/lunar";
+import { sendNotificationRequest } from "@/lib/notificationSettings";
 import { getOfficialCurrentReference } from "@/lib/officialCurrent";
 import { getOfficialTideReference } from "@/lib/officialTide";
 import { rememberLastPostGroupId } from "@/lib/postPreferences";
@@ -128,6 +129,13 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
         verificationScore,
         anomalyFindings: catchProof.anomalyFindings,
         rankingEligibility
+      });
+      await sendNotificationRequest({
+        groupId: group.id,
+        category: "groupCatchPosted",
+        title: "グループに新しい釣果が投稿されました",
+        body: `${group.name} に ${fishType} ${sizeCm}cm の釣果が投稿されました。`,
+        url: `/groups/${group.id}`
       });
       rememberLastPostGroupId(group.id);
       router.push(`/groups/${group.id}`);

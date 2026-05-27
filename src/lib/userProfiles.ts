@@ -74,7 +74,24 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     disabledFeatures: Array.isArray(data.disabledFeatures) ? data.disabledFeatures.filter((item): item is NonNullable<UserProfile["disabledFeatures"]>[number] => typeof item === "string") : [],
     trialEndsAt: normalizeDateString(data.trialEndsAt),
     planUpdatedAt: normalizeDateString(data.planUpdatedAt),
+    notificationEnabled: data.notificationEnabled === true,
+    fcmTokens: Array.isArray(data.fcmTokens) ? data.fcmTokens.filter((item): item is string => typeof item === "string") : [],
+    notificationPreferences: normalizeNotificationPreferences(data.notificationPreferences),
+    notificationUpdatedAt: normalizeDateString(data.notificationUpdatedAt),
     updatedAt: normalizeDateString(data.updatedAt)
+  };
+}
+
+function normalizeNotificationPreferences(value: unknown) {
+  const data = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  return {
+    tournamentStart: data.tournamentStart !== false,
+    tournamentEndingSoon: data.tournamentEndingSoon !== false,
+    tournamentRankingUpdated: data.tournamentRankingUpdated !== false,
+    tournamentEntryApproved: data.tournamentEntryApproved !== false,
+    groupCatchPosted: data.groupCatchPosted !== false,
+    aiReportReady: data.aiReportReady !== false,
+    systemNotice: data.systemNotice !== false
   };
 }
 

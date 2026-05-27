@@ -58,16 +58,36 @@ export async function POST(request: Request) {
     if (filtered.length === 0) {
       const reportText = buildEmptyReport(summary);
       const saved = await saveAiReport(uid, token, filters, source, filtered.length, reportText, summary);
+      notifyAiReportReady(request, token, uid);
       return NextResponse.json({ report: saved });
     }
 
     const prompt = buildAiReportPrompt(summary, { plannedDate: filters.plannedDate, plannedArea: filters.plannedArea });
     const reportText = await generateReportText(prompt);
     const saved = await saveAiReport(uid, token, filters, source, filtered.length, reportText, summary);
+    notifyAiReportReady(request, token, uid);
     return NextResponse.json({ report: saved });
   } catch (error) {
     return NextResponse.json({ error: getErrorMessage(error, "AIレポートを生成できませんでした。") }, { status: getStatus(error) });
   }
+}
+
+function notifyAiReportReady(request: Request, token: string, uid: string) {
+  const origin = new URL(request.url).origin;
+  void fetch(`${origin}/api/notifications/send`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      userId: uid,
+      category: "aiReportReady",
+      title: "AI釣果レポートが生成されました",
+      body: "AI釣果レポートが生成されました。次回釣行のヒントを確認できます。",
+      url: "/ai-report"
+    })
+  }).catch(() => undefined);
 }
 
 async function generateReportText(prompt: string) {

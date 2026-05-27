@@ -7,6 +7,7 @@ import {
   type Auth
 } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { getMessaging, isSupported, type Messaging } from "firebase/messaging";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -28,6 +29,7 @@ let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
+let messaging: Messaging | null = null;
 
 export function getFirebaseApp() {
   if (!isFirebaseConfigured) {
@@ -54,6 +56,14 @@ export function getFirebaseDb() {
 export function getFirebaseStorage() {
   if (!storage) storage = getStorage(getFirebaseApp());
   return storage;
+}
+
+export async function getFirebaseMessaging() {
+  if (!(await isSupported())) {
+    throw new Error("このブラウザはWeb Push通知に対応していません。");
+  }
+  if (!messaging) messaging = getMessaging(getFirebaseApp());
+  return messaging;
 }
 
 export const googleProvider = new GoogleAuthProvider();
