@@ -61,7 +61,7 @@ export default function Home() {
             <div>
               <p className="text-sm font-bold text-water">Personal fishing log</p>
               <h1 className="mt-2 text-ink">
-                <TsuriLogLogo className="h-14 w-64 max-w-[calc(100vw-6rem)] sm:h-[4.5rem] sm:w-[20.75rem] sm:max-w-full" />
+                <TsuriLogLogo className="h-9 w-32 max-w-[34vw] sm:h-[3.6rem] sm:w-[13.2rem] sm:max-w-[48vw]" />
               </h1>
             </div>
             <Link href={user ? "/profile" : "/login"} aria-label="プロフィール設定" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-teal-100 bg-white text-base font-black text-water shadow-soft">
