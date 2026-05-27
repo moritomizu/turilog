@@ -1,6 +1,6 @@
 import type { Catch, CatchProofPackage, ProofFlag, VerificationLevel, VerificationScore } from "@/types";
 
-type MeasurementMethod = "manual" | "measurePhoto" | "unknown";
+type MeasurementMethod = "manual" | "measurePhoto" | "aiAssisted" | "unknown";
 
 type CatchLike = Partial<Catch> & {
   id?: string;
@@ -57,6 +57,12 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
       hasValidSize: Number(catchData.sizeCm ?? 0) > 0,
       measurementMethod: catchData.measurementMethod ?? "manual",
       measurementPhotoUrl: catchData.measurementPhotoUrl ?? null
+    },
+    measurement: {
+      measurementMethod: catchData.measurementMethod ?? "manual",
+      hasMeasurementPhoto: Boolean(catchData.measurementPhotoUrl),
+      measurementPhotoUrl: catchData.measurementPhotoUrl ?? null,
+      sizeCm: Number(catchData.sizeCm ?? 0)
     },
     time: {
       caughtAt,
@@ -371,7 +377,13 @@ function scoreFish(proof: CatchProofPackage, flags: Set<ProofFlag>, messages: st
 function scoreMeasurement(proof: CatchProofPackage, flags: Set<ProofFlag>, messages: string[]) {
   let score = 0;
   if (proof.size.hasValidSize) score += 4;
-  if (proof.size.measurementMethod === "measurePhoto") {
+  const measurement = proof.measurement ?? {
+    measurementMethod: proof.size.measurementMethod ?? "manual",
+    hasMeasurementPhoto: Boolean(proof.size.measurementPhotoUrl),
+    measurementPhotoUrl: proof.size.measurementPhotoUrl ?? null,
+    sizeCm: proof.size.sizeCm
+  };
+  if (measurement.measurementMethod === "measurePhoto") {
     score += 4;
     flags.add("measure_photo_method");
     messages.push("メジャー画像による計測");
@@ -379,7 +391,7 @@ function scoreMeasurement(proof: CatchProofPackage, flags: Set<ProofFlag>, messa
     flags.add("manual_measurement_only");
     messages.push("手入力サイズのみ");
   }
-  if (proof.size.measurementPhotoUrl) {
+  if (measurement.measurementPhotoUrl) {
     score += 2;
     flags.add("measurement_photo_present");
     messages.push("サイズ確認用写真あり");

@@ -93,6 +93,12 @@ export const featureDefinitions: Record<FeatureKey, FeatureDefinition> = {
     description: "釣果データから次の釣行に役立つ振り返りを作成します。Group Proではグループ釣果を母数にした分析も利用できます。",
     suggestedPlan: "premium"
   },
+  catchVerification: {
+    key: "catchVerification",
+    name: "釣果デジタル証明β",
+    description: "写真、位置情報、時刻、潮位、大会条件などをもとに釣果の信頼性を参考スコアとして確認できます。",
+    suggestedPlan: "organizer"
+  },
   privateGroup: {
     key: "privateGroup",
     name: "非公開グループ",
@@ -148,7 +154,7 @@ export const planDefinitions: Record<SubscriptionPlan, PlanDefinition> = {
     key: "organizer",
     label: "Organizer",
     description: "大会を作成・運営したい主催者向けです。",
-    features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "tournamentCreate", "tournamentAdmin", "detailedMap", "csvExport", "unlimitedTournaments"]
+    features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "tournamentCreate", "tournamentAdmin", "catchVerification", "detailedMap", "csvExport", "unlimitedTournaments"]
   },
   groupPro: {
     key: "groupPro",

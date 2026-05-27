@@ -4,10 +4,12 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
-import { getCatchById, updateCatch } from "@/lib/catches";
+import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
+import { getCatchById, updateCatch, uploadCatchImage } from "@/lib/catches";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { formatCoordinate } from "@/lib/location";
 import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
+import { getTournament } from "@/lib/tournaments";
 import type { Catch, LocationPoint } from "@/types";
 
 export default function CatchEditPage({ params }: { params: { catchId: string } }) {
@@ -26,6 +28,9 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
   const [selectedAreaId, setSelectedAreaId] = useState("");
   const [areaName, setAreaName] = useState("");
   const [pointName, setPointName] = useState("");
+  const [measurementPhotoUrl, setMeasurementPhotoUrl] = useState<string | null>(null);
+  const [measurementFile, setMeasurementFile] = useState<File | null>(null);
+  const [removeMeasurementPhoto, setRemoveMeasurementPhoto] = useState(false);
   const [message, setMessage] = useState("読み込み中です。");
   const [busy, setBusy] = useState(false);
 
@@ -47,6 +52,7 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
         setComment(result.comment);
         setAreaName(result.areaName);
         setPointName(result.pointName);
+        setMeasurementPhotoUrl(result.measurementPhotoUrl ?? null);
         if (result.latitude != null && result.longitude != null) {
           const point = { latitude: result.latitude, longitude: result.longitude };
           setLocation(point);
@@ -110,7 +116,10 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
       const blurredLocation = location && blurRadiusMeters ? generateBlurredLocation(location.latitude, location.longitude, blurRadiusMeters) : null;
       const inferredArea = location ? getAreaFromLocation(location.latitude, location.longitude) : { areaName: "", areaCode: "" };
       const savedAreaName = areaName || inferredArea.areaName;
-      await updateCatch(item.id, {
+      let nextMeasurementPhotoUrl = removeMeasurementPhoto ? null : measurementPhotoUrl;
+      if (measurementFile) nextMeasurementPhotoUrl = await uploadCatchImage(userId, measurementFile);
+      const nextMeasurementMethod = nextMeasurementPhotoUrl ? "measurePhoto" : "manual";
+      const basePatch = {
         fishType: fishType.trim(),
         sizeCm: nextSize,
         caughtAt: nextCaughtAt.toISOString(),
@@ -124,7 +133,26 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
         areaCode: inferredArea.areaCode,
         pointName: pointName.trim(),
         blurRadiusMeters,
-        locationUpdatedAt: location ? new Date().toISOString() : null
+        locationUpdatedAt: location ? new Date().toISOString() : null,
+        measurementPhotoUrl: nextMeasurementPhotoUrl,
+        measurementMethod: nextMeasurementMethod
+      } as const;
+      const updatedForProof = { ...item, ...basePatch };
+      const tournament = updatedForProof.tournamentId ? await getTournament(updatedForProof.tournamentId).catch(() => null) : null;
+      const generatedAt = new Date().toISOString();
+      const catchProof = buildCatchProofPackage(updatedForProof, {
+        generatedAt,
+        tournamentStartAt: tournament?.startAt ?? null,
+        tournamentEndAt: tournament?.endAt ?? null,
+        tournamentTargetFishTypes: tournament?.targetFishTypes ?? []
+      });
+      const verificationScore = calculateVerificationScore(catchProof);
+      const rankingEligibility = checkRankingEligibility(updatedForProof, verificationScore);
+      await updateCatch(item.id, {
+        ...basePatch,
+        catchProof,
+        verificationScore,
+        rankingEligibility
       });
       window.location.href = "/catches";
     } catch (error) {
@@ -154,6 +182,23 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
                 <span className="text-sm font-bold">コメント</span>
                 <textarea value={comment} onChange={(event) => setComment(event.target.value)} className="mt-2 min-h-24 w-full rounded border border-slate-300 bg-white p-3 text-base" />
               </label>
+            </section>
+
+            <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
+              <h2 className="text-sm font-black">サイズ確認用写真（任意）</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">大会やランキングでサイズ確認が必要な場合に使用します。メジャーと魚が一緒に写った写真を推奨します。</p>
+              {measurementPhotoUrl && !removeMeasurementPhoto ? (
+                <div className="mt-3 rounded bg-foam p-3 text-sm font-bold">
+                  <a href={measurementPhotoUrl} target="_blank" rel="noreferrer" className="text-water underline">現在のサイズ確認用写真を見る</a>
+                  <button type="button" onClick={() => setRemoveMeasurementPhoto(true)} className="mt-3 block rounded border border-coral px-3 py-2 text-xs font-black text-coral">サイズ確認用写真を削除</button>
+                </div>
+              ) : null}
+              {removeMeasurementPhoto ? <p className="mt-2 rounded bg-orange-50 p-2 text-xs font-bold text-coral">保存時にサイズ確認用写真を削除します。</p> : null}
+              <input type="file" accept="image/*" onChange={(event) => {
+                setMeasurementFile(event.target.files?.[0] ?? null);
+                if (event.target.files?.[0]) setRemoveMeasurementPhoto(false);
+              }} className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" />
+              <p className="mt-2 text-xs font-bold leading-5 text-slate-500">メジャーと魚体全体が写る写真を登録すると、今後のサイズ確認や大会承認で役立ちます。</p>
             </section>
 
             <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">

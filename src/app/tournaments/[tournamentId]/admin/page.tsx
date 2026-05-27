@@ -80,6 +80,13 @@ function TournamentAdmin({ tournamentId, userId }: { tournamentId: string; userI
                   {tournament ? <CheckList item={item} tournament={tournament} /> : null}
                   <p>潮位: {item.tideHeight == null ? "未取得" : `${item.tideHeight}m`}</p>
                   <p>潮: {item.tidePhaseLabel}</p>
+                  <div className="rounded bg-foam p-2 text-xs font-bold leading-5">
+                    <p>{item.measurementPhotoUrl ? "サイズ確認用写真あり" : "サイズ確認用写真なし"}</p>
+                    <p>{item.measurementMethod === "measurePhoto" ? "サイズは写真確認ありです" : "サイズは手動入力です"}</p>
+                    <p>measurementScore: {item.verificationScore?.measurementScore ?? 0} / 10</p>
+                    <p>サイズ写真不足flag: {item.verificationScore?.flags?.includes("measurement_photo_missing") ? "あり" : "なし"}</p>
+                    {item.measurementPhotoUrl ? <a href={item.measurementPhotoUrl} target="_blank" rel="noreferrer" className="text-water underline">サイズ確認用写真を開く</a> : null}
+                  </div>
                   <CatchVerificationPanel item={item} compact showRawJson />
                   <div className="grid grid-cols-2 gap-2 pt-2">
                     <button onClick={() => updateStatus(item.id, "approved")} className="tap-target rounded bg-water px-4 py-2 font-black text-white">承認</button>

@@ -38,6 +38,16 @@ export function CatchVerificationPanel({ item, compact = false, showRawJson = fa
       </div>
 
       {item.rankingEligibility?.reason ? <p className="mt-3 rounded bg-orange-50 p-2 text-xs font-bold text-coral">{item.rankingEligibility.reason}</p> : null}
+      <div className="mt-3 rounded bg-foam p-3 text-sm font-bold text-slate-700">
+        <p className="text-xs font-black text-slate-500">サイズ確認</p>
+        <p className="mt-1">{getMeasurementLabel(item)}</p>
+        {item.verificationScore?.measurementScore != null ? <p className="text-xs text-slate-500">measurementScore: {item.verificationScore.measurementScore} / 10</p> : null}
+        {item.measurementPhotoUrl ? (
+          <a href={item.measurementPhotoUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">
+            サイズ確認用写真を見る
+          </a>
+        ) : null}
+      </div>
 
       <div className={`mt-4 grid gap-3 ${compact ? "" : "sm:grid-cols-2"}`}>
         <InfoList title="確認済み" items={score.messages?.length ? score.messages : ["確認済み項目はまだありません。"]} tone="ok" />
@@ -53,6 +63,7 @@ export function CatchVerificationPanel({ item, compact = false, showRawJson = fa
           <p>釣果時刻: {item.catchProof?.time.caughtAt ?? "未取得"}</p>
           <p>投稿時刻: {item.catchProof?.time.createdAt ?? "未取得"}</p>
           <p>潮位: {item.catchProof?.environment.hasTideData ? "あり" : "なし"} / {item.catchProof?.environment.tidePhaseLabel ?? "潮未取得"}</p>
+          <p>サイズ確認: {item.catchProof?.measurement?.measurementMethod ?? item.catchProof?.size.measurementMethod ?? "manual"} / 写真: {item.catchProof?.measurement?.hasMeasurementPhoto ? "あり" : "なし"}</p>
           <p>大会: {item.catchProof?.context.isTournamentEntry ? "大会投稿" : "通常投稿"} / {item.catchProof?.context.tournamentEntryStatus ?? "none"}</p>
           <ScoreBreakdown item={item} />
           {showRawJson ? (
@@ -68,6 +79,12 @@ export function CatchVerificationPanel({ item, compact = false, showRawJson = fa
       </p>
     </section>
   );
+}
+
+function getMeasurementLabel(item: Catch) {
+  if (item.measurementPhotoUrl) return "サイズ確認：写真あり";
+  if (item.measurementMethod === "aiAssisted") return "サイズ確認：AI補助";
+  return "サイズ確認：手動入力";
 }
 
 function InfoList({ title, items, tone }: { title: string; items: string[]; tone: "ok" | "warn" }) {

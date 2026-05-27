@@ -42,6 +42,7 @@ export type FeatureKey =
   | "proxyPost"
   | "tackleAnalysis"
   | "aiReport"
+  | "catchVerification"
   | "privateGroup"
   | "unlimitedGroups"
   | "unlimitedTournaments"
@@ -123,8 +124,14 @@ export type CatchProofPackage = {
     fishType?: string;
     sizeCm: number;
     hasValidSize: boolean;
-    measurementMethod?: "manual" | "measurePhoto" | "unknown";
+    measurementMethod?: "manual" | "measurePhoto" | "aiAssisted" | "unknown";
     measurementPhotoUrl?: string | null;
+  };
+  measurement: {
+    measurementMethod: "manual" | "measurePhoto" | "aiAssisted" | "unknown";
+    hasMeasurementPhoto: boolean;
+    measurementPhotoUrl: string | null;
+    sizeCm: number;
   };
   time: {
     caughtAt?: string | null;
@@ -394,7 +401,7 @@ export type Catch = TideInfo &
   tackleId?: string | null;
   tackleName?: string;
   measurementPhotoUrl?: string | null;
-  measurementMethod?: "manual" | "measurePhoto";
+  measurementMethod?: "manual" | "measurePhoto" | "aiAssisted";
   rod?: string;
   reel?: string;
   line?: string;

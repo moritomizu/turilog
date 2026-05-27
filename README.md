@@ -1171,6 +1171,30 @@ measurementMethod: "measurePhoto"
 measurementMethod: "manual"
 ```
 
+`measurementMethod` の意味:
+
+```text
+manual: サイズを手入力した状態
+measurePhoto: サイズ確認用写真がある状態
+aiAssisted: 将来的にAIサイズ計測を使った状態
+```
+
+`measurementScore` は以下で最大10点です。
+
+```text
+sizeCm あり: +4
+measurementMethod が measurePhoto: +4
+measurementPhotoUrl あり: +2
+```
+
+大会投稿で `measurementPhotoUrl` がない場合は `measurement_photo_missing` flag が付きます。
+
+大会承認画面では、通常の釣果写真に加えて、サイズ確認用写真の有無、`measurementMethod`、`measurementScore`、`measurement_photo_missing` flag を確認できます。
+
+釣果編集画面からもサイズ確認用写真を追加・変更・削除できます。変更時は `catchProof` / `verificationScore` / `rankingEligibility` を再計算します。
+
+Feature Flags では `catchVerification` を定義しています。Tester はすべての機能を利用でき、Organizer には大会運営向けに `catchVerification` を含めています。ただし、通常投稿の保存処理は Feature Flag に関係なく壊れないよう、証明情報は保存されます。
+
 ### 既存釣果への後付け生成
 
 管理者は以下のページから、既存釣果の証明情報を後付け生成・再計算できます。

@@ -84,6 +84,11 @@ export async function updateCatch(
       | "pointName"
       | "blurRadiusMeters"
       | "locationUpdatedAt"
+      | "measurementPhotoUrl"
+      | "measurementMethod"
+      | "catchProof"
+      | "verificationScore"
+      | "rankingEligibility"
     >
   >
 ) {
@@ -177,7 +182,7 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
     tackleId: typeof data.tackleId === "string" ? data.tackleId : null,
     tackleName: typeof data.tackleName === "string" ? data.tackleName : "",
     measurementPhotoUrl: typeof data.measurementPhotoUrl === "string" ? data.measurementPhotoUrl : null,
-    measurementMethod: data.measurementMethod === "measurePhoto" ? "measurePhoto" : "manual",
+    measurementMethod: data.measurementMethod === "measurePhoto" || data.measurementMethod === "aiAssisted" ? data.measurementMethod : "manual",
     rod: typeof data.rod === "string" ? data.rod : "",
     reel: typeof data.reel === "string" ? data.reel : "",
     line: typeof data.line === "string" ? data.line : "",
