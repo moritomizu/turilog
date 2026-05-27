@@ -37,6 +37,7 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
   const [comment, setComment] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [measurementFile, setMeasurementFile] = useState<File | null>(null);
+  const [showMeasurementPhoto, setShowMeasurementPhoto] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -146,11 +147,23 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
           <Field label="釣った日時" value={caughtAt} onChange={setCaughtAt} type="datetime-local" required />
           <TextArea label="コメント" value={comment} onChange={setComment} />
           <label className="block"><span className="text-sm font-bold">写真</span><input type="file" accept="image/*" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3" /></label>
-          <label className="block">
-            <span className="text-sm font-bold">サイズ確認用写真（任意）</span>
-            <input type="file" accept="image/*" onChange={(event) => setMeasurementFile(event.target.files?.[0] ?? null)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3" />
-            <span className="mt-2 block text-xs font-bold leading-5 text-slate-500">大会やランキングでサイズ確認が必要な場合に使用します。メジャーと魚が一緒に写った写真を推奨します。</span>
-          </label>
+          <section className="rounded bg-foam p-3">
+            <button type="button" onClick={() => setShowMeasurementPhoto((value) => !value)} className="tap-target flex w-full items-center justify-between rounded bg-white px-3 py-3 text-left text-sm font-black text-ink">
+              <span>{measurementFile ? "メジャー写真を選択済み" : "メジャー写真を追加"}</span>
+              <span className="text-xs text-slate-500">{showMeasurementPhoto ? "閉じる" : "任意"}</span>
+            </button>
+            {showMeasurementPhoto ? (
+              <div className="mt-3">
+                <input type="file" accept="image/*" onChange={(event) => setMeasurementFile(event.target.files?.[0] ?? null)} className="w-full rounded border border-slate-300 bg-white p-3" />
+                <span className="mt-2 block text-xs font-bold leading-5 text-slate-500">メジャーと魚体全体が写る写真を登録すると、サイズ確認や承認で役立ちます。</span>
+                {measurementFile ? (
+                  <button type="button" onClick={() => setMeasurementFile(null)} className="mt-2 rounded border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600">
+                    選択を外す
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
           {canProxy ? (
             <label className="block">
               <span className="text-sm font-bold">釣った人</span>

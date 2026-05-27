@@ -74,11 +74,16 @@ function PostForm({ userId }: { userId: string }) {
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [showDetails, setShowDetails] = useState(false);
   const [showMapPicker, setShowMapPicker] = useState(false);
+  const [showMeasurementPhoto, setShowMeasurementPhoto] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [submitStage, setSubmitStage] = useState("");
   const [successSummary, setSuccessSummary] = useState("");
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
+  const selectedTournamentForUi = useMemo(
+    () => tournamentOptions.find((item) => item.id === selectedTournamentId) ?? null,
+    [selectedTournamentId, tournamentOptions]
+  );
   const canQuickPost = fishType.trim().length > 0 && Number(sizeCm) > 0;
 
   useEffect(() => {
@@ -311,6 +316,7 @@ function PostForm({ userId }: { userId: string }) {
       setComment("");
       setFile(null);
       setMeasurementFile(null);
+      setShowMeasurementPhoto(false);
       setCaughtAt(toLocalInputValue(new Date()));
       setSuccessSummary(`${savedFishType} ${savedSizeCm}cm を投稿しました。`);
       setMessage(`${buildPostMessage(selectedTournament, tournamentCheck, selectedGroup)} 潮位・天候・水温は裏側で追記中です。`);
@@ -333,12 +339,6 @@ function PostForm({ userId }: { userId: string }) {
             <p className="mt-2 text-xs font-bold text-slate-500">カメラ撮影または写真ライブラリから選択できます。</p>
           </label>
           {preview ? <SizeEstimator imageUrl={preview} onApply={(value) => setSizeCm(value)} /> : null}
-
-          <label className="block rounded border border-teal-100 bg-white p-4 shadow-soft">
-            <span className="text-sm font-black">サイズ確認用写真（任意）</span>
-            <input className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(e) => setMeasurementFile(e.target.files?.[0] ?? null)} />
-            <p className="mt-2 text-xs font-bold leading-5 text-slate-500">大会やランキングでサイズ確認が必要な場合に使用します。メジャーと魚が一緒に写った写真を推奨します。</p>
-          </label>
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
             <Field label="魚種" value={fishType} onChange={setFishType} placeholder="例: シーバス" required listId="fish-suggestions" autoFocus />
@@ -371,6 +371,22 @@ function PostForm({ userId }: { userId: string }) {
                 ))}
               </select>
               <p className="mt-2 text-xs font-bold leading-5 text-slate-600">期間内・対象魚種・位置情報ありの場合、大会投稿として承認待ち保存します。</p>
+              {selectedTournamentForUi ? (
+                <div className="mt-3 rounded border border-orange-200 bg-white p-3">
+                  <p className="text-xs font-black text-coral">大会投稿の確認写真</p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-slate-600">メジャー写真があると、サイズ確認や承認時の判断に役立ちます。</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDetails(true);
+                      setShowMeasurementPhoto(true);
+                    }}
+                    className="tap-target mt-2 rounded border border-coral bg-white px-3 py-2 text-xs font-black text-coral"
+                  >
+                    {measurementFile ? "メジャー写真を変更" : "メジャー写真を追加"}
+                  </button>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
@@ -490,6 +506,14 @@ function PostForm({ userId }: { userId: string }) {
             {showDetails ? (
               <div className="mt-4 space-y-4">
                 <Field label="釣った日時" type="datetime-local" value={caughtAt} onChange={setCaughtAt} required compact />
+
+                <MeasurementPhotoInput
+                  file={measurementFile}
+                  open={showMeasurementPhoto}
+                  recommended={Boolean(selectedTournamentForUi)}
+                  onToggle={() => setShowMeasurementPhoto((value) => !value)}
+                  onChange={setMeasurementFile}
+                />
 
                 <section className="rounded bg-foam p-3">
                   <h2 className="text-sm font-black">場所</h2>
@@ -789,6 +813,41 @@ function TackleField({
         ))}
       </datalist>
     </div>
+  );
+}
+
+function MeasurementPhotoInput({
+  file,
+  open,
+  recommended,
+  onToggle,
+  onChange
+}: {
+  file: File | null;
+  open: boolean;
+  recommended: boolean;
+  onToggle: () => void;
+  onChange: (file: File | null) => void;
+}) {
+  return (
+    <section className={`rounded p-3 ${recommended ? "border border-orange-200 bg-orange-50" : "bg-foam"}`}>
+      <button type="button" onClick={onToggle} className="tap-target flex w-full items-center justify-between rounded bg-white px-3 py-3 text-left text-sm font-black text-ink">
+        <span>{file ? "メジャー写真を選択済み" : "メジャー写真を追加"}</span>
+        <span className="text-xs text-slate-500">{open ? "閉じる" : "任意"}</span>
+      </button>
+      {recommended ? <p className="mt-2 text-xs font-bold leading-5 text-coral">大会投稿では、サイズ確認写真があると承認時の確認がスムーズです。</p> : null}
+      {open ? (
+        <div className="mt-3">
+          <input className="w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(event) => onChange(event.target.files?.[0] ?? null)} />
+          <p className="mt-2 text-xs font-bold leading-5 text-slate-500">メジャーと魚体全体が写る写真を登録すると、今後のサイズ確認や大会承認で役立ちます。</p>
+          {file ? (
+            <button type="button" onClick={() => onChange(null)} className="mt-2 rounded border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600">
+              選択を外す
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
