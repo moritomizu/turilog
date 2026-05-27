@@ -53,6 +53,7 @@ export type FeatureKey =
 export type FeatureEventType =
   | "viewLockedFeature"
   | "clickInterested"
+  | "clickNotInterested"
   | "clickLearnMore"
   | "attemptUseFeature"
   | "useFeature";

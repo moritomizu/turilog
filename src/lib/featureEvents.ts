@@ -27,6 +27,10 @@ export function logFeatureInterest(userId: string, featureKey: FeatureKey, metad
   return logFeatureEvent(userId, featureKey, "clickInterested", metadata);
 }
 
+export function logFeatureNotInterested(userId: string, featureKey: FeatureKey, metadata?: Record<string, unknown>) {
+  return logFeatureEvent(userId, featureKey, "clickNotInterested", metadata);
+}
+
 export function logFeatureAttempt(userId: string, featureKey: FeatureKey, metadata?: Record<string, unknown>) {
   return logFeatureEvent(userId, featureKey, "attemptUseFeature", metadata);
 }

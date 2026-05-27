@@ -106,7 +106,7 @@ function buildSummary(items: FeatureEvent[]) {
   return {
     byFeature: countBy(items, (item) => featureDefinitions[item.featureKey]?.name ?? item.featureKey),
     byEventType: countBy(items, (item) => item.eventType),
-    byUser: countBy(items.filter((item) => item.eventType === "clickInterested" || item.eventType === "clickLearnMore"), (item) => item.userId)
+    byUser: countBy(items.filter((item) => item.eventType === "clickInterested" || item.eventType === "clickNotInterested" || item.eventType === "clickLearnMore"), (item) => item.userId)
   };
 }
 

@@ -4,7 +4,7 @@ import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { logFeatureInterest } from "@/lib/featureEvents";
+import { logFeatureInterest, logFeatureNotInterested } from "@/lib/featureEvents";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 import { featureDefinitions, planDefinitions } from "@/lib/plans";
 import type { FeatureKey, SubscriptionPlan } from "@/types";
@@ -14,6 +14,12 @@ const interestFeatureByPlan: Partial<Record<SubscriptionPlan, FeatureKey>> = {
   premium: "plan_premium",
   organizer: "plan_organizer",
   groupPro: "plan_groupPro"
+};
+const planPrices: Partial<Record<SubscriptionPlan, string>> = {
+  free: "0円/月",
+  premium: "980円/月",
+  organizer: "2,980円/月",
+  groupPro: "9,800円/月"
 };
 
 export function PlansClient() {
@@ -26,17 +32,22 @@ export function PlansClient() {
     return onAuthStateChanged(getFirebaseAuth(), setUser);
   }, []);
 
-  async function handleInterest(plan: SubscriptionPlan) {
+  async function handlePlanReaction(plan: SubscriptionPlan, interested: boolean) {
     if (!user) {
-      setMessage("興味ありを送るにはログインしてください。");
+      setMessage("反応を送るにはログインしてください。");
       return;
     }
     const featureKey = interestFeatureByPlan[plan];
     if (!featureKey) return;
     setMessage("反応を保存しています。");
     try {
-      await logFeatureInterest(user.uid, featureKey, { plan });
-      setMessage("ありがとうございます。今後のプラン設計に活用します。");
+      const metadata = { plan, priceLabel: planPrices[plan] ?? "", interested };
+      if (interested) {
+        await logFeatureInterest(user.uid, featureKey, metadata);
+      } else {
+        await logFeatureNotInterested(user.uid, featureKey, metadata);
+      }
+      setMessage(interested ? "ありがとうございます。興味ありとして保存しました。" : "ありがとうございます。今はなしとして保存しました。");
     } catch {
       setMessage("保存できませんでした。時間をおいてもう一度お試しください。");
     }
@@ -65,6 +76,11 @@ export function PlansClient() {
             return (
               <article key={plan} className="flex flex-col rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <h2 className="text-xl font-black">{definition.label}</h2>
+                <div className="mt-3 rounded bg-foam p-3">
+                  <p className="text-xs font-black text-slate-500">仮料金</p>
+                  <p className="mt-1 text-2xl font-black text-ink">{planPrices[plan] ?? "未定"}</p>
+                  {plan !== "free" ? <p className="mt-1 text-xs font-bold text-slate-500">ニーズ調査用の仮設定です</p> : null}
+                </div>
                 <p className="mt-2 min-h-16 text-sm font-bold leading-6 text-slate-700">{definition.description}</p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm font-bold text-slate-700">
                   {definition.features.map((featureKey) => (
@@ -81,14 +97,20 @@ export function PlansClient() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  type="button"
-                  disabled={plan === "free"}
-                  onClick={() => handleInterest(plan)}
-                  className="tap-target mt-4 rounded bg-coral px-4 py-3 font-black text-white disabled:bg-slate-200 disabled:text-slate-500"
-                >
-                  {plan === "free" ? "利用中の基本プラン" : "興味あり"}
-                </button>
+                {plan === "free" ? (
+                  <button type="button" disabled className="tap-target mt-4 rounded bg-slate-200 px-4 py-3 font-black text-slate-500">
+                    利用中の基本プラン
+                  </button>
+                ) : (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => handlePlanReaction(plan, true)} className="tap-target rounded bg-coral px-4 py-3 font-black text-white">
+                      興味あり
+                    </button>
+                    <button type="button" onClick={() => handlePlanReaction(plan, false)} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
+                      今はなし
+                    </button>
+                  </div>
+                )}
                 {plan !== "free" ? <p className="mt-2 text-center text-xs font-bold text-slate-500">決済はまだ行われません</p> : null}
               </article>
             );
