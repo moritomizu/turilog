@@ -69,12 +69,12 @@ export function PlansClient() {
                 <ul className="mt-4 flex-1 space-y-2 text-sm font-bold text-slate-700">
                   {definition.features.map((featureKey) => (
                     <li key={featureKey} className="flex items-center justify-between gap-2 rounded bg-foam px-3 py-2">
-                      <span>{featureDefinitions[featureKey]?.name ?? featureKey}</span>
+                      <span>{getFeatureDisplayName(featureKey, plan)}</span>
                       <button
                         type="button"
                         onClick={() => setSelectedFeature(featureKey)}
                         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-black text-slate-600"
-                        aria-label={`${featureDefinitions[featureKey]?.name ?? featureKey}の説明を見る`}
+                        aria-label={`${getFeatureDisplayName(featureKey, plan)}の説明を見る`}
                       >
                         ?
                       </button>
@@ -98,6 +98,12 @@ export function PlansClient() {
       </main>
     </>
   );
+}
+
+function getFeatureDisplayName(featureKey: FeatureKey, plan: SubscriptionPlan) {
+  if (featureKey === "aiReport" && plan === "premium") return "AIレポート(自分のみ)";
+  if (featureKey === "aiReport" && plan === "groupPro") return "AIレポート(グループ)";
+  return featureDefinitions[featureKey]?.name ?? featureKey;
 }
 
 function FeatureDescriptionDialog({ featureKey, onClose }: { featureKey: FeatureKey; onClose: () => void }) {
