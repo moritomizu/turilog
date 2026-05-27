@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TsuriLog">
-  <rect width="512" height="512" fill="#0f766e"/>
-  <circle cx="256" cy="256" r="210" fill="#dff7f0"/>
-  <path d="M142 318c56 64 168 78 249 9 10-9 10-25-2-33-82-60-190-48-248 16-3 3-3 5 1 8Z" fill="#0f766e"/>
-  <path d="M359 286c26-29 50-67 62-105 3-10-10-18-18-11-35 29-60 61-80 100l36 16Z" fill="#0f766e"/>
-  <circle cx="207" cy="308" r="12" fill="#dff7f0"/>
-  <path d="M92 190c55-47 127-65 208-55" fill="none" stroke="#0f766e" stroke-width="30" stroke-linecap="round"/>
-  <path d="M300 135c49 7 87 27 118 60" fill="none" stroke="#0f766e" stroke-width="30" stroke-linecap="round"/>
-</svg>

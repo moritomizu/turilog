@@ -13,10 +13,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icons/tsurilog-pwa-icon.svg", type: "image/svg+xml" }
+      { url: "/icons/tsurilog-icon.png", sizes: "512x512", type: "image/png" }
     ],
     apple: [
-      { url: "/icons/tsurilog-pwa-icon.svg", type: "image/svg+xml" }
+      { url: "/icons/tsurilog-icon.png", sizes: "512x512", type: "image/png" }
     ]
   },
   appleWebApp: {

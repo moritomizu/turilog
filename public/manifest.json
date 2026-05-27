@@ -12,16 +12,16 @@
   "categories": ["sports", "lifestyle", "utilities"],
   "icons": [
     {
-      "src": "/icons/tsurilog-pwa-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/tsurilog-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/tsurilog-pwa-maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
+      "src": "/icons/tsurilog-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
