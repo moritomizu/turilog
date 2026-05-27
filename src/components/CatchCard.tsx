@@ -97,6 +97,7 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
 }
 
 function VerificationSummary({ item, open, onToggle }: { item: Catch; open: boolean; onToggle: () => void }) {
+  const [showHelp, setShowHelp] = useState(false);
   const score = item.verificationScore;
   if (!score) return null;
   const total = score.total ?? score.totalScore ?? 0;
@@ -106,23 +107,34 @@ function VerificationSummary({ item, open, onToggle }: { item: Catch; open: bool
 
   return (
     <section className="border-t border-slate-100 pt-3">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="tap-target flex w-full items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2 text-left"
-        aria-expanded={open}
-      >
-        <div>
-          <p className="text-[11px] font-black text-slate-500">釣果デジタル証明β</p>
-          <p className="mt-0.5 text-xs font-bold text-slate-600">
-            {concernFlags.length ? `確認事項 ${concernFlags.length}件` : "大きな確認事項なし"}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className={`rounded-full px-2.5 py-1 text-xs font-black ${levelClass}`}>{getVerificationScoreLabel(score)}</span>
-          <span className="text-sm font-black text-slate-600">{total}</span>
-        </div>
-      </button>
+      <div className="flex items-stretch gap-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="tap-target flex min-w-0 flex-1 items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2 text-left"
+          aria-expanded={open}
+        >
+          <div>
+            <p className="text-[11px] font-black text-slate-500">釣果デジタル証明β</p>
+            <p className="mt-0.5 text-xs font-bold text-slate-600">
+              {concernFlags.length ? `確認事項 ${concernFlags.length}件` : "大きな確認事項なし"}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className={`rounded-full px-2.5 py-1 text-xs font-black ${levelClass}`}>{getVerificationScoreLabel(score)}</span>
+            <span className="text-sm font-black text-slate-600">{total}</span>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowHelp(true)}
+          className="flex w-10 shrink-0 items-center justify-center rounded border border-slate-300 bg-white text-sm font-black text-slate-600"
+          aria-label="釣果デジタル証明βの説明を見る"
+        >
+          ?
+        </button>
+      </div>
+      {showHelp ? <VerificationHelpDialog onClose={() => setShowHelp(false)} /> : null}
       {!open && topConcerns.length ? (
         <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
           {topConcerns.join(" / ")}
@@ -134,6 +146,37 @@ function VerificationSummary({ item, open, onToggle }: { item: Catch; open: bool
         </div>
       ) : null}
     </section>
+  );
+}
+
+function VerificationHelpDialog({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 py-5 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="verification-help-title">
+      <section className="w-full max-w-md rounded border border-teal-100 bg-white p-5 shadow-soft">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black text-water">機能説明</p>
+            <h2 id="verification-help-title" className="mt-1 text-xl font-black text-ink">釣果デジタル証明β</h2>
+          </div>
+          <button type="button" onClick={onClose} className="tap-target rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-600" aria-label="閉じる">
+            ×
+          </button>
+        </div>
+        <p className="mt-4 text-sm font-bold leading-6 text-slate-700">
+          写真・位置情報・時刻・潮位・大会条件などをもとに、釣果の信頼性を参考スコアとして表示します。
+        </p>
+        <div className="mt-4 rounded bg-foam p-3 text-sm font-bold leading-6 text-slate-700">
+          <p className="text-xs font-black text-slate-500">見方</p>
+          <p className="mt-1">スコアが高いほど記録情報がそろっています。確認事項がある場合は、写真・位置情報・サイズ確認・大会条件などを見直す目安になります。</p>
+        </div>
+        <p className="mt-4 text-xs font-bold leading-5 text-slate-500">
+          このスコアは釣果の真正性を完全に保証するものではありません。大会運営や確認作業を補助するための参考情報です。
+        </p>
+        <button type="button" onClick={onClose} className="tap-target mt-4 w-full rounded bg-water px-4 py-3 font-black text-white">
+          閉じる
+        </button>
+      </section>
+    </div>
   );
 }
 
