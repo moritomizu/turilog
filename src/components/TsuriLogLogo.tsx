@@ -10,8 +10,8 @@ export function TsuriLogLogo({ className, title = "TsuriLog" }: TsuriLogLogoProp
     <Image
       src="/icons/tsurilog-logo.svg"
       alt={title}
-      width={930}
-      height={155}
+      width={611}
+      height={123}
       className={className}
       priority
       unoptimized
