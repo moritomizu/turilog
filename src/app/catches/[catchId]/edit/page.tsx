@@ -5,12 +5,12 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
-import { getCatchById, getUserCatches, updateCatch, uploadCatchImage } from "@/lib/catches";
+import { emptyTackleInfo, getCatchById, getUserCatches, updateCatch, uploadCatchImage } from "@/lib/catches";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { formatCoordinate } from "@/lib/location";
 import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
 import { getTournament } from "@/lib/tournaments";
-import type { Catch, LocationPoint } from "@/types";
+import type { Catch, LocationPoint, TackleInfo } from "@/types";
 
 export default function CatchEditPage({ params }: { params: { catchId: string } }) {
   return <AuthGate>{(user) => <CatchEdit catchId={params.catchId} userId={user.uid} />}</AuthGate>;
@@ -22,6 +22,7 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
   const [sizeCm, setSizeCm] = useState("");
   const [caughtAt, setCaughtAt] = useState("");
   const [comment, setComment] = useState("");
+  const [tackle, setTackle] = useState<TackleInfo>(emptyTackleInfo());
   const [location, setLocation] = useState<LocationPoint | null>(null);
   const [manualLatitude, setManualLatitude] = useState("");
   const [manualLongitude, setManualLongitude] = useState("");
@@ -50,6 +51,7 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
         setSizeCm(String(result.sizeCm));
         setCaughtAt(toLocalInputValue(new Date(result.caughtAt)));
         setComment(result.comment);
+        setTackle(result.tackle ?? emptyTackleInfo());
         setAreaName(result.areaName);
         setPointName(result.pointName);
         setMeasurementPhotoUrl(result.measurementPhotoUrl ?? null);
@@ -124,6 +126,14 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
         sizeCm: nextSize,
         caughtAt: nextCaughtAt.toISOString(),
         comment,
+        tackle,
+        tackleId: item.tackleId ?? null,
+        tackleName: item.tackleName ?? "",
+        rod: tackle.rodName,
+        reel: tackle.reelName,
+        line: tackle.lineName,
+        leader: tackle.leaderName,
+        lure: [tackle.lureName, tackle.lureColor].filter(Boolean).join(" / "),
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
         publicLatitude: blurredLocation?.latitude ?? null,
@@ -187,6 +197,19 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
                 <span className="text-sm font-bold">コメント</span>
                 <textarea value={comment} onChange={(event) => setComment(event.target.value)} className="mt-2 min-h-24 w-full rounded border border-slate-300 bg-white p-3 text-base" />
               </label>
+            </section>
+
+            <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
+              <h2 className="text-sm font-black">タックル</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">釣果投稿時と同じように、ルアー・ロッド・リールなどを後から調整できます。</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <TackleField label="ルアー" field="lureName" tackle={tackle} setTackle={setTackle} placeholder="例: カゲロウ100F" />
+                <TackleField label="カラー" field="lureColor" tackle={tackle} setTackle={setTackle} placeholder="例: チャートバック" />
+                <TackleField label="ロッド" field="rodName" tackle={tackle} setTackle={setTackle} placeholder="例: 9.6ft ML" />
+                <TackleField label="リール" field="reelName" tackle={tackle} setTackle={setTackle} placeholder="例: 4000XG" />
+                <TackleField label="ライン" field="lineName" tackle={tackle} setTackle={setTackle} placeholder="例: PE1.0号" />
+                <TackleField label="リーダー" field="leaderName" tackle={tackle} setTackle={setTackle} placeholder="例: フロロ20lb" />
+              </div>
             </section>
 
             <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
@@ -328,7 +351,27 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
   );
 }
 
-function Field({ label, value, onChange, type = "text", required }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
+function TackleField({
+  label,
+  field,
+  tackle,
+  setTackle,
+  placeholder
+}: {
+  label: string;
+  field: keyof TackleInfo;
+  tackle: TackleInfo;
+  setTackle: (value: TackleInfo) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <Field label={label} value={tackle[field]} onChange={(value) => setTackle({ ...tackle, [field]: value })} placeholder={placeholder} />
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, type = "text", required, placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; placeholder?: string }) {
   const inputClass = type === "datetime-local"
     ? "mt-2 block w-full min-w-0 max-w-full appearance-none rounded border border-slate-300 bg-white p-3 text-left text-[16px] font-bold leading-tight"
     : "mt-2 block w-full rounded border border-slate-300 bg-white p-3 text-base font-bold";
@@ -336,7 +379,7 @@ function Field({ label, value, onChange, type = "text", required }: { label: str
   return (
     <label className="block">
       <span className="text-sm font-bold">{label}</span>
-      <input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} className={inputClass} />
+      <input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className={inputClass} />
     </label>
   );
 }

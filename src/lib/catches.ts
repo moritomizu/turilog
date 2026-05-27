@@ -71,6 +71,14 @@ export async function updateCatch(
       | "sizeCm"
       | "comment"
       | "caughtAt"
+      | "tackle"
+      | "tackleId"
+      | "tackleName"
+      | "rod"
+      | "reel"
+      | "line"
+      | "leader"
+      | "lure"
       | "actualAnglerUserId"
       | "groupIds"
       | "primaryGroupId"
@@ -98,7 +106,7 @@ export async function updateCatch(
   const publicRef = doc(db, "publicCatches", catchId);
   const publicSnapshot = await getDoc(publicRef);
   if (publicSnapshot.exists()) {
-    await updateDoc(publicRef, data);
+    await updateDoc(publicRef, removeUndefinedDeep(data));
   }
 }
 
@@ -131,7 +139,7 @@ export async function updateCatchPublicStatus(catchId: string, userId: string, i
     publicShareEnabledAt: isPublic ? new Date().toISOString() : null
   });
   if (isPublic) {
-    await setDoc(publicRef, sanitizeCatchForEmbed(normalizeCatchDoc(snapshot.id, snapshot.data())));
+    await setDoc(publicRef, removeUndefinedDeep(sanitizeCatchForEmbed(normalizeCatchDoc(snapshot.id, snapshot.data()))));
   } else {
     await deleteDoc(publicRef);
   }
@@ -205,6 +213,19 @@ function sanitizeCatchForEmbed(item: Catch): Omit<Catch, "id"> {
     isPublic: true,
     publicShareEnabledAt: new Date().toISOString()
   };
+}
+
+function removeUndefinedDeep<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => removeUndefinedDeep(item)).filter((item) => item !== undefined) as T;
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, item]) => item !== undefined)
+      .map(([key, item]) => [key, removeUndefinedDeep(item)]);
+    return Object.fromEntries(entries) as T;
+  }
+  return value;
 }
 
 function getSortableTime(item: Catch) {
