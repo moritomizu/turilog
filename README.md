@@ -994,6 +994,66 @@ planUpdatedAt: serverTimestamp()
 
 その後、画面側は既存の `hasFeature` 判定のまま利用できます。
 
+## AI釣果レポートβ
+
+`/ai-report` では、自分の釣果データをもとに、魚種・サイズ・釣行日時・潮位・エリア・タックル傾向を集計し、次回釣行のヒントになるAIレポートを生成できます。
+
+AIが生データから勝手に断定するのではなく、まずアプリ側で釣果数、最大サイズ、時間帯、潮位、エリア、タックルを集計し、その要約をOpenAI APIへ渡して文章化します。釣果数が少ない場合は「参考傾向」「仮説」として表示します。
+
+### OpenAI APIキー設定
+
+`.env.local` に以下を追加してください。
+
+```text
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+Vercelに公開している場合は、Vercelの Project Settings → Environment Variables にも同じ値を追加してください。`OPENAI_API_KEY` はサーバー側だけで使うため、`NEXT_PUBLIC_` は付けません。
+
+### aiReports コレクション
+
+生成したレポートは Firestore の `aiReports` コレクションに保存されます。
+
+保存項目:
+
+```text
+userId
+fishType
+period
+plannedDate
+plannedArea
+catchCount
+reportText
+summaryJson
+createdAt
+```
+
+Firestore Security Rules では、最低限以下の考え方で設定してください。
+
+```text
+aiReports は request.auth.uid == resource.data.userId のユーザーだけが読める
+aiReports の作成は request.auth.uid == request.resource.data.userId の場合だけ許可する
+```
+
+### データ不足時の扱い
+
+- 0件: 分析に必要な釣果データがまだないことを案内します。
+- 1〜4件: 参考メモとして表示します。
+- 5〜19件: 仮説段階として表示します。
+- 20件以上: 一定の傾向分析として表示します。
+
+AIレポートは釣果を保証するものではありません。天候、水温、ベイト、人的要因などで結果は変わるため、次回釣行の参考情報として使ってください。
+
+### 将来的な拡張予定
+
+- 天気予報連携
+- 風速/気圧連携
+- 水温連携
+- AI釣行計画
+- グループAIレポート
+- 大会AIレポート
+
 ## 今後の拡張候補
 
 - 釣り大会モード

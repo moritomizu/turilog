@@ -22,6 +22,7 @@ const links = [
   { href: "/ranking", label: "ランキング", body: "年間・魚種別・月別の最大サイズ" },
   { href: "/map", label: "マップ", body: "釣れた地点を地図で振り返る" },
   { href: "/analysis", label: "潮位分析", body: "上げ潮・下げ潮・何分目の傾向" },
+  { href: "/ai-report", label: "AIレポートβ", body: "釣果傾向から次回釣行のヒントを作成" },
   { href: "/plans", label: "プラン", body: "準備中の便利機能と候補プランを見る" }
 ];
 

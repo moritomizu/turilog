@@ -24,6 +24,7 @@ export type FishingFrequency =
   | "onceEveryFewMonths"
   | "fewTimesPerYear";
 export type FishingMotivation = "casual" | "improve" | "serious" | "competitive" | "business";
+export type AiReportPeriod = "all" | "last30" | "last90" | "thisYear";
 export type SubscriptionPlan = "free" | "premium" | "organizer" | "groupPro" | "tester";
 export type FeatureKey =
   | "basicCatchLog"
@@ -116,6 +117,26 @@ export type FeatureEvent = {
   pagePath: string;
   createdAt: string;
   metadata: Record<string, unknown>;
+};
+
+export type AiReportFilters = {
+  fishType: string;
+  period: AiReportPeriod;
+  plannedDate?: string;
+  plannedArea?: string;
+};
+
+export type AiReport = {
+  id: string;
+  userId: string;
+  fishType: string;
+  period: AiReportPeriod;
+  plannedDate: string | null;
+  plannedArea: string | null;
+  catchCount: number;
+  reportText: string;
+  summaryJson: Record<string, unknown>;
+  createdAt: string;
 };
 
 export type TideInfo = {
