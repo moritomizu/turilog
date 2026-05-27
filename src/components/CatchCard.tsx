@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { CatchVerificationPanel } from "@/components/CatchVerificationPanel";
 import type { Catch } from "@/types";
 
 export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: Catch; rank?: number; mapPinNumber?: number | null; onMapPinClick?: () => void }) {
@@ -70,6 +71,7 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
           />
         </div>
         {showTideHelp ? <TideHelp /> : null}
+        {item.verificationScore ? <CatchVerificationPanel item={item} compact /> : null}
         {item.officialCurrentCurveUrl ? (
           <a
             href={item.officialCurrentCurveUrl}

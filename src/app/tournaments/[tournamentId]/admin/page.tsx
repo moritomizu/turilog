@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
+import { CatchVerificationPanel } from "@/components/CatchVerificationPanel";
 import { FeatureGate } from "@/components/FeatureGate";
 import { PageHeader } from "@/components/PageHeader";
 import { getTournamentCatches, updateTournamentEntryStatus } from "@/lib/catches";
@@ -79,6 +80,7 @@ function TournamentAdmin({ tournamentId, userId }: { tournamentId: string; userI
                   {tournament ? <CheckList item={item} tournament={tournament} /> : null}
                   <p>潮位: {item.tideHeight == null ? "未取得" : `${item.tideHeight}m`}</p>
                   <p>潮: {item.tidePhaseLabel}</p>
+                  <CatchVerificationPanel item={item} compact />
                   <div className="grid grid-cols-2 gap-2 pt-2">
                     <button onClick={() => updateStatus(item.id, "approved")} className="tap-target rounded bg-water px-4 py-2 font-black text-white">承認</button>
                     <button onClick={() => updateStatus(item.id, "rejected")} className="tap-target rounded border border-coral px-4 py-2 font-black text-coral">却下</button>
