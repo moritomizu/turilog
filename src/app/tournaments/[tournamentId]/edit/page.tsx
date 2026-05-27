@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
+import { getFeatureAccess } from "@/lib/features";
 import { deleteTournament, getTournament, parseTargetFishTypes, updateTournament } from "@/lib/tournaments";
 import type { Tournament, TournamentLocationVisibility, TournamentRankingType, TournamentVisibility } from "@/types";
 
@@ -29,8 +30,16 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
   const [locationVisibilityDefault, setLocationVisibilityDefault] = useState<TournamentLocationVisibility>("exactForOrganizersOnly");
   const [maxParticipants, setMaxParticipants] = useState("");
   const [requiresParticipantInfo, setRequiresParticipantInfo] = useState(false);
+  const [canUsePaidTournament, setCanUsePaidTournament] = useState(false);
+  const [entryFeeEnabled, setEntryFeeEnabled] = useState(false);
+  const [entryFeeAmount, setEntryFeeAmount] = useState("");
+  const [paymentInstructions, setPaymentInstructions] = useState("");
   const [message, setMessage] = useState("読み込み中です。");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getFeatureAccess(userId, "paidTournament").then((access) => setCanUsePaidTournament(access.allowed)).catch(() => setCanUsePaidTournament(false));
+  }, [userId]);
 
   useEffect(() => {
     getTournament(tournamentId)
@@ -51,6 +60,9 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
         setLocationVisibilityDefault(result.locationVisibilityDefault);
         setMaxParticipants(result.maxParticipants == null ? "" : String(result.maxParticipants));
         setRequiresParticipantInfo(result.requiresParticipantInfo);
+        setEntryFeeEnabled(result.entryFeeEnabled);
+        setEntryFeeAmount(result.entryFeeAmount == null ? "" : String(result.entryFeeAmount));
+        setPaymentInstructions(result.paymentInstructions);
         setMessage("");
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "大会を読み込めませんでした。"));
@@ -72,6 +84,10 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
         visibility,
         locationVisibilityDefault,
         requiresParticipantInfo,
+        entryFeeEnabled: canUsePaidTournament && entryFeeEnabled,
+        entryFeeAmount: canUsePaidTournament && entryFeeEnabled ? Number(entryFeeAmount) : null,
+        entryFeeCurrency: "JPY",
+        paymentInstructions: canUsePaidTournament && entryFeeEnabled ? paymentInstructions : "",
         maxParticipants: maxParticipants ? Number(maxParticipants) : null
       });
       router.push(`/tournaments/${tournamentId}`);
@@ -144,6 +160,28 @@ function TournamentEditForm({ tournamentId, userId }: { tournamentId: string; us
             </select>
           </label>
           <Field label="参加上限人数" type="number" value={maxParticipants} onChange={setMaxParticipants} />
+          <section className="rounded border border-orange-100 bg-orange-50 p-3">
+            <label className="flex items-start gap-3 text-sm font-bold leading-6 text-slate-700">
+              <input
+                type="checkbox"
+                checked={entryFeeEnabled}
+                disabled={!canUsePaidTournament}
+                onChange={(event) => setEntryFeeEnabled(event.target.checked)}
+                className="mt-1 h-5 w-5 shrink-0 disabled:opacity-50"
+              />
+              <span>
+                <span className="block font-black text-coral">参加費を徴収する</span>
+                <span className="mt-1 block text-xs">参加者は支払い確認後に大会投稿できるようになります。</span>
+              </span>
+            </label>
+            {!canUsePaidTournament ? <p className="mt-2 rounded bg-white p-2 text-xs font-bold text-slate-600">現在のプランでは有料大会設定を利用できません。</p> : null}
+            {entryFeeEnabled && canUsePaidTournament ? (
+              <div className="mt-3 space-y-3">
+                <Field label="参加費（税込・円）" type="number" value={entryFeeAmount} onChange={setEntryFeeAmount} required />
+                <TextArea label="支払い方法・案内" value={paymentInstructions} onChange={setPaymentInstructions} />
+              </div>
+            ) : null}
+          </section>
           <label className="flex items-start gap-3 rounded border border-orange-100 bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700">
             <input type="checkbox" checked={requiresParticipantInfo} onChange={(event) => setRequiresParticipantInfo(event.target.checked)} className="mt-1 h-5 w-5 shrink-0" />
             <span>

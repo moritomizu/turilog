@@ -63,6 +63,12 @@ export const featureDefinitions: Record<FeatureKey, FeatureDefinition> = {
     description: "大会釣果の承認、参加者管理、運営向け確認ができます。",
     suggestedPlan: "organizer"
   },
+  paidTournament: {
+    key: "paidTournament",
+    name: "有料大会設定",
+    description: "参加費を設定し、支払い確認後に大会投稿できる大会を運営できます。",
+    suggestedPlan: "organizer"
+  },
   detailedMap: {
     key: "detailedMap",
     name: "詳細マップ",
@@ -154,7 +160,7 @@ export const planDefinitions: Record<SubscriptionPlan, PlanDefinition> = {
     key: "organizer",
     label: "Organizer",
     description: "大会を作成・運営したい主催者向けです。",
-    features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "tournamentCreate", "tournamentAdmin", "catchVerification", "detailedMap", "csvExport", "unlimitedTournaments"]
+    features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "tournamentCreate", "tournamentAdmin", "paidTournament", "catchVerification", "detailedMap", "csvExport", "unlimitedTournaments"]
   },
   groupPro: {
     key: "groupPro",

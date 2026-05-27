@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { canManageMembers, findParticipant, updateTournamentParticipantPermissions } from "@/lib/tournamentPermissions";
-import { getTournament, getTournamentParticipants } from "@/lib/tournaments";
-import type { Tournament, TournamentParticipant, TournamentRole } from "@/types";
+import { getTournament, getTournamentParticipants, updateTournamentParticipantPaymentStatus } from "@/lib/tournaments";
+import type { Tournament, TournamentParticipant, TournamentPaymentStatus, TournamentRole } from "@/types";
 
 export default function TournamentMembersPage({ params }: { params: { tournamentId: string } }) {
   return (
@@ -46,6 +46,16 @@ function TournamentMembers({ tournamentId, userId }: { tournamentId: string; use
       setMessage("権限を更新しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "権限を更新できませんでした。");
+    }
+  }
+
+  async function updatePaymentStatus(participant: TournamentParticipant, paymentStatus: TournamentPaymentStatus) {
+    try {
+      await updateTournamentParticipantPaymentStatus(participant.id, paymentStatus);
+      await load();
+      setMessage("支払い状態を更新しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "支払い状態を更新できませんでした。");
     }
   }
 
@@ -103,6 +113,7 @@ function TournamentMembers({ tournamentId, userId }: { tournamentId: string; use
                   <Toggle label="詳細釣果情報" checked={participant.canViewPrivateCatchDetails} disabled={locked} onChange={(value) => updateParticipant(participant, { canViewPrivateCatchDetails: value })} />
                   <Toggle label="承認/却下" checked={participant.canApproveEntries} disabled={locked} onChange={(value) => updateParticipant(participant, { canApproveEntries: value })} />
                 </div>
+                {tournament?.entryFeeEnabled ? <PaymentStatusControl participant={participant} disabled={locked} onChange={(status) => updatePaymentStatus(participant, status)} /> : null}
                 {tournament?.requiresParticipantInfo ? <SafetyInfoView participant={participant} /> : null}
               </article>
             );
@@ -110,6 +121,31 @@ function TournamentMembers({ tournamentId, userId }: { tournamentId: string; use
         </div>
       </main>
     </>
+  );
+}
+
+function PaymentStatusControl({ participant, disabled, onChange }: { participant: TournamentParticipant; disabled: boolean; onChange: (status: TournamentPaymentStatus) => void }) {
+  return (
+    <div className="mt-3 rounded border border-orange-100 bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-black text-coral">参加費</p>
+          <p>支払い状態: {getPaymentStatusLabel(participant.paymentStatus)}</p>
+          {participant.paymentConfirmedAt ? <p className="text-xs text-slate-500">確認日時: {formatDate(participant.paymentConfirmedAt)}</p> : null}
+        </div>
+        <select
+          disabled={disabled}
+          value={participant.paymentStatus}
+          onChange={(event) => onChange(event.target.value as TournamentPaymentStatus)}
+          className="rounded border border-orange-200 bg-white p-2 text-sm font-bold disabled:opacity-50"
+        >
+          <option value="unpaid">未確認</option>
+          <option value="paid">支払い確認済み</option>
+          <option value="waived">免除</option>
+          <option value="notRequired">不要</option>
+        </select>
+      </div>
+    </div>
   );
 }
 
@@ -138,6 +174,13 @@ function getGenderLabel(value: TournamentParticipant["safetyInfo"] extends infer
   if (value === "female") return "女性";
   if (value === "other") return "その他";
   return "回答しない";
+}
+
+function getPaymentStatusLabel(status: TournamentPaymentStatus) {
+  if (status === "paid") return "支払い確認済み";
+  if (status === "waived") return "免除";
+  if (status === "unpaid") return "未確認";
+  return "不要";
 }
 
 function Toggle({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled: boolean; onChange: (value: boolean) => void }) {

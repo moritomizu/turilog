@@ -18,7 +18,7 @@ import { getLastPostGroupId, rememberLastPostGroupId } from "@/lib/postPreferenc
 import { emptySeaTemperatureInfo, fetchSeaTemperatureInfo } from "@/lib/seaTemperature";
 import { getUserTackles, tackleToTackleInfo } from "@/lib/tackles";
 import { fetchTideInfo } from "@/lib/tide";
-import { getJoinedTournaments, getTournament, isTournamentEntryEligible } from "@/lib/tournaments";
+import { getJoinedTournaments, getTournament, getTournamentParticipants, isTournamentEntryEligible } from "@/lib/tournaments";
 import { emptyWeatherInfo, fetchWeatherInfo } from "@/lib/weather";
 import type { Catch, Group, LocationPoint, Tackle, TackleInfo, Tournament } from "@/types";
 
@@ -109,11 +109,18 @@ function PostForm({ userId }: { userId: string }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tournamentId = params.get("tournamentId") ?? "";
-    Promise.all([getJoinedTournaments(userId), tournamentId ? getTournament(tournamentId) : Promise.resolve(null)])
-      .then(([joined, linked]) => {
-        const options = linked && !joined.some((item) => item.id === linked.id) ? [linked, ...joined] : joined;
+    Promise.all([
+      getJoinedTournaments(userId),
+      tournamentId ? getTournament(tournamentId) : Promise.resolve(null),
+      tournamentId ? getTournamentParticipants(tournamentId) : Promise.resolve([])
+    ])
+      .then(([joined, linked, linkedParticipants]) => {
+        const linkedParticipant = linkedParticipants.find((item) => item.userId === userId);
+        const linkedPaymentOk = linked && (!linked.entryFeeEnabled || linkedParticipant?.paymentStatus === "paid" || linkedParticipant?.paymentStatus === "waived" || linked.ownerId === userId);
+        const options = linked && linkedPaymentOk && !joined.some((item) => item.id === linked.id) ? [linked, ...joined] : joined;
         setTournamentOptions(options);
-        if (tournamentId) setSelectedTournamentId(tournamentId);
+        if (tournamentId && linkedPaymentOk) setSelectedTournamentId(tournamentId);
+        if (tournamentId && linked && !linkedPaymentOk) setMessage("参加費の支払い確認後に大会投稿できます。通常投稿として保存できます。");
       })
       .catch(() => setTournamentOptions([]));
   }, [userId]);

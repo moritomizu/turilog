@@ -43,7 +43,8 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
   const canOpenMembers = canManageMembers(currentParticipant);
   const canOpenExactLocation = canSeeExactLocation(currentParticipant);
   const canOpenPrivateDetails = canSeePrivateCatchDetails(currentParticipant);
-  const canSubmitTournamentEntry = currentParticipant?.role !== "viewer";
+  const paymentSettled = !tournament?.entryFeeEnabled || isOwner || currentParticipant?.paymentStatus === "paid" || currentParticipant?.paymentStatus === "waived";
+  const canSubmitTournamentEntry = currentParticipant?.role !== "viewer" && paymentSettled;
   const canViewPrivateContent = tournament ? tournament.visibility === "public" || isParticipant || isOwner : false;
   const participantNames = useMemo(() => new Map(participants.map((item) => [item.userId, item.userName])), [participants]);
   const approvedCatches = useMemo(() => catches.filter((item) => isApprovedTournamentCatch(item, tournament)), [catches, tournament]);
@@ -91,7 +92,7 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
       setParticipants(await getTournamentParticipants(tournament.id));
       setCatches(await getTournamentCatches(tournament.id));
       setIconFile(null);
-      setMessage("大会に参加しました。");
+      setMessage(tournament.entryFeeEnabled ? "大会に参加しました。支払い確認後に大会投稿できるようになります。" : "大会に参加しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "参加できませんでした。");
     }
@@ -130,6 +131,7 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
                 <InfoItem label="公開設定" value={getVisibilityLabel(tournament.visibility)} />
                 <InfoItem label="位置情報" value={getTournamentLocationLabel(tournament.locationVisibilityDefault)} />
                 <InfoItem label="参加者情報" value={tournament.requiresParticipantInfo ? "参加時に入力必須" : "取得しない"} />
+                <InfoItem label="参加費" value={formatEntryFee(tournament)} />
                 <InfoItem label="主催者" value={isOwner ? "あなた" : "大会作成者"} />
               </div>
               <p className="mt-3 rounded bg-white/80 p-3 text-xs font-bold leading-5 text-slate-600">
@@ -143,9 +145,12 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
                   <h2 className="text-sm font-black text-ink">参加メニュー</h2>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     {isParticipant ? (
-                      <div className="flex items-center gap-3 rounded border border-teal-100 bg-foam p-3 text-sm font-black text-slate-700">
+                      <div className="flex items-center gap-3 rounded border border-teal-100 bg-foam p-3 text-sm font-black text-slate-700 sm:col-span-2">
                         <Avatar src={currentParticipant?.avatarUrl} name={participantNames.get(userId) ?? userName} size="md" />
-                        <span className="min-w-0 truncate">自分の参加名: {participantNames.get(userId) ?? userName}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate">自分の参加名: {participantNames.get(userId) ?? userName}</span>
+                          {tournament.entryFeeEnabled ? <span className="mt-1 block text-xs text-slate-500">支払い状態: {getPaymentStatusLabel(currentParticipant?.paymentStatus)}</span> : null}
+                        </span>
                       </div>
                     ) : (
                       <>
@@ -173,6 +178,13 @@ function TournamentDetail({ tournamentId, userId, userName, email }: { tournamen
                       <button onClick={handleLeave} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
                         大会から抜ける
                       </button>
+                    ) : null}
+                    {isParticipant && tournament.entryFeeEnabled && !paymentSettled ? (
+                      <div className="rounded border border-orange-100 bg-orange-50 p-3 text-sm font-bold leading-6 text-slate-700 sm:col-span-2">
+                        <p className="font-black text-coral">支払い確認待ち</p>
+                        <p className="mt-1">参加費 {formatEntryFee(tournament)} の支払い確認後に、大会釣果を投稿できます。</p>
+                        {tournament.paymentInstructions ? <p className="mt-2 whitespace-pre-wrap rounded bg-white p-2 text-xs">{tournament.paymentInstructions}</p> : null}
+                      </div>
                     ) : null}
                     {canViewPrivateContent && canSubmitTournamentEntry ? (
                       <Link href={`/post?tournamentId=${tournament.id}`} className="tap-target flex items-center justify-center rounded bg-water px-4 py-3 font-black text-white sm:col-span-2">
@@ -529,6 +541,18 @@ function getStatusLabel(status: string) {
 
 function getVisibilityLabel(visibility: Tournament["visibility"]) {
   return visibility === "public" ? "公開大会" : "非公開大会";
+}
+
+function formatEntryFee(tournament: Tournament) {
+  if (!tournament.entryFeeEnabled) return "無料";
+  return `${(tournament.entryFeeAmount ?? 0).toLocaleString("ja-JP")}円`;
+}
+
+function getPaymentStatusLabel(status: TournamentParticipant["paymentStatus"] | undefined) {
+  if (status === "paid") return "支払い確認済み";
+  if (status === "waived") return "免除";
+  if (status === "unpaid") return "未確認";
+  return "不要";
 }
 
 function getTournamentLocationLabel(value: Tournament["locationVisibilityDefault"]) {

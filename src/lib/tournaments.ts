@@ -8,6 +8,7 @@ import type {
   TournamentLocationVisibility,
   TournamentParticipant,
   TournamentParticipantGender,
+  TournamentPaymentStatus,
   TournamentParticipantSafetyInfo,
   TournamentRankingType,
   TournamentRole,
@@ -28,6 +29,10 @@ export type TournamentInput = {
   visibility: TournamentVisibility;
   maxParticipants: number | null;
   requiresParticipantInfo?: boolean;
+  entryFeeEnabled?: boolean;
+  entryFeeAmount?: number | null;
+  entryFeeCurrency?: "JPY";
+  paymentInstructions?: string;
   locationVisibilityDefault?: TournamentLocationVisibility;
   ownerUserName?: string;
   ownerEmail?: string | null;
@@ -58,6 +63,8 @@ export async function createTournament(input: TournamentInput) {
     avatarUrl: null,
     safetyInfo: null,
     safetyInfoSubmittedAt: null,
+    paymentStatus: "notRequired",
+    paymentConfirmedAt: null,
     ...getRoleDefaults("owner"),
     joinedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -149,10 +156,20 @@ export async function joinTournament(tournament: Tournament, userId: string, use
     avatarUrl: options.avatarUrl ?? null,
     safetyInfo: options.safetyInfo ?? null,
     safetyInfoSubmittedAt: options.safetyInfo ? new Date().toISOString() : null,
+    paymentStatus: tournament.entryFeeEnabled ? "unpaid" : "notRequired",
+    paymentConfirmedAt: null,
     ...getRoleDefaults("participant"),
     joinedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     status: "active"
+  });
+}
+
+export async function updateTournamentParticipantPaymentStatus(participantId: string, status: TournamentPaymentStatus) {
+  await updateDoc(doc(getFirebaseDb(), "tournamentParticipants", participantId), {
+    paymentStatus: status,
+    paymentConfirmedAt: status === "paid" || status === "waived" ? new Date().toISOString() : null,
+    updatedAt: serverTimestamp()
   });
 }
 
@@ -162,12 +179,16 @@ export async function leaveTournament(tournamentId: string, userId: string) {
 
 export async function getJoinedTournaments(userId: string): Promise<Tournament[]> {
   const snapshot = await getDocs(query(collection(getFirebaseDb(), "tournamentParticipants"), where("userId", "==", userId)));
-  const ids = snapshot.docs
-    .filter((item) => item.data().role !== "viewer")
-    .map((item) => item.data().tournamentId)
-    .filter((value): value is string => typeof value === "string");
-  const tournaments = await Promise.all(ids.map((id) => getTournament(id)));
-  return tournaments.filter((item): item is Tournament => Boolean(item));
+  const participants = snapshot.docs
+    .map((item) => item.data())
+    .filter((item) => item.role !== "viewer" && typeof item.tournamentId === "string");
+  const tournaments = await Promise.all(participants.map((item) => getTournament(item.tournamentId)));
+  return tournaments.filter((item, index): item is Tournament => {
+    if (!item) return false;
+    if (!item.entryFeeEnabled) return true;
+    const paymentStatus = participants[index].paymentStatus;
+    return paymentStatus === "paid" || paymentStatus === "waived";
+  });
 }
 
 export function getTournamentStatus(tournament: Tournament, now = new Date()): TournamentStatus {
@@ -217,6 +238,10 @@ function normalizeTournament(id: string, data: Record<string, unknown>): Tournam
     visibility: data.visibility === "private" ? "private" : "public",
     maxParticipants: typeof data.maxParticipants === "number" ? data.maxParticipants : null,
     requiresParticipantInfo: data.requiresParticipantInfo === true,
+    entryFeeEnabled: data.entryFeeEnabled === true,
+    entryFeeAmount: typeof data.entryFeeAmount === "number" ? data.entryFeeAmount : null,
+    entryFeeCurrency: "JPY",
+    paymentInstructions: typeof data.paymentInstructions === "string" ? data.paymentInstructions : "",
     locationVisibilityDefault:
       data.locationVisibilityDefault === "blurredForParticipants" || data.locationVisibilityDefault === "areaOnlyForParticipants" || data.locationVisibilityDefault === "hiddenForParticipants"
         ? data.locationVisibilityDefault
@@ -240,6 +265,8 @@ function normalizeParticipant(id: string, data: Record<string, unknown>): Tourna
     avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : null,
     safetyInfo: normalizeSafetyInfo(data.safetyInfo),
     safetyInfoSubmittedAt: data.safetyInfoSubmittedAt == null ? null : normalizeDate(data.safetyInfoSubmittedAt),
+    paymentStatus: normalizePaymentStatus(data.paymentStatus),
+    paymentConfirmedAt: data.paymentConfirmedAt == null ? null : normalizeDate(data.paymentConfirmedAt),
     role,
     canViewExactLocation: typeof data.canViewExactLocation === "boolean" ? data.canViewExactLocation : defaults.canViewExactLocation,
     canViewPrivateCatchDetails: typeof data.canViewPrivateCatchDetails === "boolean" ? data.canViewPrivateCatchDetails : defaults.canViewPrivateCatchDetails,
@@ -248,6 +275,11 @@ function normalizeParticipant(id: string, data: Record<string, unknown>): Tourna
     updatedAt: data.updatedAt == null ? null : normalizeDate(data.updatedAt),
     status: "active"
   };
+}
+
+function normalizePaymentStatus(value: unknown): TournamentPaymentStatus {
+  if (value === "unpaid" || value === "paid" || value === "waived") return value;
+  return "notRequired";
 }
 
 function normalizeSafetyInfo(value: unknown): TournamentParticipantSafetyInfo | null {

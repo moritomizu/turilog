@@ -10,6 +10,7 @@ export type TournamentStatus = "upcoming" | "active" | "ended";
 export type TournamentEntryStatus = "none" | "pending" | "approved" | "rejected";
 export type TournamentRole = "owner" | "admin" | "subAdmin" | "participant" | "viewer";
 export type TournamentParticipantGender = "male" | "female" | "other" | "preferNotToSay";
+export type TournamentPaymentStatus = "notRequired" | "unpaid" | "paid" | "waived";
 export type LocationVisibility = "exact" | "public" | "hidden";
 export type GroupRole = "owner" | "admin" | "moderator" | "member" | "viewer";
 export type GroupVisibility = "private" | "inviteOnly" | "public";
@@ -38,6 +39,7 @@ export type FeatureKey =
   | "groupAnalysis"
   | "tournamentCreate"
   | "tournamentAdmin"
+  | "paidTournament"
   | "detailedMap"
   | "csvExport"
   | "proxyPost"
@@ -482,6 +484,10 @@ export type Tournament = {
   visibility: TournamentVisibility;
   maxParticipants: number | null;
   requiresParticipantInfo: boolean;
+  entryFeeEnabled: boolean;
+  entryFeeAmount: number | null;
+  entryFeeCurrency: "JPY";
+  paymentInstructions: string;
   locationVisibilityDefault: TournamentLocationVisibility;
   allowedAreaCodes?: string[];
   allowedAreas?: string[];
@@ -506,6 +512,8 @@ export type TournamentParticipant = {
   avatarUrl: string | null;
   safetyInfo?: TournamentParticipantSafetyInfo | null;
   safetyInfoSubmittedAt?: string | null;
+  paymentStatus: TournamentPaymentStatus;
+  paymentConfirmedAt?: string | null;
   role: TournamentRole;
   canViewExactLocation: boolean;
   canViewPrivateCatchDetails: boolean;
