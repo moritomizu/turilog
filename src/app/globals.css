@@ -13,6 +13,12 @@ body {
   color: #17201d;
 }
 
+@media (display-mode: standalone) {
+  html {
+    font-size: 15px;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root,
   html {
