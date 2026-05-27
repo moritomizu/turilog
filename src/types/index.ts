@@ -55,6 +55,36 @@ export type FeatureEventType =
   | "attemptUseFeature"
   | "useFeature";
 export type ProofFlag =
+  | "photo_present"
+  | "exif_present"
+  | "exif_datetime_present"
+  | "gps_present"
+  | "gps_accuracy_good"
+  | "caught_at_present"
+  | "posted_at_present"
+  | "posted_at_close_to_caught_at"
+  | "tide_present"
+  | "tide_direction_present"
+  | "tide_phase_present"
+  | "fish_type_present"
+  | "size_present"
+  | "measure_photo_method"
+  | "measurement_photo_present"
+  | "not_tournament_entry"
+  | "tournament_in_period"
+  | "tournament_target_fish_match"
+  | "tournament_entry_submitted"
+  | "missing_photo"
+  | "missing_gps"
+  | "low_location_accuracy"
+  | "posted_at_far_from_caught_at"
+  | "missing_tide"
+  | "missing_fish_type"
+  | "missing_size"
+  | "manual_measurement_only"
+  | "measurement_photo_missing"
+  | "tournament_out_of_period"
+  | "tournament_target_fish_mismatch"
   | "hasPhoto"
   | "hasExactLocation"
   | "hasBlurredLocation"
@@ -77,7 +107,7 @@ export type ProofFlag =
   | "suspiciousHugeSize"
   | "manualLocationOnly"
   | "lowExternalData";
-export type VerificationLevel = "unverified" | "basic" | "standard" | "strong" | "highTrust";
+export type VerificationLevel = "high" | "medium" | "low" | "needs_review" | "unverified" | "basic" | "standard" | "strong" | "highTrust";
 
 export type CatchProofPackage = {
   catchId?: string;
@@ -85,10 +115,15 @@ export type CatchProofPackage = {
   image: {
     hasImage: boolean;
     imageUrl?: string | null;
+    hasExif?: boolean;
+    hasExifDateTime?: boolean;
   };
   size: {
+    fishType?: string;
     sizeCm: number;
     hasValidSize: boolean;
+    measurementMethod?: "manual" | "measurePhoto" | "unknown";
+    measurementPhotoUrl?: string | null;
   };
   time: {
     caughtAt?: string | null;
@@ -106,6 +141,7 @@ export type CatchProofPackage = {
     areaCode?: string;
     pointName?: string;
     blurRadiusMeters?: number | null;
+    accuracyMeters?: number | null;
   };
   environment: {
     hasTideData: boolean;
@@ -126,15 +162,28 @@ export type CatchProofPackage = {
     postedByUserId?: string;
     actualAnglerUserId?: string;
     isProxyPost: boolean;
+    tournamentStartAt?: string | null;
+    tournamentEndAt?: string | null;
+    tournamentTargetFishTypes?: string[];
   };
   flags: ProofFlag[];
   generatedAt: string;
 };
 
 export type VerificationScore = {
+  total: number;
   totalScore: number;
   level: VerificationLevel;
   flags: ProofFlag[];
+  criticalFlags: ProofFlag[];
+  messages: string[];
+  mediaScore: number;
+  gpsScore: number;
+  timeScore: number;
+  tideScore: number;
+  fishScore: number;
+  measurementScore: number;
+  tournamentScore: number;
   positiveScore: number;
   penaltyScore: number;
   breakdown: Array<{

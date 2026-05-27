@@ -1,31 +1,44 @@
 import type { Catch, CatchProofPackage, ProofFlag, VerificationLevel, VerificationScore } from "@/types";
 
+type MeasurementMethod = "manual" | "measurePhoto" | "unknown";
+
 type CatchLike = Partial<Catch> & {
   id?: string;
   userId: string;
   sizeCm?: number;
   caughtAt?: string | Date | null;
   createdAt?: string | Date | null;
+  postedAt?: string | Date | null;
+  exif?: { capturedAt?: string | Date | null } | null;
+  hasExif?: boolean;
+  exifCapturedAt?: string | Date | null;
+  accuracyMeters?: number | null;
+  measurementMethod?: MeasurementMethod;
+  measurementPhotoUrl?: string | null;
 };
 
 type ProofContext = {
   generatedAt?: string | Date;
   now?: string | Date;
   locationSource?: "gps" | "map" | "manual" | "unknown";
+  tournamentStartAt?: string | Date | null;
+  tournamentEndAt?: string | Date | null;
+  tournamentTargetFishTypes?: string[];
 };
 
 type RankingEligibilityOptions = {
-  minimumLevel?: VerificationLevel;
   minimumScore?: number;
+  minimumLevel?: VerificationLevel;
   allowMissingLocation?: boolean;
   allowPendingTournamentEntry?: boolean;
 };
 
-const levelOrder: VerificationLevel[] = ["unverified", "basic", "standard", "strong", "highTrust"];
+const criticalFlags: ProofFlag[] = ["missing_photo", "missing_gps", "tournament_out_of_period", "tournament_target_fish_mismatch"];
 
 export function buildCatchProofPackage(catchData: CatchLike, context: ProofContext = {}): CatchProofPackage {
   const caughtAt = toIsoString(catchData.caughtAt);
-  const createdAt = toIsoString(catchData.createdAt);
+  const createdAt = toIsoString(catchData.postedAt ?? catchData.createdAt);
+  const exifCapturedAt = toIsoString(catchData.exifCapturedAt ?? catchData.exif?.capturedAt);
   const flags = buildFlags(catchData, caughtAt, createdAt, context);
 
   return {
@@ -33,11 +46,16 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
     userId: catchData.userId,
     image: {
       hasImage: Boolean(catchData.imageUrl),
-      imageUrl: catchData.imageUrl ?? null
+      imageUrl: catchData.imageUrl ?? null,
+      hasExif: catchData.hasExif === true || Boolean(catchData.exif),
+      hasExifDateTime: Boolean(exifCapturedAt)
     },
     size: {
+      fishType: catchData.fishType ?? "",
       sizeCm: Number(catchData.sizeCm ?? 0),
-      hasValidSize: Number(catchData.sizeCm ?? 0) > 0
+      hasValidSize: Number(catchData.sizeCm ?? 0) > 0,
+      measurementMethod: catchData.measurementMethod ?? "manual",
+      measurementPhotoUrl: catchData.measurementPhotoUrl ?? null
     },
     time: {
       caughtAt,
@@ -45,7 +63,7 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
       minutesFromCaughtToCreated: getMinutesBetween(caughtAt, createdAt)
     },
     location: {
-      hasExactLocation: isNumber(catchData.latitude) && isNumber(catchData.longitude),
+      hasExactLocation: hasGps(catchData),
       hasBlurredLocation: isNumber(catchData.publicLatitude) && isNumber(catchData.publicLongitude),
       latitude: catchData.latitude ?? null,
       longitude: catchData.longitude ?? null,
@@ -54,10 +72,11 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
       areaName: catchData.areaName ?? "",
       areaCode: catchData.areaCode ?? "",
       pointName: catchData.pointName ?? "",
-      blurRadiusMeters: catchData.blurRadiusMeters ?? null
+      blurRadiusMeters: catchData.blurRadiusMeters ?? null,
+      accuracyMeters: catchData.accuracyMeters ?? null
     },
     environment: {
-      hasTideData: catchData.tideApiProvider === "stormglass" || catchData.tideApiProvider === "worldtides",
+      hasTideData: hasTideData(catchData),
       hasWeatherData: Boolean(catchData.weather?.weatherSourceName),
       hasSeaTemperatureData: catchData.seaTemperature?.seaTemperatureC != null,
       hasLunarData: catchData.lunar?.moonAge != null,
@@ -74,7 +93,10 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
       primaryGroupId: catchData.primaryGroupId ?? null,
       postedByUserId: catchData.postedByUserId,
       actualAnglerUserId: catchData.actualAnglerUserId,
-      isProxyPost: catchData.isProxyPost === true
+      isProxyPost: catchData.isProxyPost === true,
+      tournamentStartAt: toIsoString(context.tournamentStartAt) ?? null,
+      tournamentEndAt: toIsoString(context.tournamentEndAt) ?? null,
+      tournamentTargetFishTypes: context.tournamentTargetFishTypes ?? []
     },
     flags,
     generatedAt: toIsoString(context.generatedAt) ?? new Date().toISOString()
@@ -82,83 +104,129 @@ export function buildCatchProofPackage(catchData: CatchLike, context: ProofConte
 }
 
 export function calculateVerificationScore(proofPackage: CatchProofPackage): VerificationScore {
-  const breakdown = [
-    scoreItem("image", "釣果写真あり", proofPackage.image.hasImage ? 18 : 0),
-    scoreItem("size", "サイズ入力あり", proofPackage.size.hasValidSize ? 10 : 0),
-    scoreItem("caughtAt", "釣った日時あり", proofPackage.time.caughtAt ? 12 : 0),
-    scoreItem("createdAt", "投稿日時あり", proofPackage.time.createdAt ? 6 : 0),
-    scoreItem("exactLocation", "正確位置あり", proofPackage.location.hasExactLocation ? 18 : 0),
-    scoreItem("area", "エリア情報あり", proofPackage.location.areaName ? 6 : 0),
-    scoreItem("tide", "潮位データあり", proofPackage.environment.hasTideData ? 8 : 0),
-    scoreItem("weather", "気象データあり", proofPackage.environment.hasWeatherData ? 5 : 0),
-    scoreItem("seaTemperature", "水温データあり", proofPackage.environment.hasSeaTemperatureData ? 4 : 0),
-    scoreItem("lunar", "月齢データあり", proofPackage.environment.hasLunarData ? 3 : 0),
-    scoreItem("context", "大会/グループ文脈あり", proofPackage.context.isTournamentEntry || proofPackage.context.groupIds.length > 0 ? 5 : 0),
-    scoreItem("pointName", "ポイント名あり", proofPackage.location.pointName ? 3 : 0)
-  ];
-  const positiveScore = clampScore(breakdown.reduce((sum, item) => sum + Math.max(0, item.score), 0));
-  const penaltyScore = getPenaltyScore(proofPackage.flags);
-  const totalScore = clampScore(positiveScore - penaltyScore);
-  const level = getVerificationLevel(totalScore, proofPackage.flags);
+  const flags = new Set<ProofFlag>(proofPackage.flags);
+  const messages: string[] = [];
 
-  return {
-    totalScore,
+  const mediaScore = scoreMedia(proofPackage, flags, messages);
+  const gpsScore = scoreGps(proofPackage, flags, messages);
+  const timeScore = scoreTime(proofPackage, flags, messages);
+  const tideScore = scoreTide(proofPackage, flags, messages);
+  const fishScore = scoreFish(proofPackage, flags, messages);
+  const measurementScore = scoreMeasurement(proofPackage, flags, messages);
+  const tournamentScore = scoreTournament(proofPackage, flags, messages);
+
+  const total = clampScore(mediaScore + gpsScore + timeScore + tideScore + fishScore + measurementScore + tournamentScore);
+  const normalizedFlags = [...flags];
+  const majorFlags = normalizedFlags.filter((flag) => criticalFlags.includes(flag));
+  const level = getVerificationLevel(total, normalizedFlags);
+  const breakdown = [
+    scoreItem("mediaScore", "メディア証明", mediaScore),
+    scoreItem("gpsScore", "GPS証明", gpsScore),
+    scoreItem("timeScore", "時刻証明", timeScore),
+    scoreItem("tideScore", "潮位証明", tideScore),
+    scoreItem("fishScore", "魚種・サイズ", fishScore),
+    scoreItem("measurementScore", "計測証明", measurementScore),
+    scoreItem("tournamentScore", "大会条件", tournamentScore)
+  ];
+
+  const result: VerificationScore = {
+    total,
+    totalScore: total,
     level,
-    flags: proofPackage.flags,
-    positiveScore,
-    penaltyScore,
+    flags: normalizedFlags,
+    criticalFlags: majorFlags,
+    messages,
+    mediaScore,
+    gpsScore,
+    timeScore,
+    tideScore,
+    fishScore,
+    measurementScore,
+    tournamentScore,
+    positiveScore: total,
+    penaltyScore: 0,
     breakdown,
     calculatedAt: new Date().toISOString()
   };
+
+  debugVerification("verificationScore", { breakdown, flags: normalizedFlags, level });
+  return result;
 }
 
 export function getVerificationLevel(totalScore: number, flags: ProofFlag[]): VerificationLevel {
-  if (flags.includes("missingPhoto") || flags.includes("missingSize")) return totalScore >= 45 ? "basic" : "unverified";
-  if (flags.includes("suspiciousFutureCaughtAt") || flags.includes("suspiciousCreatedBeforeCaught")) return totalScore >= 60 ? "standard" : "basic";
-  if (totalScore >= 85) return "highTrust";
-  if (totalScore >= 70) return "strong";
-  if (totalScore >= 50) return "standard";
-  if (totalScore >= 30) return "basic";
-  return "unverified";
+  if (hasCriticalFlag(flags) || totalScore <= 39) return "needs_review";
+  if (totalScore >= 80) return "high";
+  if (totalScore >= 60) return "medium";
+  return "low";
 }
 
-export function checkRankingEligibility(
-  catchData: CatchLike,
-  verificationScore: VerificationScore,
-  options: RankingEligibilityOptions = {}
-) {
-  const minimumLevel = options.minimumLevel ?? "standard";
-  const minimumScore = options.minimumScore ?? 50;
+export function checkRankingEligibility(catchData: CatchLike, verificationScore: VerificationScore, options: RankingEligibilityOptions = {}) {
+  const minimumScore = options.minimumScore ?? 60;
   const checkedAt = new Date();
+  const flags = verificationScore.flags ?? [];
+  const total = verificationScore.total ?? verificationScore.totalScore;
+  let result: { eligible: boolean; reason?: string; checkedAt: Date };
 
-  if (Number(catchData.sizeCm ?? 0) <= 0) return { eligible: false, reason: "サイズが未入力です。", checkedAt };
-  if (!catchData.imageUrl) return { eligible: false, reason: "釣果写真がありません。", checkedAt };
-  if (!options.allowMissingLocation && (!isNumber(catchData.latitude) || !isNumber(catchData.longitude))) {
-    return { eligible: false, reason: "正確な位置情報がありません。", checkedAt };
+  if (total < minimumScore) {
+    result = { eligible: false, reason: "信頼度スコア不足", checkedAt };
+  } else if (flags.includes("missing_photo")) {
+    result = { eligible: false, reason: "釣果写真不足", checkedAt };
+  } else if (flags.includes("missing_gps")) {
+    result = { eligible: false, reason: "GPS情報不足", checkedAt };
+  } else if (flags.includes("tournament_out_of_period")) {
+    result = { eligible: false, reason: "大会期間外", checkedAt };
+  } else if (flags.includes("tournament_target_fish_mismatch")) {
+    result = { eligible: false, reason: "対象魚種不一致", checkedAt };
+  } else if (hasCriticalFlag(flags)) {
+    result = { eligible: false, reason: "重大な確認項目があります", checkedAt };
+  } else {
+    result = { eligible: true, checkedAt };
   }
-  if (catchData.isTournamentEntry && !options.allowPendingTournamentEntry && catchData.tournamentEntryStatus !== "approved") {
-    return { eligible: false, reason: "大会釣果が承認済みではありません。", checkedAt };
-  }
-  if (verificationScore.totalScore < minimumScore) {
-    return { eligible: false, reason: `信頼度スコアが不足しています（${verificationScore.totalScore}点）。`, checkedAt };
-  }
-  if (levelOrder.indexOf(verificationScore.level) < levelOrder.indexOf(minimumLevel)) {
-    return { eligible: false, reason: `信頼度レベルが不足しています（${getVerificationScoreLabel(verificationScore)}）。`, checkedAt };
-  }
-  return { eligible: true, checkedAt };
+
+  debugVerification("rankingEligibility", { catchId: catchData.id, flags, finalLevel: verificationScore.level, result });
+  return result;
 }
 
 export function getVerificationScoreLabel(score: VerificationScore | VerificationLevel | number) {
   const level = typeof score === "number" ? getVerificationLevel(score, []) : typeof score === "string" ? score : score.level;
-  if (level === "highTrust") return "高信頼";
-  if (level === "strong") return "強い証明";
-  if (level === "standard") return "標準";
-  if (level === "basic") return "簡易";
-  return "未証明";
+  if (level === "high" || level === "highTrust") return "高信頼";
+  if (level === "medium" || level === "strong" || level === "standard") return "標準";
+  if (level === "low" || level === "basic") return "低め";
+  return "要確認";
 }
 
 export function getVerificationFlagLabel(flag: ProofFlag) {
   const labels: Record<ProofFlag, string> = {
+    photo_present: "釣果写真あり",
+    exif_present: "EXIFあり",
+    exif_datetime_present: "EXIF撮影日時あり",
+    gps_present: "GPS情報あり",
+    gps_accuracy_good: "GPS精度100m以内",
+    caught_at_present: "釣った日時あり",
+    posted_at_present: "投稿日時あり",
+    posted_at_close_to_caught_at: "投稿時刻と釣果時刻が近い",
+    tide_present: "潮位情報あり",
+    tide_direction_present: "潮向きあり",
+    tide_phase_present: "潮の何分目あり",
+    fish_type_present: "魚種あり",
+    size_present: "サイズあり",
+    measure_photo_method: "メジャー画像計測",
+    measurement_photo_present: "サイズ確認用写真あり",
+    not_tournament_entry: "通常釣果",
+    tournament_in_period: "大会期間内",
+    tournament_target_fish_match: "大会対象魚種と一致",
+    tournament_entry_submitted: "大会エントリー済み",
+    missing_photo: "釣果写真なし",
+    missing_gps: "GPS情報なし",
+    low_location_accuracy: "GPS精度が低い",
+    posted_at_far_from_caught_at: "投稿時刻と釣果時刻の差が大きい",
+    missing_tide: "潮位情報なし",
+    missing_fish_type: "魚種なし",
+    missing_size: "サイズなし",
+    manual_measurement_only: "手入力サイズのみ",
+    measurement_photo_missing: "サイズ確認用写真なし",
+    tournament_out_of_period: "大会期間外",
+    tournament_target_fish_mismatch: "大会対象魚種と不一致",
     hasPhoto: "釣果写真あり",
     hasExactLocation: "正確位置あり",
     hasBlurredLocation: "ぼかし位置あり",
@@ -185,61 +253,248 @@ export function getVerificationFlagLabel(flag: ProofFlag) {
   return labels[flag];
 }
 
+function scoreMedia(proof: CatchProofPackage, flags: Set<ProofFlag>, messages: string[]) {
+  let score = 0;
+  if (proof.image.hasImage) {
+    score += 10;
+    flags.add("photo_present");
+    messages.push("釣果写真を確認済み");
+  } else {
+    flags.add("missing_photo");
+    messages.push("釣果写真なし");
+  }
+  if (proof.image.hasExif) {
+    score += 3;
+    flags.add("exif_present");
+    messages.push("EXIF情報あり");
+  }
+  if (proof.image.hasExifDateTime) {
+    score += 2;
+    flags.add("exif_datetime_present");
+    messages.push("EXIF撮影日時あり");
+  }
+  return Math.min(15, score);
+}
+
+function scoreGps(proof: CatchProofPackage, flags: Set<ProofFlag>, messages: string[]) {
+  let score = 0;
+  if (proof.location.hasExactLocation) {
+    score += 15;
+    flags.add("gps_present");
+    messages.push("GPS情報を確認済み");
+  } else {
+    flags.add("missing_gps");
+    messages.push("GPS情報不足");
+  }
+  if (isNumber(proof.location.accuracyMeters)) {
+    if (proof.location.accuracyMeters <= 100) {
+      score += 5;
+      flags.add("gps_accuracy_good");
+      messages.push("GPS精度100m以内");
+    }
+    if (proof.location.accuracyMeters >= 500) {
+      flags.add("low_location_accuracy");
+      messages.push("GPS精度が低い可能性");
+    }
+  }
+  return Math.min(20, score);
+}
+
+function scoreTime(proof: CatchProofPackage, flags: Set<ProofFlag>, messages: string[]) {
+  let score = 0;
+  if (proof.time.caughtAt) {
+    score += 8;
+    flags.add("caught_at_present");
+    messages.push("釣果時刻を確認済み");
+  }
+  if (proof.time.createdAt) {
+    score += 4;
+    flags.add("posted_at_present");
+    messages.push("投稿時刻を確認済み");
+  }
+  const minutes = proof.time.minutesFromCaughtToCreated;
+  if (minutes != null && Math.abs(minutes) <= 12 * 60) {
+    score += 3;
+    flags.add("posted_at_close_to_caught_at");
+    messages.push("投稿時刻と釣果時刻の差が12時間以内");
+  }
+  if (minutes != null && Math.abs(minutes) >= 24 * 60) {
+    flags.add("posted_at_far_from_caught_at");
+    messages.push("投稿時刻と釣果時刻の差が大きい");
+  }
+  return Math.min(15, score);
+}
+
+function scoreTide(proof: CatchProofPackage, flags: Set<ProofFlag>, messages: string[]) {
+  let score = 0;
+  if (proof.environment.hasTideData) {
+    score += 8;
+    flags.add("tide_present");
+    messages.push("潮位データを取得済み");
+  } else {
+    flags.add("missing_tide");
+    messages.push("潮位情報なし");
+  }
+  if (proof.environment.hasTideData && proof.environment.tidePhaseLabel && !proof.environment.tidePhaseLabel.includes("未取得")) {
+    score += 4;
+    flags.add("tide_direction_present");
+    messages.push("潮向きを確認済み");
+    score += 3;
+    flags.add("tide_phase_present");
+    messages.push("潮の何分目を確認済み");
+  }
+  return Math.min(15, score);
+}
+
+function scoreFish(proof: CatchProofPackage, flags: Set<ProofFlag>, messages: string[]) {
+  let score = 0;
+  if (proof.size.fishType) {
+    score += 5;
+    flags.add("fish_type_present");
+    messages.push("魚種入力あり");
+  } else {
+    flags.add("missing_fish_type");
+    messages.push("魚種未入力");
+  }
+  if (proof.size.hasValidSize) {
+    score += 5;
+    flags.add("size_present");
+    messages.push("サイズ入力あり");
+  } else {
+    flags.add("missing_size");
+    messages.push("サイズ未入力");
+  }
+  return Math.min(10, score);
+}
+
+function scoreMeasurement(proof: CatchProofPackage, flags: Set<ProofFlag>, messages: string[]) {
+  let score = 0;
+  if (proof.size.hasValidSize) score += 4;
+  if (proof.size.measurementMethod === "measurePhoto") {
+    score += 4;
+    flags.add("measure_photo_method");
+    messages.push("メジャー画像による計測");
+  } else {
+    flags.add("manual_measurement_only");
+    messages.push("手入力サイズのみ");
+  }
+  if (proof.size.measurementPhotoUrl) {
+    score += 2;
+    flags.add("measurement_photo_present");
+    messages.push("サイズ確認用写真あり");
+  } else if (proof.context.isTournamentEntry) {
+    flags.add("measurement_photo_missing");
+    messages.push("大会投稿ですがサイズ確認用写真なし");
+  }
+  return Math.min(10, score);
+}
+
+function scoreTournament(proof: CatchProofPackage, flags: Set<ProofFlag>, messages: string[]) {
+  if (!proof.context.isTournamentEntry) {
+    flags.add("not_tournament_entry");
+    messages.push("通常釣果のため大会条件チェック対象外");
+    return 15;
+  }
+
+  let score = 0;
+  if (isTournamentInPeriod(proof)) {
+    score += 6;
+    flags.add("tournament_in_period");
+    messages.push("大会期間内");
+  } else {
+    flags.add("tournament_out_of_period");
+    messages.push("大会期間外");
+  }
+  if (isTournamentTargetFishMatch(proof)) {
+    score += 5;
+    flags.add("tournament_target_fish_match");
+    messages.push("大会対象魚種と一致");
+  } else {
+    flags.add("tournament_target_fish_mismatch");
+    messages.push("大会対象魚種と不一致");
+  }
+  if (proof.context.tournamentEntryStatus === "pending" || proof.context.tournamentEntryStatus === "approved") {
+    score += 4;
+    flags.add("tournament_entry_submitted");
+    messages.push("大会エントリー状態を確認済み");
+  }
+  return Math.min(15, score);
+}
+
 function buildFlags(catchData: CatchLike, caughtAt: string | null, createdAt: string | null, context: ProofContext) {
   const flags = new Set<ProofFlag>();
-  const hasExactLocation = isNumber(catchData.latitude) && isNumber(catchData.longitude);
-  const hasBlurredLocation = isNumber(catchData.publicLatitude) && isNumber(catchData.publicLongitude);
-  const externalCount = [
-    catchData.tideApiProvider === "stormglass" || catchData.tideApiProvider === "worldtides",
-    Boolean(catchData.weather?.weatherSourceName),
-    catchData.seaTemperature?.seaTemperatureC != null,
-    catchData.lunar?.moonAge != null
-  ].filter(Boolean).length;
-
-  addFlag(flags, Boolean(catchData.imageUrl), "hasPhoto", "missingPhoto");
-  addFlag(flags, hasExactLocation, "hasExactLocation", "missingLocation");
-  if (hasBlurredLocation) flags.add("hasBlurredLocation");
-  addFlag(flags, Boolean(caughtAt), "hasCaughtAt", "missingCaughtAt");
-  if (createdAt) flags.add("hasCreatedAt");
-  if (Number(catchData.sizeCm ?? 0) <= 0) flags.add("missingSize");
-  if (Number(catchData.sizeCm ?? 0) >= 300) flags.add("suspiciousHugeSize");
-  if (catchData.tideApiProvider === "stormglass" || catchData.tideApiProvider === "worldtides") flags.add("hasTideData");
-  if (catchData.weather?.weatherSourceName) flags.add("hasWeatherData");
-  if (catchData.seaTemperature?.seaTemperatureC != null) flags.add("hasSeaTemperatureData");
-  if (catchData.lunar?.moonAge != null) flags.add("hasLunarData");
-  if (catchData.tackleName || catchData.rod || catchData.reel || catchData.lure || catchData.tackleId) flags.add("hasTackleData");
-  if (catchData.isTournamentEntry) flags.add("hasTournamentEntry");
-  if ((catchData.groupIds ?? []).length > 0) flags.add("hasGroupContext");
-  if (catchData.pointName) flags.add("hasPointName");
+  if (!catchData.imageUrl) flags.add("missing_photo");
+  if (!hasGps(catchData)) flags.add("missing_gps");
+  if (isNumber(catchData.accuracyMeters) && catchData.accuracyMeters >= 500) flags.add("low_location_accuracy");
+  if (!caughtAt) flags.add("missingCaughtAt");
+  if (!catchData.fishType) flags.add("missing_fish_type");
+  if (Number(catchData.sizeCm ?? 0) <= 0) flags.add("missing_size");
+  if (!hasTideData(catchData)) flags.add("missing_tide");
+  if (catchData.measurementMethod !== "measurePhoto") flags.add("manual_measurement_only");
+  if (catchData.isTournamentEntry && !catchData.measurementPhotoUrl) flags.add("measurement_photo_missing");
+  const minutes = getMinutesBetween(caughtAt, createdAt);
+  if (minutes != null && Math.abs(minutes) >= 24 * 60) flags.add("posted_at_far_from_caught_at");
+  if (catchData.isTournamentEntry) {
+    const proofContext = {
+      caughtAt,
+      startAt: toIsoString(context.tournamentStartAt),
+      endAt: toIsoString(context.tournamentEndAt),
+      fishType: catchData.fishType,
+      targetFishTypes: context.tournamentTargetFishTypes ?? []
+    };
+    if (!isTournamentInPeriodContext(proofContext)) flags.add("tournament_out_of_period");
+    if (!isTournamentTargetFishMatchContext(proofContext)) flags.add("tournament_target_fish_mismatch");
+  }
   if (context.locationSource === "manual") flags.add("manualLocationOnly");
-  if (externalCount <= 1) flags.add("lowExternalData");
-  if (caughtAt && new Date(caughtAt).getTime() > getNowMs(context) + 10 * 60 * 1000) flags.add("suspiciousFutureCaughtAt");
-  if (caughtAt && createdAt && new Date(createdAt).getTime() + 60 * 1000 < new Date(caughtAt).getTime()) flags.add("suspiciousCreatedBeforeCaught");
-
   return [...flags];
 }
 
-function getPenaltyScore(flags: ProofFlag[]) {
-  const penalties: Partial<Record<ProofFlag, number>> = {
-    missingPhoto: 25,
-    missingLocation: 18,
-    missingCaughtAt: 15,
-    missingSize: 30,
-    suspiciousFutureCaughtAt: 35,
-    suspiciousCreatedBeforeCaught: 25,
-    suspiciousHugeSize: 20,
-    manualLocationOnly: 5,
-    lowExternalData: 5
-  };
-  return flags.reduce((sum, flag) => sum + (penalties[flag] ?? 0), 0);
+function isTournamentInPeriod(proof: CatchProofPackage) {
+  return isTournamentInPeriodContext({
+    caughtAt: proof.time.caughtAt ?? null,
+    startAt: proof.context.tournamentStartAt ?? null,
+    endAt: proof.context.tournamentEndAt ?? null,
+    fishType: "",
+    targetFishTypes: []
+  });
+}
+
+function isTournamentInPeriodContext(context: { caughtAt: string | null; startAt: string | null; endAt: string | null; fishType: string | undefined; targetFishTypes: string[] }) {
+  if (!context.caughtAt || !context.startAt || !context.endAt) return false;
+  const caught = new Date(context.caughtAt).getTime();
+  return caught >= new Date(context.startAt).getTime() && caught <= new Date(context.endAt).getTime();
+}
+
+function isTournamentTargetFishMatch(proof: CatchProofPackage) {
+  return isTournamentTargetFishMatchContext({
+    caughtAt: proof.time.caughtAt ?? null,
+    startAt: proof.context.tournamentStartAt ?? null,
+    endAt: proof.context.tournamentEndAt ?? null,
+    fishType: proof.size.fishType,
+    targetFishTypes: proof.context.tournamentTargetFishTypes ?? []
+  });
+}
+
+function isTournamentTargetFishMatchContext(context: { caughtAt: string | null; startAt: string | null; endAt: string | null; fishType: string | undefined; targetFishTypes: string[] }) {
+  if (!context.targetFishTypes.length) return true;
+  if (!context.fishType) return false;
+  return context.targetFishTypes.includes(context.fishType);
+}
+
+function hasCriticalFlag(flags: ProofFlag[]) {
+  return flags.some((flag) => criticalFlags.includes(flag));
 }
 
 function scoreItem(key: string, label: string, score: number) {
   return { key, label, score };
 }
 
-function addFlag(flags: Set<ProofFlag>, condition: boolean, positive: ProofFlag, negative: ProofFlag) {
-  flags.add(condition ? positive : negative);
+function hasGps(catchData: Pick<CatchLike, "latitude" | "longitude">) {
+  return isNumber(catchData.latitude) && isNumber(catchData.longitude);
+}
+
+function hasTideData(catchData: Pick<CatchLike, "tideApiProvider" | "tideHeight">) {
+  return catchData.tideApiProvider === "stormglass" || catchData.tideApiProvider === "worldtides" || isNumber(catchData.tideHeight);
 }
 
 function getMinutesBetween(start: string | null, end: string | null) {
@@ -259,11 +514,10 @@ function isNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function getNowMs(context: ProofContext) {
-  const value = toIsoString(context.now);
-  return value ? new Date(value).getTime() : Date.now();
-}
-
 function clampScore(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function debugVerification(label: string, value: unknown) {
+  if (process.env.NODE_ENV !== "production") console.debug(`[catchVerification] ${label}`, value);
 }

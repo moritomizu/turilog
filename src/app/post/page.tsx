@@ -275,7 +275,15 @@ function PostForm({ userId }: { userId: string }) {
         ...emptyTideInfo
       };
       const proofGeneratedAt = new Date().toISOString();
-      const catchProof = buildCatchProofPackage({ ...baseCatchData, createdAt: proofGeneratedAt }, { generatedAt: proofGeneratedAt });
+      const catchProof = buildCatchProofPackage(
+        { ...baseCatchData, createdAt: proofGeneratedAt },
+        {
+          generatedAt: proofGeneratedAt,
+          tournamentStartAt: selectedTournament?.startAt ?? null,
+          tournamentEndAt: selectedTournament?.endAt ?? null,
+          tournamentTargetFishTypes: selectedTournament?.targetFishTypes ?? []
+        }
+      );
       const verificationScore = calculateVerificationScore(catchProof);
       const rankingEligibility = checkRankingEligibility(baseCatchData, verificationScore, { allowPendingTournamentEntry: true });
       const catchId = await createCatch({
