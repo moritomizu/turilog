@@ -19,6 +19,7 @@ const interestFeatureByPlan: Partial<Record<SubscriptionPlan, FeatureKey>> = {
 export function PlansClient() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [message, setMessage] = useState("");
+  const [selectedFeature, setSelectedFeature] = useState<FeatureKey | null>(null);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -67,8 +68,16 @@ export function PlansClient() {
                 <p className="mt-2 min-h-16 text-sm font-bold leading-6 text-slate-700">{definition.description}</p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm font-bold text-slate-700">
                   {definition.features.map((featureKey) => (
-                    <li key={featureKey} className="rounded bg-foam px-3 py-2">
-                      {featureDefinitions[featureKey]?.name ?? featureKey}
+                    <li key={featureKey} className="flex items-center justify-between gap-2 rounded bg-foam px-3 py-2">
+                      <span>{featureDefinitions[featureKey]?.name ?? featureKey}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFeature(featureKey)}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-black text-slate-600"
+                        aria-label={`${featureDefinitions[featureKey]?.name ?? featureKey}の説明を見る`}
+                      >
+                        ?
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -85,7 +94,38 @@ export function PlansClient() {
             );
           })}
         </div>
+        {selectedFeature ? <FeatureDescriptionDialog featureKey={selectedFeature} onClose={() => setSelectedFeature(null)} /> : null}
       </main>
     </>
+  );
+}
+
+function FeatureDescriptionDialog({ featureKey, onClose }: { featureKey: FeatureKey; onClose: () => void }) {
+  const feature = featureDefinitions[featureKey];
+  if (!feature) return null;
+  const plan = planDefinitions[feature.suggestedPlan];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 py-5 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="feature-dialog-title">
+      <section className="w-full max-w-md rounded border border-teal-100 bg-white p-5 shadow-soft">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black text-water">機能説明</p>
+            <h2 id="feature-dialog-title" className="mt-1 text-xl font-black text-ink">{feature.name}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="tap-target rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-600" aria-label="閉じる">
+            ×
+          </button>
+        </div>
+        <p className="mt-4 text-sm font-bold leading-6 text-slate-700">{feature.description}</p>
+        <div className="mt-4 rounded bg-foam p-3 text-sm font-bold leading-6 text-slate-700">
+          <p className="text-xs font-black text-slate-500">想定プラン</p>
+          <p className="mt-1">{plan?.label ?? feature.suggestedPlan}</p>
+        </div>
+        <button type="button" onClick={onClose} className="tap-target mt-4 w-full rounded bg-water px-4 py-3 font-black text-white">
+          閉じる
+        </button>
+      </section>
+    </div>
   );
 }
