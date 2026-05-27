@@ -33,6 +33,27 @@ type MeasurePoint = {
   y: number;
 };
 
+type PostDraft = {
+  fishType: string;
+  sizeCm: string;
+  caughtAt: string;
+  comment: string;
+  tackle: TackleInfo;
+  selectedTackleId: string;
+  location: LocationPoint | null;
+  manualLatitude: string;
+  manualLongitude: string;
+  selectedAreaId: string;
+  areaName: string;
+  pointName: string;
+  selectedTournamentId: string;
+  selectedGroupId: string;
+  showDetails: boolean;
+  showMeasurementPhoto: boolean;
+  savedAt: string;
+  unsent: boolean;
+};
+
 export default function PostPage() {
   return (
     <AuthGate>
@@ -76,6 +97,8 @@ function PostForm({ userId }: { userId: string }) {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [showMeasurementPhoto, setShowMeasurementPhoto] = useState(false);
   const [message, setMessage] = useState("");
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftNotice, setDraftNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [submitStage, setSubmitStage] = useState("");
   const [successSummary, setSuccessSummary] = useState("");
@@ -85,6 +108,94 @@ function PostForm({ userId }: { userId: string }) {
     [selectedTournamentId, tournamentOptions]
   );
   const canQuickPost = fishType.trim().length > 0 && Number(sizeCm) > 0;
+
+  useEffect(() => {
+    let mounted = true;
+    async function restoreDraft() {
+      const draft = readPostDraft(userId);
+      if (draft) {
+        setFishType(draft.fishType);
+        setSizeCm(draft.sizeCm);
+        setCaughtAt(draft.caughtAt || toLocalInputValue(new Date()));
+        setComment(draft.comment);
+        setTackle(draft.tackle ?? emptyTackleInfo());
+        setSelectedTackleId(draft.selectedTackleId);
+        setLocation(draft.location);
+        setManualLatitude(draft.manualLatitude);
+        setManualLongitude(draft.manualLongitude);
+        setSelectedAreaId(draft.selectedAreaId);
+        setAreaName(draft.areaName);
+        setPointName(draft.pointName);
+        setSelectedTournamentId(draft.selectedTournamentId);
+        setSelectedGroupId(draft.selectedGroupId);
+        setShowDetails(draft.showDetails);
+        setShowMeasurementPhoto(draft.showMeasurementPhoto);
+        setDraftNotice(draft.unsent ? "未送信の釣果を復元しました。通信が安定したらもう一度投稿できます。" : "前回の入力途中の内容を復元しました。");
+      }
+      const [draftFile, draftMeasurementFile] = await Promise.all([readDraftFile(userId, "catchPhoto"), readDraftFile(userId, "measurementPhoto")]);
+      if (!mounted) return;
+      if (draftFile) setFile(draftFile);
+      if (draftMeasurementFile) setMeasurementFile(draftMeasurementFile);
+      setDraftReady(true);
+    }
+
+    restoreDraft().catch(() => setDraftReady(true));
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    const timer = window.setTimeout(() => {
+      const draft = buildPostDraft({
+        fishType,
+        sizeCm,
+        caughtAt,
+        comment,
+        tackle,
+        selectedTackleId,
+        location,
+        manualLatitude,
+        manualLongitude,
+        selectedAreaId,
+        areaName,
+        pointName,
+        selectedTournamentId,
+        selectedGroupId,
+        showDetails,
+        showMeasurementPhoto,
+        unsent: readPostDraft(userId)?.unsent ?? false
+      });
+      if (hasDraftContent(draft) || file || measurementFile) {
+        savePostDraft(userId, draft);
+      } else {
+        clearPostDraft(userId);
+      }
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [
+    userId,
+    draftReady,
+    fishType,
+    sizeCm,
+    caughtAt,
+    comment,
+    tackle,
+    selectedTackleId,
+    location,
+    manualLatitude,
+    manualLongitude,
+    selectedAreaId,
+    areaName,
+    pointName,
+    selectedTournamentId,
+    selectedGroupId,
+    showDetails,
+    showMeasurementPhoto,
+    file,
+    measurementFile
+  ]);
 
   useEffect(() => {
     getUserCatches(userId)
@@ -157,6 +268,18 @@ function PostForm({ userId }: { userId: string }) {
       setTackle(tackleToTackleInfo(selected));
       setMessage(`${selected.name} をタックルに反映しました。`);
     }
+  }
+
+  async function handleCatchPhotoChange(nextFile: File | null) {
+    setFile(nextFile);
+    setDraftNotice("");
+    await saveDraftFile(userId, "catchPhoto", nextFile).catch(() => undefined);
+  }
+
+  async function handleMeasurementPhotoChange(nextFile: File | null) {
+    setMeasurementFile(nextFile);
+    setDraftNotice("");
+    await saveDraftFile(userId, "measurementPhoto", nextFile).catch(() => undefined);
   }
 
   async function handleLocation() {
@@ -327,8 +450,34 @@ function PostForm({ userId }: { userId: string }) {
       setCaughtAt(toLocalInputValue(new Date()));
       setSuccessSummary(`${savedFishType} ${savedSizeCm}cm を投稿しました。`);
       setMessage(`${buildPostMessage(selectedTournament, tournamentCheck, selectedGroup)} 潮位・天候・水温は裏側で追記中です。`);
+      clearPostDraft(userId);
+      await Promise.all([saveDraftFile(userId, "catchPhoto", null), saveDraftFile(userId, "measurementPhoto", null)]).catch(() => undefined);
+      setDraftNotice("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "投稿に失敗しました。");
+      savePostDraft(
+        userId,
+        buildPostDraft({
+          fishType,
+          sizeCm,
+          caughtAt,
+          comment,
+          tackle,
+          selectedTackleId,
+          location,
+          manualLatitude,
+          manualLongitude,
+          selectedAreaId,
+          areaName,
+          pointName,
+          selectedTournamentId,
+          selectedGroupId,
+          showDetails,
+          showMeasurementPhoto,
+          unsent: true
+        })
+      );
+      setDraftNotice("未送信の釣果として端末に保持しました。通信が安定したら、この画面から再度投稿してください。");
+      setMessage(error instanceof Error ? `${error.message} 入力内容は端末に保持しています。` : "投稿に失敗しました。入力内容は端末に保持しています。");
     } finally {
       setSubmitStage("");
       setBusy(false);
@@ -340,9 +489,32 @@ function PostForm({ userId }: { userId: string }) {
       <PageHeader title="釣果投稿" actionHref="/catches" actionLabel="一覧" />
       <main className="mx-auto max-w-xl px-4 pb-28 pt-5">
         <form onSubmit={handleSubmit} className="space-y-5">
+          {draftNotice ? (
+            <section className="rounded border border-orange-200 bg-orange-50 p-4 text-sm font-bold leading-6 text-slate-700 shadow-soft">
+              <p className="text-xs font-black text-coral">OFFLINE SAVE</p>
+              <p className="mt-1">{draftNotice}</p>
+              <button
+                type="button"
+                onClick={async () => {
+                  clearPostDraft(userId);
+                  await Promise.all([saveDraftFile(userId, "catchPhoto", null), saveDraftFile(userId, "measurementPhoto", null)]).catch(() => undefined);
+                  setFishType("");
+                  setSizeCm("");
+                  setComment("");
+                  setFile(null);
+                  setMeasurementFile(null);
+                  setDraftNotice("");
+                  setMessage("下書きを破棄しました。");
+                }}
+                className="mt-3 rounded border border-orange-200 bg-white px-3 py-2 text-xs font-black text-coral"
+              >
+                この下書きを破棄
+              </button>
+            </section>
+          ) : null}
           <label className="block rounded border border-teal-100 bg-white p-4 shadow-soft">
             <span className="text-sm font-black">写真</span>
-            <input className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <input className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(e) => handleCatchPhotoChange(e.target.files?.[0] ?? null)} />
             <p className="mt-2 text-xs font-bold text-slate-500">カメラ撮影または写真ライブラリから選択できます。</p>
           </label>
           {preview ? <SizeEstimator imageUrl={preview} onApply={(value) => setSizeCm(value)} /> : null}
@@ -519,7 +691,7 @@ function PostForm({ userId }: { userId: string }) {
                   open={showMeasurementPhoto}
                   recommended={Boolean(selectedTournamentForUi)}
                   onToggle={() => setShowMeasurementPhoto((value) => !value)}
-                  onChange={setMeasurementFile}
+                  onChange={handleMeasurementPhotoChange}
                 />
 
                 <section className="rounded bg-foam p-3">
@@ -1089,6 +1261,116 @@ function SubmitProgress({ label }: { label: string }) {
       </div>
     </div>
   );
+}
+
+function buildPostDraft(value: Omit<PostDraft, "savedAt">): PostDraft {
+  return { ...value, savedAt: new Date().toISOString() };
+}
+
+function hasDraftContent(draft: PostDraft) {
+  return Boolean(
+    draft.fishType.trim() ||
+      draft.sizeCm.trim() ||
+      draft.comment.trim() ||
+      draft.pointName.trim() ||
+      Object.values(draft.tackle).some((value) => String(value ?? "").trim())
+  );
+}
+
+function postDraftKey(userId: string) {
+  return `tsurilog:postDraft:${userId}`;
+}
+
+function readPostDraft(userId: string): PostDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(postDraftKey(userId));
+    if (!raw) return null;
+    const data = JSON.parse(raw) as Partial<PostDraft>;
+    return {
+      fishType: data.fishType ?? "",
+      sizeCm: data.sizeCm ?? "",
+      caughtAt: data.caughtAt ?? toLocalInputValue(new Date()),
+      comment: data.comment ?? "",
+      tackle: data.tackle ?? emptyTackleInfo(),
+      selectedTackleId: data.selectedTackleId ?? "",
+      location: data.location ?? null,
+      manualLatitude: data.manualLatitude ?? "",
+      manualLongitude: data.manualLongitude ?? "",
+      selectedAreaId: data.selectedAreaId ?? "",
+      areaName: data.areaName ?? "",
+      pointName: data.pointName ?? "",
+      selectedTournamentId: data.selectedTournamentId ?? "",
+      selectedGroupId: data.selectedGroupId ?? "",
+      showDetails: Boolean(data.showDetails),
+      showMeasurementPhoto: Boolean(data.showMeasurementPhoto),
+      savedAt: data.savedAt ?? new Date().toISOString(),
+      unsent: Boolean(data.unsent)
+    };
+  } catch {
+    return null;
+  }
+}
+
+function savePostDraft(userId: string, draft: PostDraft) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(postDraftKey(userId), JSON.stringify(draft));
+}
+
+function markDraftAsUnsent(userId: string) {
+  const draft = readPostDraft(userId);
+  if (!draft) return;
+  savePostDraft(userId, { ...draft, unsent: true, savedAt: new Date().toISOString() });
+}
+
+function clearPostDraft(userId: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(postDraftKey(userId));
+}
+
+type DraftFileKind = "catchPhoto" | "measurementPhoto";
+
+function draftFileKey(userId: string, kind: DraftFileKind) {
+  return `${userId}:${kind}`;
+}
+
+function openDraftDb(): Promise<IDBDatabase | null> {
+  if (typeof window === "undefined" || !("indexedDB" in window)) return Promise.resolve(null);
+  return new Promise((resolve, reject) => {
+    const request = window.indexedDB.open("tsurilog-offline-drafts", 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("files")) db.createObjectStore("files");
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveDraftFile(userId: string, kind: DraftFileKind, file: File | null) {
+  const db = await openDraftDb();
+  if (!db) return;
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction("files", "readwrite");
+    const store = transaction.objectStore("files");
+    const request = file ? store.put(file, draftFileKey(userId, kind)) : store.delete(draftFileKey(userId, kind));
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+}
+
+async function readDraftFile(userId: string, kind: DraftFileKind): Promise<File | null> {
+  const db = await openDraftDb();
+  if (!db) return null;
+  const file = await new Promise<File | null>((resolve, reject) => {
+    const transaction = db.transaction("files", "readonly");
+    const request = transaction.objectStore("files").get(draftFileKey(userId, kind));
+    request.onsuccess = () => resolve(request.result instanceof File ? request.result : null);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return file;
 }
 
 function estimateSizeCm(points: MeasurePoint[], knownCm: number) {
