@@ -3,10 +3,12 @@
 import Image from "next/image";
 import { useState } from "react";
 import { CatchVerificationPanel } from "@/components/CatchVerificationPanel";
-import type { Catch } from "@/types";
+import { getVerificationFlagLabel, getVerificationScoreLabel } from "@/lib/catchVerification";
+import type { Catch, ProofFlag } from "@/types";
 
 export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: Catch; rank?: number; mapPinNumber?: number | null; onMapPinClick?: () => void }) {
   const [showTideHelp, setShowTideHelp] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
 
   return (
     <article className="overflow-hidden rounded border border-teal-100 bg-white shadow-soft">
@@ -71,7 +73,6 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
           />
         </div>
         {showTideHelp ? <TideHelp /> : null}
-        {item.verificationScore ? <CatchVerificationPanel item={item} compact /> : null}
         {item.officialCurrentCurveUrl ? (
           <a
             href={item.officialCurrentCurveUrl}
@@ -87,8 +88,52 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick }: { item: C
             潮流参照地点: {item.officialCurrentStationName}
           </p>
         ) : null}
+        {item.verificationScore ? (
+          <VerificationSummary item={item} open={showVerification} onToggle={() => setShowVerification((value) => !value)} />
+        ) : null}
       </div>
     </article>
+  );
+}
+
+function VerificationSummary({ item, open, onToggle }: { item: Catch; open: boolean; onToggle: () => void }) {
+  const score = item.verificationScore;
+  if (!score) return null;
+  const total = score.total ?? score.totalScore ?? 0;
+  const concernFlags = getConcernFlags(score.flags ?? []);
+  const levelClass = getVerificationTone(score.level);
+  const topConcerns = concernFlags.slice(0, 2).map(getVerificationFlagLabel);
+
+  return (
+    <section className="border-t border-slate-100 pt-3">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="tap-target flex w-full items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2 text-left"
+        aria-expanded={open}
+      >
+        <div>
+          <p className="text-[11px] font-black text-slate-500">釣果デジタル証明β</p>
+          <p className="mt-0.5 text-xs font-bold text-slate-600">
+            {concernFlags.length ? `確認事項 ${concernFlags.length}件` : "大きな確認事項なし"}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className={`rounded-full px-2.5 py-1 text-xs font-black ${levelClass}`}>{getVerificationScoreLabel(score)}</span>
+          <span className="text-sm font-black text-slate-600">{total}</span>
+        </div>
+      </button>
+      {!open && topConcerns.length ? (
+        <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
+          {topConcerns.join(" / ")}
+        </p>
+      ) : null}
+      {open ? (
+        <div className="mt-3">
+          <CatchVerificationPanel item={item} compact />
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -150,6 +195,26 @@ function getTideCycleByLunarDay(lunarDay: number) {
   if ([10, 25].includes(day)) return "長潮";
   if ([11, 26].includes(day)) return "若潮";
   return "中潮";
+}
+
+function getConcernFlags(flags: ProofFlag[]) {
+  return flags.filter((flag) =>
+    flag.startsWith("missing_") ||
+    flag.startsWith("low_") ||
+    flag.includes("mismatch") ||
+    flag.includes("suspected") ||
+    flag.includes("out_of_period") ||
+    flag.includes("manual") ||
+    flag.includes("far_from") ||
+    flag.includes("missing")
+  );
+}
+
+function getVerificationTone(level: string) {
+  if (level === "high" || level === "highTrust") return "bg-emerald-100 text-emerald-700";
+  if (level === "medium" || level === "strong" || level === "standard") return "bg-sky-100 text-sky-700";
+  if (level === "low" || level === "basic") return "bg-yellow-100 text-yellow-700";
+  return "bg-red-100 text-red-700";
 }
 
 function Info({ label, value, action }: { label: string; value: string; action?: React.ReactNode }) {
