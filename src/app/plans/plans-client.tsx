@@ -4,10 +4,11 @@ import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { logFeatureInterest, logFeatureNotInterested } from "@/lib/featureEvents";
+import { logFeatureInterest } from "@/lib/featureEvents";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 import { featureDefinitions, planDefinitions } from "@/lib/plans";
-import type { FeatureKey, SubscriptionPlan } from "@/types";
+import { getUserProfile } from "@/lib/userProfiles";
+import type { FeatureKey, SubscriptionPlan, UserProfile } from "@/types";
 
 const visiblePlans: SubscriptionPlan[] = ["free", "premium", "organizer", "groupPro"];
 const interestFeatureByPlan: Partial<Record<SubscriptionPlan, FeatureKey>> = {
@@ -24,33 +25,68 @@ const planPrices: Partial<Record<SubscriptionPlan, string>> = {
 
 export function PlansClient() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [message, setMessage] = useState("");
   const [selectedFeature, setSelectedFeature] = useState<FeatureKey | null>(null);
   const [revealedPlans, setRevealedPlans] = useState<SubscriptionPlan[]>(["free"]);
+  const [loadingPlan, setLoadingPlan] = useState<"checkout" | "portal" | null>(null);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
-    return onAuthStateChanged(getFirebaseAuth(), setUser);
+    return onAuthStateChanged(getFirebaseAuth(), async (authUser) => {
+      setUser(authUser);
+      setProfile(authUser ? await getUserProfile(authUser.uid) : null);
+    });
   }, []);
 
-  async function handlePlanReaction(plan: SubscriptionPlan, interested: boolean) {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") === "success") setMessage("Premium登録を受け付けました。反映まで少し時間がかかる場合があります。");
+    if (params.get("checkout") === "cancelled") setMessage("Premium登録はキャンセルされました。");
+  }, []);
+
+  async function handlePremiumCheckout() {
     if (!user) {
-      setMessage("反応を送るにはログインしてください。");
+      setMessage("Premium登録にはログインしてください。");
       return;
     }
-    const featureKey = interestFeatureByPlan[plan];
-    if (!featureKey) return;
-    setMessage("反応を保存しています。");
+    setLoadingPlan("checkout");
+    setMessage("Stripe Checkoutを準備しています。");
     try {
-      const metadata = { plan, priceLabel: planPrices[plan] ?? "", interested };
-      if (interested) {
-        await logFeatureInterest(user.uid, featureKey, metadata);
-      } else {
-        await logFeatureNotInterested(user.uid, featureKey, metadata);
-      }
-      setMessage(interested ? "ありがとうございます。興味ありとして保存しました。" : "ありがとうございます。今はなしとして保存しました。");
-    } catch {
-      setMessage("保存できませんでした。時間をおいてもう一度お試しください。");
+      await logFeatureInterest(user.uid, "plan_premium", { plan: "premium", priceLabel: planPrices.premium, action: "startCheckout" });
+      const token = await user.getIdToken();
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (!response.ok || typeof data.url !== "string") throw new Error(typeof data.error === "string" ? data.error : "Checkoutを開始できませんでした。");
+      window.location.href = data.url;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Checkoutを開始できませんでした。時間をおいてもう一度お試しください。");
+      setLoadingPlan(null);
+    }
+  }
+
+  async function handleCustomerPortal() {
+    if (!user) {
+      setMessage("契約管理にはログインしてください。");
+      return;
+    }
+    setLoadingPlan("portal");
+    setMessage("契約管理ページを準備しています。");
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/stripe/create-portal-session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (!response.ok || typeof data.url !== "string") throw new Error(typeof data.error === "string" ? data.error : "契約管理ページを開けませんでした。");
+      window.location.href = data.url;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "契約管理ページを開けませんでした。");
+      setLoadingPlan(null);
     }
   }
 
@@ -78,7 +114,7 @@ export function PlansClient() {
           <p className="text-xs font-black text-water">COMING SOON</p>
           <h1 className="mt-1 text-2xl font-black">便利な機能を、必要な人に。準備中です。</h1>
           <p className="mt-2 text-sm font-bold leading-6 text-slate-700">
-            まだ決済は実装していません。興味があるプランを教えていただくことで、今後の機能優先度や価格設計の参考にします。
+            Premiumプランだけ先行して月額登録を試せるようになりました。Organizer / Group Pro は引き続きニーズ調査中です。
           </p>
           {message ? <p className="mt-3 rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
           {!user ? (
@@ -130,12 +166,30 @@ export function PlansClient() {
                     月額の目安を見てみる
                   </button>
                 ) : (
-                  <div className="mt-4 rounded border border-coral/30 bg-orange-50 p-3">
-                    <p className="text-xs font-black text-coral">仮料金</p>
-                    <p className="mt-1 text-2xl font-black text-ink">{planPrices[plan] ?? "未定"}</p>
-                    <p className="mt-2 text-sm font-bold leading-6 text-slate-700">{getPlanCuriosityCopy(plan)}</p>
-                    <p className="mt-2 text-xs font-bold text-slate-500">ニーズ調査用の仮設定です。決済は行われません。</p>
-                  </div>
+                  <>
+                    <div className="mt-4 rounded border border-coral/30 bg-orange-50 p-3">
+                      <p className="text-xs font-black text-coral">{plan === "premium" ? "月額料金" : "仮料金"}</p>
+                      <p className="mt-1 text-2xl font-black text-ink">{planPrices[plan] ?? "未定"}</p>
+                      <p className="mt-2 text-sm font-bold leading-6 text-slate-700">{getPlanCuriosityCopy(plan)}</p>
+                      <p className="mt-2 text-xs font-bold text-slate-500">
+                        {plan === "premium" ? "Stripe Checkoutで安全に登録できます。解約やカード変更は契約管理から行えます。" : "ニーズ調査用の仮設定です。決済は行われません。"}
+                      </p>
+                    </div>
+                    {plan === "premium" ? (
+                      profile?.subscriptionPlan === "premium" ? (
+                        <div className="mt-3 space-y-2">
+                          <p className="rounded bg-teal-50 p-3 text-sm font-black text-water">Premium利用中です。</p>
+                          <button type="button" onClick={handleCustomerPortal} disabled={loadingPlan !== null} className="tap-target w-full rounded border border-water bg-white px-4 py-3 font-black text-water disabled:opacity-60">
+                            {loadingPlan === "portal" ? "準備中..." : "契約・カードを管理する"}
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={handlePremiumCheckout} disabled={loadingPlan !== null} className="tap-target mt-3 w-full rounded bg-water px-4 py-3 font-black text-white disabled:opacity-60">
+                          {loadingPlan === "checkout" ? "Checkout準備中..." : "Premiumに登録する"}
+                        </button>
+                      )
+                    ) : null}
+                  </>
                 )}
               </article>
             );

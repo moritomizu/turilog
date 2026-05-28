@@ -901,10 +901,14 @@ tester
 const allowed = await hasFeature(userId, "detailedMap");
 ```
 
-Firestore の `users` には、将来的なプラン変更や個別開放に備えて以下を保存できます。
+Firestore の `users` には、プラン変更や個別開放に備えて以下を保存できます。
 
 ```text
 subscriptionPlan
+subscriptionStatus
+stripeCustomerId
+stripeSubscriptionId
+currentPeriodEnd
 enabledFeatures
 disabledFeatures
 trialEndsAt
@@ -973,7 +977,9 @@ useFeature
 /plans
 ```
 
-「興味あり」を押すと、以下の `featureKey` で `featureEvents` に保存されます。
+Premium は Stripe Checkout で月額登録できます。Organizer / Group Pro は料金目安の表示を `featureEvents` に保存し、ニーズ調査として扱います。
+
+料金目安を表示すると、以下の `featureKey` で `featureEvents` に保存されます。
 
 ```text
 plan_premium
@@ -981,18 +987,86 @@ plan_organizer
 plan_groupPro
 ```
 
-## Stripe連携の想定
+## Stripe Premium課金MVP
 
-将来的にStripe決済を導入する場合は、決済完了後に `users.subscriptionPlan` と `planUpdatedAt` を更新します。
+Premiumプランのみ、Stripe Checkoutによる月額サブスクリプション登録に対応しています。
 
-例:
+Premium:
 
 ```text
-subscriptionPlan: "premium"
-planUpdatedAt: serverTimestamp()
+月額980円
 ```
 
-その後、画面側は既存の `hasFeature` 判定のまま利用できます。
+Premiumで有効になる主な機能:
+
+```text
+aiReport
+advancedAnalysis
+tackleAnalysis
+detailedMap
+catchVerificationDetails
+```
+
+Stripe連携で使う主なファイル:
+
+```text
+src/app/api/stripe/create-checkout-session/route.ts
+src/app/api/stripe/create-portal-session/route.ts
+src/app/api/stripe/webhook/route.ts
+src/lib/server/firebaseRest.ts
+```
+
+### Stripe設定手順
+
+1. Stripe Dashboardで商品を作成します。
+2. 月額980円の継続課金価格を作成します。
+3. 作成された Price ID を控えます。
+4. Developers > API keys から Secret key を控えます。
+5. Developers > Webhooks でエンドポイントを追加します。
+
+Webhook URL:
+
+```text
+https://your-domain.vercel.app/api/stripe/webhook
+```
+
+受け取るイベント:
+
+```text
+checkout.session.completed
+customer.subscription.updated
+customer.subscription.deleted
+```
+
+6. Webhook signing secret を控えます。
+7. `.env.local` と Vercel の環境変数に以下を設定します。
+
+```text
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PREMIUM_PRICE_ID=price_...
+```
+
+WebhookではFirestoreの `users` に以下を保存します。
+
+```text
+subscriptionPlan
+subscriptionStatus
+stripeCustomerId
+stripeSubscriptionId
+currentPeriodEnd
+planUpdatedAt
+```
+
+`subscriptionPlan: "premium"` になると、既存の `hasFeature` 判定でPremium機能が有効になります。解約イベントを受け取ると `subscriptionPlan: "free"` に戻します。
+
+### 解約・カード変更
+
+`/plans` の「契約・カードを管理する」から Stripe Customer Portal を開きます。
+
+Customer Portalを使うには、Stripe Dashboard の Billing > Customer portal でポータル設定を有効化してください。
+
+ローカルでStripe Webhookを確認する場合は、Stripe CLIの利用が便利です。Webhook secretはローカル用と本番用で別になるため、環境ごとに設定してください。
 
 ## AI釣果レポートβ
 

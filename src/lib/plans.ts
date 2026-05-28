@@ -105,6 +105,12 @@ export const featureDefinitions: Record<FeatureKey, FeatureDefinition> = {
     description: "写真、位置情報、時刻、潮位、大会条件などをもとに釣果の信頼性を参考スコアとして確認できます。",
     suggestedPlan: "organizer"
   },
+  catchVerificationDetails: {
+    key: "catchVerificationDetails",
+    name: "釣果証明の詳細表示",
+    description: "証明スコアの内訳、確認事項、サイズ確認写真などを詳しく確認できます。",
+    suggestedPlan: "premium"
+  },
   privateGroup: {
     key: "privateGroup",
     name: "非公開グループ",
@@ -154,7 +160,7 @@ export const planDefinitions: Record<SubscriptionPlan, PlanDefinition> = {
     key: "premium",
     label: "Premium",
     description: "個人の振り返りと分析を深めたいユーザー向けです。グループ詳細マップの拡大表示も利用できます。",
-    features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "advancedAnalysis", "tackleAnalysis", "detailedMap", "aiReport"]
+    features: ["basicCatchLog", "basicRanking", "joinTournament", "joinGroup", "advancedAnalysis", "tackleAnalysis", "detailedMap", "aiReport", "catchVerificationDetails"]
   },
   organizer: {
     key: "organizer",

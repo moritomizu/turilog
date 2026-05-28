@@ -30,6 +30,7 @@ export type AiReportPeriod = "all" | "last7" | "last30" | "last90" | "last180" |
 export type AiReportPlannedTimeBand = "allDay" | "morning" | "daytime" | "evening" | "night" | "custom";
 export type AiReportSourceScope = "personal" | "group";
 export type SubscriptionPlan = "free" | "premium" | "organizer" | "groupPro" | "tester";
+export type SubscriptionStatus = "none" | "active" | "trialing" | "past_due" | "canceled" | "incomplete" | "incomplete_expired" | "unpaid" | "paused";
 export type NotificationCategory =
   | "tournamentStart"
   | "tournamentEndingSoon"
@@ -55,6 +56,7 @@ export type FeatureKey =
   | "tackleAnalysis"
   | "aiReport"
   | "catchVerification"
+  | "catchVerificationDetails"
   | "privateGroup"
   | "unlimitedGroups"
   | "unlimitedTournaments"
@@ -257,6 +259,10 @@ export type User = {
   onboardingCompletedAt?: Date;
   onboardingSkippedAt?: Date;
   subscriptionPlan?: SubscriptionPlan;
+  subscriptionStatus?: SubscriptionStatus | string;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  currentPeriodEnd?: string | null;
   enabledFeatures?: FeatureKey[];
   disabledFeatures?: FeatureKey[];
   trialEndsAt?: Date;
@@ -280,6 +286,10 @@ export type UserProfile = {
   onboardingCompletedAt?: string | null;
   onboardingSkippedAt?: string | null;
   subscriptionPlan?: SubscriptionPlan;
+  subscriptionStatus?: SubscriptionStatus | string;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  currentPeriodEnd?: string | null;
   enabledFeatures?: FeatureKey[];
   disabledFeatures?: FeatureKey[];
   trialEndsAt?: string | null;
