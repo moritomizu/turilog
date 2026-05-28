@@ -94,18 +94,17 @@ export function PlansClient() {
             return (
               <article key={plan} className="flex flex-col rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <h2 className="text-xl font-black">{definition.label}</h2>
-                {priceRevealed ? (
+                {priceRevealed && plan === "free" ? (
                   <div className="mt-3 rounded bg-foam p-3">
-                    <p className="text-xs font-black text-slate-500">仮料金</p>
+                    <p className="text-xs font-black text-slate-500">料金</p>
                     <p className="mt-1 text-2xl font-black text-ink">{planPrices[plan] ?? "未定"}</p>
-                    {plan !== "free" ? <p className="mt-1 text-xs font-bold text-slate-500">ニーズ調査用の仮設定です。決済は行われません。</p> : null}
                   </div>
-                ) : (
+                ) : !priceRevealed && plan !== "free" ? (
                   <div className="mt-3 rounded border border-dashed border-teal-200 bg-foam p-3">
                     <p className="text-xs font-black text-water">PRICE CHECK</p>
-                    <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{getPlanCuriosityCopy(plan)}</p>
+                    <p className="mt-1 text-sm font-bold leading-6 text-slate-700">料金が気になる方は、月額の目安を確認できます。</p>
                   </div>
-                )}
+                ) : null}
                 <p className="mt-2 min-h-16 text-sm font-bold leading-6 text-slate-700">{definition.description}</p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm font-bold text-slate-700">
                   {definition.features.map((featureKey) => (
@@ -131,16 +130,13 @@ export function PlansClient() {
                     月額の目安を見てみる
                   </button>
                 ) : (
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => handlePlanReaction(plan, true)} className="tap-target rounded bg-coral px-4 py-3 font-black text-white">
-                      この内容なら気になる
-                    </button>
-                    <button type="button" onClick={() => handlePlanReaction(plan, false)} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
-                      今は見送り
-                    </button>
+                  <div className="mt-4 rounded border border-coral/30 bg-orange-50 p-3">
+                    <p className="text-xs font-black text-coral">仮料金</p>
+                    <p className="mt-1 text-2xl font-black text-ink">{planPrices[plan] ?? "未定"}</p>
+                    <p className="mt-2 text-sm font-bold leading-6 text-slate-700">{getPlanCuriosityCopy(plan)}</p>
+                    <p className="mt-2 text-xs font-bold text-slate-500">ニーズ調査用の仮設定です。決済は行われません。</p>
                   </div>
                 )}
-                {plan !== "free" && priceRevealed ? <p className="mt-2 text-center text-xs font-bold text-slate-500">今はニーズ調査中です</p> : null}
               </article>
             );
           })}
@@ -152,9 +148,9 @@ export function PlansClient() {
 }
 
 function getPlanCuriosityCopy(plan: SubscriptionPlan) {
-  if (plan === "premium") return "自分の釣果分析をもう一段深くしたい方向け。月額の目安を確認できます。";
-  if (plan === "organizer") return "大会をきちんと運営したい方向け。承認や管理機能込みの目安を確認できます。";
-  if (plan === "groupPro") return "仲間やチーム単位で釣果を伸ばしたい方向け。グループ活用の目安を確認できます。";
+  if (plan === "premium") return "毎月のランチ一食分で自らの釣りが分析できる。釣れる";
+  if (plan === "organizer") return "ルアー1個分。マップ分析/AI分析を仲間と共に";
+  if (plan === "groupPro") return "船釣り１回分よりも安く、プロレベルの釣果/ポイント分析を手にする";
   return "基本機能は無料で利用できます。";
 }
 
