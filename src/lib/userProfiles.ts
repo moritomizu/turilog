@@ -16,7 +16,7 @@ export async function saveUserProfileData(userId: string, data: Partial<UserProf
   await setDoc(
     doc(getFirebaseDb(), "users", userId),
     {
-      ...data,
+      ...removeUndefinedFields(data),
       updatedAt: serverTimestamp()
     },
     { merge: true }
@@ -107,4 +107,8 @@ function normalizeDateString(value: unknown) {
     if (typeof timestamp.toDate === "function") return timestamp.toDate().toISOString();
   }
   return null;
+}
+
+function removeUndefinedFields<T extends Record<string, unknown>>(data: T) {
+  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) as Partial<T>;
 }
