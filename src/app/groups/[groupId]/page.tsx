@@ -130,7 +130,10 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
           <>
             <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
               <p className="text-xs font-black text-water">GROUP</p>
-              <h1 className="mt-1 text-2xl font-black">{group.name}</h1>
+              <div className="mt-1 flex items-center gap-3">
+                <GroupIcon group={group} />
+                <h1 className="min-w-0 text-2xl font-black">{group.name}</h1>
+              </div>
               <p className="mt-2 text-sm font-bold leading-6 text-slate-600">{group.description || "説明なし"}</p>
               <div className="mt-3 grid gap-2 text-sm font-bold text-slate-700 sm:grid-cols-2">
                 <p>メンバー数: {members.length}人</p>
@@ -227,6 +230,14 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
         ) : null}
       </main>
     </>
+  );
+}
+
+function GroupIcon({ group }: { group: Group }) {
+  return (
+    <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-water text-base font-black text-white">
+      {group.iconUrl ? <img src={group.iconUrl} alt="" className="h-full w-full object-cover" /> : group.name.slice(0, 1)}
+    </span>
   );
 }
 

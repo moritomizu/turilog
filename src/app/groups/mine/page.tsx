@@ -51,7 +51,10 @@ function GroupList({ userId }: { userId: string }) {
           {items.map((group) => (
             <Link key={group.id} href={`/groups/${group.id}`} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
               <div className="flex items-start justify-between gap-2">
-                <h2 className="min-w-0 truncate text-lg font-black text-ink">{group.name}</h2>
+                <div className="flex min-w-0 items-center gap-2">
+                  <GroupIcon group={group} />
+                  <h2 className="min-w-0 truncate text-lg font-black text-ink">{group.name}</h2>
+                </div>
                 {group.ownerId === userId ? <span className="shrink-0 rounded-full bg-ink px-2 py-1 text-xs font-black text-white">主催者</span> : null}
               </div>
               <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{group.description || "説明なし"}</p>
@@ -65,6 +68,14 @@ function GroupList({ userId }: { userId: string }) {
         </div>
       </main>
     </>
+  );
+}
+
+function GroupIcon({ group }: { group: Group }) {
+  return (
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-water text-sm font-black text-white">
+      {group.iconUrl ? <img src={group.iconUrl} alt="" className="h-full w-full object-cover" /> : group.name.slice(0, 1)}
+    </span>
   );
 }
 

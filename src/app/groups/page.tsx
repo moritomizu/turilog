@@ -157,14 +157,17 @@ function GroupSection({
             return (
               <article key={group.id} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-lg font-black text-ink">{group.name}</h3>
-                    {joined && (group.newCatchCount > 0 || group.newCommentCount > 0) ? (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {group.newCatchCount > 0 ? <span className="inline-flex rounded-full bg-coral px-2 py-0.5 text-xs font-black text-white">{group.newCatchCount}件の新着</span> : null}
-                        {group.newCommentCount > 0 ? <span className="inline-flex rounded-full bg-white px-2 py-0.5 text-xs font-black text-coral ring-1 ring-coral/30">コメント{group.newCommentCount}件</span> : null}
-                      </div>
-                    ) : null}
+                  <div className="flex min-w-0 items-start gap-2">
+                    <GroupIcon group={group} />
+                    <div className="min-w-0">
+                      <h3 className="truncate text-lg font-black text-ink">{group.name}</h3>
+                      {joined && (group.newCatchCount > 0 || group.newCommentCount > 0) ? (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {group.newCatchCount > 0 ? <span className="inline-flex rounded-full bg-coral px-2 py-0.5 text-xs font-black text-white">{group.newCatchCount}件の新着</span> : null}
+                          {group.newCommentCount > 0 ? <span className="inline-flex rounded-full bg-white px-2 py-0.5 text-xs font-black text-coral ring-1 ring-coral/30">コメント{group.newCommentCount}件</span> : null}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {user?.uid === group.ownerId ? <span className="rounded-full bg-ink px-2 py-1 text-xs font-black text-white">主催者</span> : null}
@@ -240,6 +243,14 @@ function GroupSection({
           })}
       </div>
     </section>
+  );
+}
+
+function GroupIcon({ group }: { group: Group }) {
+  return (
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-water text-sm font-black text-white">
+      {group.iconUrl ? <img src={group.iconUrl} alt="" className="h-full w-full object-cover" /> : group.name.slice(0, 1)}
+    </span>
   );
 }
 

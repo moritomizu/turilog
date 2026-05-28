@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
-import { createGroup } from "@/lib/groups";
+import { createGroup, uploadGroupIcon } from "@/lib/groups";
 import { getPreferredParticipantName, rememberParticipantName } from "@/lib/participantName";
 import type { GroupLocationVisibility, GroupVisibility } from "@/types";
 
@@ -17,6 +17,7 @@ function GroupForm({ userId, userName, email }: { userId: string; userName: stri
   const [name, setName] = useState("");
   const [ownerName, setOwnerName] = useState(userName);
   const [description, setDescription] = useState("");
+  const [iconFile, setIconFile] = useState<File | null>(null);
   const [visibility, setVisibility] = useState<GroupVisibility>("inviteOnly");
   const [locationVisibilityDefault, setLocationVisibilityDefault] = useState<GroupLocationVisibility>("exactForAdminsOnly");
   const [message, setMessage] = useState("");
@@ -32,7 +33,8 @@ function GroupForm({ userId, userName, email }: { userId: string; userName: stri
     setMessage("グループを作成しています。");
     try {
       const nextOwnerName = ownerName.trim() || userName;
-      const id = await createGroup({ ownerId: userId, ownerUserName: nextOwnerName, ownerEmail: email, name, description, visibility, locationVisibilityDefault });
+      const iconUrl = iconFile ? await uploadGroupIcon(userId, iconFile) : null;
+      const id = await createGroup({ ownerId: userId, ownerUserName: nextOwnerName, ownerEmail: email, name, description, iconUrl, visibility, locationVisibilityDefault });
       rememberParticipantName(nextOwnerName);
       router.push(`/groups/${id}`);
     } catch (error) {
@@ -47,6 +49,7 @@ function GroupForm({ userId, userName, email }: { userId: string; userName: stri
       <main className="mx-auto max-w-xl px-4 py-5">
         <form onSubmit={handleSubmit} className="space-y-4 rounded border border-teal-100 bg-white p-4 shadow-soft">
           <Field label="グループ名" value={name} onChange={setName} required />
+          <GroupIconField file={iconFile} name={name} onChange={setIconFile} />
           <Field label="グループ参加名" value={ownerName} onChange={setOwnerName} required helper="グループ内で仲間に表示される名前です。大会や他グループで使った参加名があれば初期表示します。" />
           <TextArea label="説明" value={description} onChange={setDescription} />
           <Select
@@ -76,6 +79,23 @@ function GroupForm({ userId, userName, email }: { userId: string; userName: stri
         </form>
       </main>
     </>
+  );
+}
+
+function GroupIconField({ file, name, onChange }: { file: File | null; name: string; onChange: (file: File | null) => void }) {
+  const preview = file ? URL.createObjectURL(file) : "";
+  return (
+    <label className="flex items-center gap-4 rounded bg-foam p-3">
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-water text-lg font-black text-white">
+        {preview ? <img src={preview} alt="グループアイコンのプレビュー" className="h-full w-full object-cover" /> : (name || "G").slice(0, 1)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-black text-slate-700">グループアイコン（任意）</span>
+        <span className="mt-1 block text-xs font-bold leading-5 text-slate-500">一覧や詳細画面で、グループ名の前に表示します。</span>
+        <span className="mt-2 inline-flex rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">画像を選択</span>
+      </span>
+      <input type="file" accept="image/*" onChange={(event) => onChange(event.target.files?.[0] ?? null)} className="hidden" />
+    </label>
   );
 }
 

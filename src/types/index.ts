@@ -552,6 +552,7 @@ export type Group = {
   ownerId: string;
   name: string;
   description: string;
+  iconUrl?: string | null;
   visibility: GroupVisibility;
   locationVisibilityDefault: GroupLocationVisibility;
   inviteCode: string;

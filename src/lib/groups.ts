@@ -1,7 +1,8 @@
 "use client";
 
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import type { Group, GroupJoinRequest, GroupJoinRequestStatus, GroupLocationVisibility, GroupMember, GroupRole, GroupVisibility } from "@/types";
 
 export type GroupInput = {
@@ -10,9 +11,16 @@ export type GroupInput = {
   ownerEmail: string | null;
   name: string;
   description: string;
+  iconUrl?: string | null;
   visibility: GroupVisibility;
   locationVisibilityDefault: GroupLocationVisibility;
 };
+
+export async function uploadGroupIcon(ownerId: string, file: File) {
+  const storageRef = ref(getFirebaseStorage(), `groups/${ownerId}/icons/${crypto.randomUUID()}-${file.name}`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
+}
 
 export async function createGroup(input: GroupInput) {
   const db = getFirebaseDb();
@@ -24,6 +32,7 @@ export async function createGroup(input: GroupInput) {
     ownerId: input.ownerId,
     name: input.name,
     description: input.description,
+    iconUrl: input.iconUrl ?? null,
     visibility: input.visibility,
     locationVisibilityDefault: input.locationVisibilityDefault,
     inviteCode,
@@ -203,6 +212,7 @@ function normalizeGroup(id: string, data: Record<string, unknown>): Group {
     ownerId: typeof data.ownerId === "string" ? data.ownerId : "",
     name: typeof data.name === "string" ? data.name : "",
     description: typeof data.description === "string" ? data.description : "",
+    iconUrl: typeof data.iconUrl === "string" ? data.iconUrl : null,
     visibility: data.visibility === "public" || data.visibility === "inviteOnly" ? data.visibility : "private",
     locationVisibilityDefault:
       data.locationVisibilityDefault === "exactForAllMembers" || data.locationVisibilityDefault === "blurredForMembers" || data.locationVisibilityDefault === "hidden"
