@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { ProfileStepBasic, ProfileStepMotivation, ProfileStepStyle, initialProfileSurveyState, toProfilePayload, type ProfileSurveyState } from "@/components/ProfileSurveyForm";
+import { planDefinitions } from "@/lib/plans";
 import { getAgeRangeLabel, getFishingFrequencyLabel, getFishingMotivationLabel } from "@/lib/profileOptions";
 import { getUserProfile, saveUserProfileData, uploadUserAvatar } from "@/lib/userProfiles";
+import type { UserProfile } from "@/types";
 
 export default function ProfilePage() {
   return <AuthGate skipOnboardingCheck>{(user) => <ProfileEditor userId={user.uid} fallbackName={user.displayName ?? user.email ?? ""} />}</AuthGate>;
@@ -14,6 +16,7 @@ export default function ProfilePage() {
 
 function ProfileEditor({ userId, fallbackName }: { userId: string; fallbackName: string }) {
   const [profile, setProfile] = useState<ProfileSurveyState>(() => initialProfileSurveyState(null, fallbackName));
+  const [accountProfile, setAccountProfile] = useState<UserProfile | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [message, setMessage] = useState("読み込み中です。");
   const [busy, setBusy] = useState(false);
@@ -21,6 +24,7 @@ function ProfileEditor({ userId, fallbackName }: { userId: string; fallbackName:
   useEffect(() => {
     getUserProfile(userId)
       .then((current) => {
+        setAccountProfile(current);
         setProfile(initialProfileSurveyState(current, fallbackName));
         setMessage("");
       })
@@ -65,6 +69,7 @@ function ProfileEditor({ userId, fallbackName }: { userId: string; fallbackName:
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
           <h2 className="mb-4 text-lg font-black">基本プロフィール</h2>
           <AvatarField avatarUrl={profile.avatarUrl} file={avatarFile} displayName={profile.displayName} onChange={setAvatarFile} />
+          <PlanStatusCard profile={accountProfile} />
           <div className="mt-4" />
           <ProfileStepBasic state={profile} setState={setProfile} />
         </section>
@@ -87,6 +92,29 @@ function ProfileEditor({ userId, fallbackName }: { userId: string; fallbackName:
         </div>
       </main>
     </>
+  );
+}
+
+function PlanStatusCard({ profile }: { profile: UserProfile | null }) {
+  const plan = profile?.subscriptionPlan ?? "free";
+  const definition = planDefinitions[plan] ?? planDefinitions.free;
+  const isPremium = plan === "premium" || profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing";
+  return (
+    <div className="mt-3 rounded border border-teal-100 bg-white p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black text-slate-500">現在のプラン</p>
+          <p className="mt-1 text-lg font-black text-ink">{isPremium ? "Premium" : definition.label}</p>
+          {profile?.currentPeriodEnd ? <p className="mt-1 text-xs font-bold text-slate-500">次回更新目安: {new Date(profile.currentPeriodEnd).toLocaleDateString("ja-JP")}</p> : null}
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-black ${isPremium ? "bg-water text-white" : "bg-slate-100 text-slate-600"}`}>
+          {isPremium ? "利用中" : "Free"}
+        </span>
+      </div>
+      <Link href="/plans" className="mt-3 inline-flex rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">
+        プランを見る
+      </Link>
+    </div>
   );
 }
 

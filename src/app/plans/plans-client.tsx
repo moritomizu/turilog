@@ -28,7 +28,7 @@ export function PlansClient() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [message, setMessage] = useState("");
   const [selectedFeature, setSelectedFeature] = useState<FeatureKey | null>(null);
-  const [revealedPlans, setRevealedPlans] = useState<SubscriptionPlan[]>(["free"]);
+  const [revealedPlans, setRevealedPlans] = useState<SubscriptionPlan[]>(["free", "premium"]);
   const [loadingPlan, setLoadingPlan] = useState<"checkout" | "portal" | null>(null);
 
   useEffect(() => {
@@ -41,9 +41,16 @@ export function PlansClient() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("checkout") === "success") setMessage("Premium登録を受け付けました。反映まで少し時間がかかる場合があります。");
+    if (params.get("checkout") === "success") {
+      setMessage("Premium登録を受け付けました。反映まで少し時間がかかる場合があります。");
+      if (user) {
+        getUserProfile(user.uid).then(setProfile).catch(() => undefined);
+        const timer = window.setTimeout(() => getUserProfile(user.uid).then(setProfile).catch(() => undefined), 2500);
+        return () => window.clearTimeout(timer);
+      }
+    }
     if (params.get("checkout") === "cancelled") setMessage("Premium登録はキャンセルされました。");
-  }, []);
+  }, [user]);
 
   async function handlePremiumCheckout() {
     if (!user) {
@@ -126,7 +133,8 @@ export function PlansClient() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {visiblePlans.map((plan) => {
             const definition = planDefinitions[plan];
-            const priceRevealed = revealedPlans.includes(plan);
+            const priceRevealed = plan === "premium" || revealedPlans.includes(plan);
+            const premiumActive = profile?.subscriptionPlan === "premium" || profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing";
             return (
               <article key={plan} className="flex flex-col rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <h2 className="text-xl font-black">{definition.label}</h2>
@@ -176,7 +184,7 @@ export function PlansClient() {
                       </p>
                     </div>
                     {plan === "premium" ? (
-                      profile?.subscriptionPlan === "premium" ? (
+                      premiumActive ? (
                         <div className="mt-3 space-y-2">
                           <p className="rounded bg-teal-50 p-3 text-sm font-black text-water">Premium利用中です。</p>
                           <button type="button" onClick={handleCustomerPortal} disabled={loadingPlan !== null} className="tap-target w-full rounded border border-water bg-white px-4 py-3 font-black text-water disabled:opacity-60">
