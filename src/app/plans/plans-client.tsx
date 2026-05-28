@@ -148,9 +148,9 @@ export function PlansClient() {
 }
 
 function getPlanCuriosityCopy(plan: SubscriptionPlan) {
-  if (plan === "premium") return "毎月のランチ一食分で自らの釣りが分析できる。釣れる";
-  if (plan === "organizer") return "ルアー1個分。マップ分析/AI分析を仲間と共に";
-  if (plan === "groupPro") return "船釣り１回分よりも安く、プロレベルの釣果/ポイント分析を手にする";
+  if (plan === "premium") return "ランチ１回分であなたの釣りが変わる。楽しくなる。";
+  if (plan === "organizer") return "ルアーセット1個分で大会を開催。集計して振り返ろう。";
+  if (plan === "groupPro") return "船釣り１回分でプロレベルの釣果/ポイント分析を手にしよう。";
   return "基本機能は無料で利用できます。";
 }
 
