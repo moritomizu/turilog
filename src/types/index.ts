@@ -248,6 +248,7 @@ export type User = {
   displayName: string | null;
   email: string | null;
   avatarUrl?: string | null;
+  selfIntroduction?: string;
   createdAt: Date;
   termsAccepted?: boolean;
   privacyAccepted?: boolean;
@@ -274,6 +275,7 @@ export type UserProfile = {
   displayName?: string;
   email?: string | null;
   avatarUrl?: string | null;
+  selfIntroduction?: string;
   ageRange?: AgeRange;
   residenceArea?: string;
   fishingAreas?: string[];

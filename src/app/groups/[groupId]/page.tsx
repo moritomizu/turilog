@@ -337,7 +337,10 @@ function GroupCatch({
     <div>
       <CatchCard item={item} mapPinNumber={mapPinNumber} onMapPinClick={onMapPinClick} />
       <div className="rounded-b border-x border-b border-teal-100 bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
-        <p>釣った人: {memberNames.get(item.actualAnglerUserId) ?? "メンバー"}</p>
+        <Link href={`/users/${item.actualAnglerUserId}`} className="inline-flex items-center gap-2 rounded-full bg-foam px-3 py-2 text-sm font-black text-water">
+          <span className="text-xs text-slate-500">釣った人</span>
+          <span>{memberNames.get(item.actualAnglerUserId) ?? "メンバー"}</span>
+        </Link>
         {item.isProxyPost ? <p>代理投稿</p> : null}
         {(canEdit || canDelete) ? (
           <div className="mt-2 grid grid-cols-2 gap-2">

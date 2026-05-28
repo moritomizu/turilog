@@ -15,6 +15,7 @@ import {
 export type ProfileSurveyState = {
   displayName: string;
   avatarUrl: string;
+  selfIntroduction: string;
   ageRange: AgeRange;
   residenceArea: string;
   fishingAreas: string[];
@@ -29,6 +30,7 @@ export function initialProfileSurveyState(profile?: UserProfile | null, fallback
   return {
     displayName: profile?.displayName || fallbackName,
     avatarUrl: profile?.avatarUrl ?? "",
+    selfIntroduction: profile?.selfIntroduction ?? "",
     ageRange: profile?.ageRange ?? "preferNotToSay",
     residenceArea: profile?.residenceArea || "回答しない",
     fishingAreas: profile?.fishingAreas ?? [],
@@ -44,6 +46,7 @@ export function toProfilePayload(state: ProfileSurveyState) {
   return {
     displayName: state.displayName.trim(),
     avatarUrl: state.avatarUrl,
+    selfIntroduction: state.selfIntroduction.trim(),
     ageRange: state.ageRange || undefined,
     residenceArea: state.residenceArea,
     fishingAreas: state.fishingAreas,
@@ -59,6 +62,7 @@ export function ProfileStepBasic({ state, setState }: { state: ProfileSurveyStat
   return (
     <div className="space-y-4">
       <TextField label="表示名" value={state.displayName} onChange={(displayName) => setState({ ...state, displayName })} placeholder="例: TaPiYoTa" />
+      <TextAreaField label="自己紹介" value={state.selfIntroduction} onChange={(selfIntroduction) => setState({ ...state, selfIntroduction })} placeholder="例: 大阪湾でタイラバとサワラキャスティングを楽しんでいます。" />
       <SelectField label="年代" value={state.ageRange} onChange={(ageRange) => setState({ ...state, ageRange: ageRange as AgeRange })} options={ageRangeOptions.map((item) => ({ value: item.value, label: item.label }))} />
       <SelectField label="居住エリア" value={state.residenceArea} onChange={(residenceArea) => setState({ ...state, residenceArea })} options={residenceAreaOptions.map((value) => ({ value, label: value }))} />
     </div>
@@ -90,6 +94,16 @@ function TextField({ label, value, onChange, placeholder }: { label: string; val
     <label className="block">
       <span className="text-sm font-black text-slate-700">{label}</span>
       <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold" />
+    </label>
+  );
+}
+
+function TextAreaField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-black text-slate-700">{label}</span>
+      <textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="mt-2 min-h-24 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold leading-6" />
+      <span className="mt-1 block text-xs font-bold leading-5 text-slate-500">グループ内プロフィールなどで表示されます。公開してよい内容だけ入力してください。</span>
     </label>
   );
 }
