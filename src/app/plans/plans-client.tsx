@@ -26,6 +26,7 @@ export function PlansClient() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [message, setMessage] = useState("");
   const [selectedFeature, setSelectedFeature] = useState<FeatureKey | null>(null);
+  const [revealedPlans, setRevealedPlans] = useState<SubscriptionPlan[]>(["free"]);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -53,6 +54,22 @@ export function PlansClient() {
     }
   }
 
+  async function handleRevealPrice(plan: SubscriptionPlan) {
+    setRevealedPlans((current) => (current.includes(plan) ? current : [...current, plan]));
+    if (!user) {
+      setMessage("仮料金を表示しました。ログインすると興味ありとして保存できます。");
+      return;
+    }
+    const featureKey = interestFeatureByPlan[plan];
+    if (!featureKey) return;
+    try {
+      await logFeatureInterest(user.uid, featureKey, { plan, priceLabel: planPrices[plan] ?? "", interested: true, action: "revealPrice" });
+      setMessage("料金が気になるプランとして保存しました。");
+    } catch {
+      setMessage("仮料金を表示しました。反応の保存はできませんでした。");
+    }
+  }
+
   return (
     <>
       <PageHeader title="プラン" actionHref="/" actionLabel="TOP" />
@@ -73,14 +90,22 @@ export function PlansClient() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {visiblePlans.map((plan) => {
             const definition = planDefinitions[plan];
+            const priceRevealed = revealedPlans.includes(plan);
             return (
               <article key={plan} className="flex flex-col rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <h2 className="text-xl font-black">{definition.label}</h2>
-                <div className="mt-3 rounded bg-foam p-3">
-                  <p className="text-xs font-black text-slate-500">仮料金</p>
-                  <p className="mt-1 text-2xl font-black text-ink">{planPrices[plan] ?? "未定"}</p>
-                  {plan !== "free" ? <p className="mt-1 text-xs font-bold text-slate-500">ニーズ調査用の仮設定です</p> : null}
-                </div>
+                {priceRevealed ? (
+                  <div className="mt-3 rounded bg-foam p-3">
+                    <p className="text-xs font-black text-slate-500">仮料金</p>
+                    <p className="mt-1 text-2xl font-black text-ink">{planPrices[plan] ?? "未定"}</p>
+                    {plan !== "free" ? <p className="mt-1 text-xs font-bold text-slate-500">ニーズ調査用の仮設定です。決済は行われません。</p> : null}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded border border-dashed border-teal-200 bg-foam p-3">
+                    <p className="text-xs font-black text-water">PRICE CHECK</p>
+                    <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{getPlanCuriosityCopy(plan)}</p>
+                  </div>
+                )}
                 <p className="mt-2 min-h-16 text-sm font-bold leading-6 text-slate-700">{definition.description}</p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm font-bold text-slate-700">
                   {definition.features.map((featureKey) => (
@@ -101,17 +126,21 @@ export function PlansClient() {
                   <button type="button" disabled className="tap-target mt-4 rounded bg-slate-200 px-4 py-3 font-black text-slate-500">
                     利用中の基本プラン
                   </button>
+                ) : !priceRevealed ? (
+                  <button type="button" onClick={() => handleRevealPrice(plan)} className="tap-target mt-4 rounded bg-coral px-4 py-3 font-black text-white">
+                    月額の目安を見てみる
+                  </button>
                 ) : (
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <button type="button" onClick={() => handlePlanReaction(plan, true)} className="tap-target rounded bg-coral px-4 py-3 font-black text-white">
-                      興味あり
+                      この内容なら気になる
                     </button>
                     <button type="button" onClick={() => handlePlanReaction(plan, false)} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 font-black text-slate-700">
-                      今はなし
+                      今は見送り
                     </button>
                   </div>
                 )}
-                {plan !== "free" ? <p className="mt-2 text-center text-xs font-bold text-slate-500">決済はまだ行われません</p> : null}
+                {plan !== "free" && priceRevealed ? <p className="mt-2 text-center text-xs font-bold text-slate-500">今はニーズ調査中です</p> : null}
               </article>
             );
           })}
@@ -120,6 +149,13 @@ export function PlansClient() {
       </main>
     </>
   );
+}
+
+function getPlanCuriosityCopy(plan: SubscriptionPlan) {
+  if (plan === "premium") return "自分の釣果分析をもう一段深くしたい方向け。月額の目安を確認できます。";
+  if (plan === "organizer") return "大会をきちんと運営したい方向け。承認や管理機能込みの目安を確認できます。";
+  if (plan === "groupPro") return "仲間やチーム単位で釣果を伸ばしたい方向け。グループ活用の目安を確認できます。";
+  return "基本機能は無料で利用できます。";
 }
 
 function getFeatureDisplayName(featureKey: FeatureKey, plan: SubscriptionPlan) {
