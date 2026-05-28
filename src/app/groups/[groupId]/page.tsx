@@ -14,6 +14,7 @@ import { addGroupCatchComment, getGroupCatchComments } from "@/lib/groupCatchCom
 import { canDeleteGroupCatchSync, canEditGroupCatchSync, canManageGroupMembersSync, canViewGroupExactLocationSync, findGroupMember } from "@/lib/groupPermissions";
 import { deleteGroup, getGroup, getGroupMembers } from "@/lib/groups";
 import { getDisplayLocation } from "@/lib/locationBlur";
+import { getUserProfile } from "@/lib/userProfiles";
 import type { Catch, DisplayLocation, Group, GroupCatchComment, GroupMember } from "@/types";
 
 export default function GroupDetailPage({ params }: { params: { groupId: string } }) {
@@ -25,6 +26,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [items, setItems] = useState<Catch[]>([]);
   const [comments, setComments] = useState<GroupCatchComment[]>([]);
+  const [profileNames, setProfileNames] = useState<Map<string, string>>(new Map());
   const [message, setMessage] = useState("読み込み中です。");
   const [selectedMapCatchId, setSelectedMapCatchId] = useState<string | null>(null);
   const [detailedMapAllowed, setDetailedMapAllowed] = useState(false);
@@ -34,13 +36,16 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
   const canManageMembers = canManageGroupMembersSync(currentMember);
   const canDeleteGroup = currentMember?.role === "owner" || currentMember?.role === "admin";
   const memberNames = useMemo(() => new Map(members.map((member) => [member.userId, member.userName])), [members]);
+  const displayNames = useMemo(() => new Map([...memberNames, ...profileNames]), [memberNames, profileNames]);
   const commentsByCatch = useMemo(() => groupCommentsByCatch(comments), [comments]);
   const digest = useMemo(() => buildDigest(items), [items]);
-  const ranking = useMemo(() => buildRanking(items, memberNames), [items, memberNames]);
+  const ranking = useMemo(() => buildRanking(items, displayNames), [items, displayNames]);
   const mapPinNumbers = useMemo(() => buildMapPinNumbers(items, userId, group, currentMember), [items, userId, group, currentMember]);
 
   async function reloadItems() {
-    setItems(await getGroupCatches(groupId));
+    const nextItems = await getGroupCatches(groupId);
+    setItems(nextItems);
+    setProfileNames(await loadProfileNames(members, nextItems));
   }
 
   async function reloadComments() {
@@ -99,6 +104,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
         setItems(nextItems);
         setComments(nextComments);
         setDetailedMapAllowed(mapAccess.allowed);
+        loadProfileNames(nextMembers, nextItems).then(setProfileNames).catch(() => undefined);
         setMessage(nextGroup ? "" : "グループが見つかりません。");
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "グループを読み込めませんでした。"));
@@ -188,7 +194,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
 
             <section id="group-catch-map">
               <h2 className="mb-3 text-xl font-black">グループ釣果マップ</h2>
-              <GroupCatchMap items={items} memberNames={memberNames} group={group} member={currentMember} userId={userId} pinNumbers={mapPinNumbers} selectedCatchId={selectedMapCatchId} detailedMapAllowed={detailedMapAllowed} />
+              <GroupCatchMap items={items} memberNames={displayNames} group={group} member={currentMember} userId={userId} pinNumbers={mapPinNumbers} selectedCatchId={selectedMapCatchId} detailedMapAllowed={detailedMapAllowed} />
             </section>
 
             <section>
@@ -205,7 +211,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
                       document.getElementById("group-catch-map")?.scrollIntoView({ behavior: "smooth", block: "start" });
                     }}
                     members={members}
-                    memberNames={memberNames}
+                    memberNames={displayNames}
                     comments={commentsByCatch.get(item.id) ?? []}
                     canEdit={canEditGroupCatchSync(currentMember, item, userId)}
                     canDelete={canDeleteGroupCatchSync(currentMember, item, userId)}
@@ -610,6 +616,16 @@ function buildRanking(items: Catch[], memberNames: Map<string, string>) {
   const groups = new Map<string, Catch[]>();
   items.forEach((item) => groups.set(item.actualAnglerUserId, [...(groups.get(item.actualAnglerUserId) ?? []), item]));
   return [...groups.entries()].map(([userId, userItems]) => ({ userId, userName: memberNames.get(userId) ?? "メンバー", best: Math.max(...userItems.map((item) => item.sizeCm)), count: userItems.length })).sort((a, b) => b.best - a.best);
+}
+
+async function loadProfileNames(members: GroupMember[], items: Catch[]) {
+  const ids = Array.from(new Set([...members.map((member) => member.userId), ...items.map((item) => item.actualAnglerUserId)].filter(Boolean)));
+  const profiles = await Promise.all(ids.map(async (id) => [id, await getUserProfile(id).catch(() => null)] as const));
+  return new Map(
+    profiles
+      .map(([id, profile]) => [id, profile?.displayName?.trim() || ""] as const)
+      .filter((entry): entry is readonly [string, string] => Boolean(entry[1]))
+  );
 }
 
 function groupCommentsByCatch(comments: GroupCatchComment[]) {
