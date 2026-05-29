@@ -60,7 +60,7 @@ export async function getGroup(groupId: string): Promise<Group | null> {
   return snapshot.exists() ? normalizeGroup(snapshot.id, snapshot.data()) : null;
 }
 
-export async function updateGroup(groupId: string, requesterUserId: string, input: Pick<Group, "name" | "description" | "visibility" | "locationVisibilityDefault">) {
+export async function updateGroup(groupId: string, requesterUserId: string, input: Pick<Group, "name" | "description" | "visibility" | "locationVisibilityDefault"> & { iconUrl?: string | null }) {
   const db = getFirebaseDb();
   const [group, members] = await Promise.all([getGroup(groupId), getGroupMembers(groupId)]);
   const requester = members.find((member) => member.userId === requesterUserId && member.status === "active");
@@ -69,6 +69,7 @@ export async function updateGroup(groupId: string, requesterUserId: string, inpu
   await updateDoc(doc(db, "groups", groupId), {
     name: input.name,
     description: input.description,
+    ...(input.iconUrl !== undefined ? { iconUrl: input.iconUrl } : {}),
     visibility: input.visibility,
     locationVisibilityDefault: input.locationVisibilityDefault,
     updatedAt: serverTimestamp()

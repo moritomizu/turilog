@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { canManageGroupMembersSync, findGroupMember } from "@/lib/groupPermissions";
-import { getGroup, getGroupMembers, updateGroup } from "@/lib/groups";
+import { getGroup, getGroupMembers, updateGroup, uploadGroupIcon } from "@/lib/groups";
 import type { Group, GroupLocationVisibility, GroupMember, GroupVisibility } from "@/types";
 
 export default function GroupEditPage({ params }: { params: { groupId: string } }) {
@@ -18,6 +18,8 @@ function GroupEdit({ groupId, userId }: { groupId: string; userId: string }) {
   const [currentMember, setCurrentMember] = useState<GroupMember | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [iconUrl, setIconUrl] = useState<string | null>(null);
+  const [iconFile, setIconFile] = useState<File | null>(null);
   const [visibility, setVisibility] = useState<GroupVisibility>("inviteOnly");
   const [locationVisibilityDefault, setLocationVisibilityDefault] = useState<GroupLocationVisibility>("exactForAdminsOnly");
   const [message, setMessage] = useState("読み込み中です。");
@@ -32,6 +34,7 @@ function GroupEdit({ groupId, userId }: { groupId: string; userId: string }) {
         if (nextGroup) {
           setName(nextGroup.name);
           setDescription(nextGroup.description);
+          setIconUrl(nextGroup.iconUrl ?? null);
           setVisibility(nextGroup.visibility);
           setLocationVisibilityDefault(nextGroup.locationVisibilityDefault);
         }
@@ -45,7 +48,8 @@ function GroupEdit({ groupId, userId }: { groupId: string; userId: string }) {
     setBusy(true);
     setMessage("保存しています。");
     try {
-      await updateGroup(groupId, userId, { name, description, visibility, locationVisibilityDefault });
+      const nextIconUrl = iconFile ? await uploadGroupIcon(userId, iconFile) : iconUrl;
+      await updateGroup(groupId, userId, { name, description, iconUrl: nextIconUrl, visibility, locationVisibilityDefault });
       router.push(`/groups/${groupId}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "グループを保存できませんでした。");
@@ -71,6 +75,7 @@ function GroupEdit({ groupId, userId }: { groupId: string; userId: string }) {
         <form onSubmit={handleSubmit} className="space-y-4 rounded border border-teal-100 bg-white p-4 shadow-soft">
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
           <Field label="グループ名" value={name} onChange={setName} required />
+          <GroupIconField file={iconFile} currentUrl={iconUrl} name={name} onChange={setIconFile} onRemove={() => { setIconFile(null); setIconUrl(null); }} />
           <TextArea label="説明" value={description} onChange={setDescription} />
           <Select
             label="公開範囲"
@@ -99,6 +104,42 @@ function GroupEdit({ groupId, userId }: { groupId: string; userId: string }) {
         </form>
       </main>
     </>
+  );
+}
+
+function GroupIconField({
+  file,
+  currentUrl,
+  name,
+  onChange,
+  onRemove
+}: {
+  file: File | null;
+  currentUrl: string | null;
+  name: string;
+  onChange: (file: File | null) => void;
+  onRemove: () => void;
+}) {
+  const preview = file ? URL.createObjectURL(file) : currentUrl ?? "";
+  return (
+    <div className="rounded bg-foam p-3">
+      <label className="flex items-center gap-4">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-water text-xl font-black text-white">
+          {preview ? <img src={preview} alt="グループアイコンのプレビュー" className="h-full w-full object-cover" /> : (name || "G").slice(0, 1)}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-black text-slate-700">グループアイコン</span>
+          <span className="mt-1 block text-xs font-bold leading-5 text-slate-500">一覧や詳細画面で、グループ名の前に表示します。</span>
+          <span className="mt-2 inline-flex rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">画像を選択</span>
+        </span>
+        <input type="file" accept="image/*" onChange={(event) => onChange(event.target.files?.[0] ?? null)} className="hidden" />
+      </label>
+      {preview ? (
+        <button type="button" onClick={onRemove} className="tap-target mt-3 w-full rounded border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600">
+          アイコンを削除
+        </button>
+      ) : null}
+    </div>
   );
 }
 
