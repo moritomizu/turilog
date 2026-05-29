@@ -1403,6 +1403,22 @@ TsuriLog は Firebase Cloud Messaging を使った Web Push 通知の土台を�
 - 通知カテゴリのON/OFF
 - テスト通知の送信
 
+運営者向けのお知らせ配信ページ:
+
+```text
+/admin/notifications
+```
+
+このページでは、管理者が「運営からのお知らせ」を通知ONのユーザーへ一斉配信できます。
+
+配信対象:
+
+- `notificationEnabled: true`
+- `notificationPreferences.systemNotice` が `false` ではない
+- `fcmTokens` が保存されているユーザー
+
+利用には `ADMIN_UIDS` または `NEXT_PUBLIC_ADMIN_UIDS` に管理者UIDを設定しておく必要があります。
+
 ### Firebase Cloud Messaging の設定
 
 Firebase Console で対象プロジェクトを開き、Cloud Messaging の設定から Web Push 証明書を作成します。

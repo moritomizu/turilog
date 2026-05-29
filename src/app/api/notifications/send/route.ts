@@ -49,6 +49,7 @@ type NotificationPayload = {
   userId?: string;
   groupId?: string;
   tournamentId?: string;
+  allUsers?: boolean;
   category: NotificationCategory;
   title: string;
   body: string;
@@ -63,8 +64,9 @@ function normalizePayload(value: Record<string, unknown>): NotificationPayload {
   const userId = typeof value.userId === "string" && value.userId.trim() ? value.userId.trim() : undefined;
   const groupId = typeof value.groupId === "string" && value.groupId.trim() ? value.groupId.trim() : undefined;
   const tournamentId = typeof value.tournamentId === "string" && value.tournamentId.trim() ? value.tournamentId.trim() : undefined;
-  if (!userId && !groupId && !tournamentId) throw new Error("通知の送信対象が指定されていません。");
-  return { userId, groupId, tournamentId, category, title, body, url };
+  const allUsers = value.allUsers === true;
+  if (!userId && !groupId && !tournamentId && !allUsers) throw new Error("通知の送信対象が指定されていません。");
+  return { userId, groupId, tournamentId, allUsers, category, title, body, url };
 }
 
 function normalizeCategory(value: unknown): NotificationCategory {
@@ -76,7 +78,30 @@ async function resolveTargetUserIds(payload: NotificationPayload, accessToken: s
   if (payload.userId) return [payload.userId];
   if (payload.groupId) return fetchMemberUserIds("groupMembers", "groupId", payload.groupId, accessToken);
   if (payload.tournamentId) return fetchMemberUserIds("tournamentParticipants", "tournamentId", payload.tournamentId, accessToken);
+  if (payload.allUsers) return fetchAllNotificationUserIds(accessToken);
   return [];
+}
+
+async function fetchAllNotificationUserIds(accessToken: string) {
+  ensureFirestoreConfig();
+  const ids = new Set<string>();
+  let pageToken = "";
+  do {
+    const url = new URL(`${firestoreBaseUrl}/users`);
+    url.searchParams.set("pageSize", "300");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error("通知対象ユーザーを取得できませんでした。");
+    (Array.isArray(data.documents) ? data.documents : []).forEach((document: { name?: string; fields?: { notificationEnabled?: { booleanValue?: boolean } } }) => {
+      const userId = document.name?.split("/").pop();
+      if (userId && document.fields?.notificationEnabled?.booleanValue === true) ids.add(userId);
+    });
+    pageToken = typeof data.nextPageToken === "string" ? data.nextPageToken : "";
+  } while (pageToken);
+  return [...ids];
 }
 
 async function fetchMemberUserIds(collectionId: string, fieldPath: string, value: string, accessToken: string) {
