@@ -26,6 +26,7 @@ function NotificationSettings({ userId }: { userId: string }) {
   const [message, setMessage] = useState("通知設定を読み込んでいます。");
   const [busy, setBusy] = useState(false);
   const tokenCount = profile?.fcmTokens?.length ?? 0;
+  const notificationReady = enabled && tokenCount > 0 && permissionLabel === "許可済み";
   const supported = useMemo(() => typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator, []);
 
   useEffect(() => {
@@ -114,9 +115,16 @@ function NotificationSettings({ userId }: { userId: string }) {
             <p>通知許可状態: {permissionLabel}</p>
             <p>登録済み端末: {tokenCount}件</p>
           </div>
-          <button disabled={busy || !supported} onClick={handleEnable} className="tap-target mt-4 w-full rounded bg-water px-5 py-4 text-base font-black text-white disabled:opacity-60">
-            {busy ? "処理中..." : "通知を有効にする"}
+          <button
+            disabled={busy || !supported || notificationReady}
+            onClick={handleEnable}
+            className={`tap-target mt-4 w-full rounded px-5 py-4 text-base font-black text-white disabled:opacity-90 ${
+              notificationReady ? "bg-emerald-600" : "bg-water"
+            }`}
+          >
+            {busy ? "処理中..." : notificationReady ? "通知は有効です" : enabled ? "この端末で通知を有効にする" : "通知を有効にする"}
           </button>
+          {notificationReady ? <p className="mt-2 text-xs font-bold leading-5 text-emerald-700">この端末で通知を受け取れる状態です。通知を止める場合は下の「通知全体」をOFFにしてください。</p> : null}
           <p className="mt-2 text-xs font-bold leading-5 text-slate-500">iPhoneでは、ホーム画面に追加したPWAから開いた場合のみ通知が使えることがあります。</p>
         </section>
 
