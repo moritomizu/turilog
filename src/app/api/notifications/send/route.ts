@@ -35,7 +35,11 @@ export async function POST(request: Request) {
     const results = await Promise.allSettled(uniqueTokens.map((token) => sendFcmMessage(accessToken, token, payload)));
     const sent = results.filter((result) => result.status === "fulfilled").length;
     const failed = results.length - sent;
-    return NextResponse.json({ sent, failed, targets: targetUserIds.length, diagnostics });
+    const failureMessages = results
+      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map((result) => (result.reason instanceof Error ? result.reason.message : "FCM送信に失敗しました。"))
+      .slice(0, 3);
+    return NextResponse.json({ sent, failed, targets: targetUserIds.length, diagnostics, failureMessages });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "通知を送信できませんでした。" }, { status: getStatus(error) });
   }

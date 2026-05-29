@@ -87,10 +87,11 @@ function NotificationSettings({ userId }: { userId: string }) {
       const result = await sendSelfTestNotification();
       const sent = result.sent ?? 0;
       const detail = typeof result.message === "string" && sent === 0 ? ` ${result.message}` : "";
+      const failures = Array.isArray(result.failureMessages) && result.failureMessages.length ? ` 失敗理由: ${result.failureMessages.join(" / ")}` : "";
       const diagnostics = result.diagnostics
         ? ` 対象:${result.diagnostics.targetUsers ?? 0} / ユーザー:${result.diagnostics.existingUsers ?? 0} / ON:${result.diagnostics.notificationEnabledUsers ?? 0} / トークン:${result.diagnostics.tokenCount ?? 0}`
         : "";
-      setMessage(`テスト通知を送信しました。送信数: ${sent}${detail}${diagnostics}`);
+      setMessage(`テスト通知を送信しました。送信数: ${sent}${detail}${diagnostics}${failures}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "テスト通知を送信できませんでした。");
     } finally {
