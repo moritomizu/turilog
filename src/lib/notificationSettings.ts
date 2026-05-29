@@ -39,8 +39,11 @@ export async function enablePushNotifications(userId: string) {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") throw new Error("通知が許可されませんでした。ブラウザ設定をご確認ください。");
 
-  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.trim();
   if (!vapidKey) throw new Error("NEXT_PUBLIC_FIREBASE_VAPID_KEY が未設定です。");
+  if (!isLikelyVapidPublicKey(vapidKey)) {
+    throw new Error("NEXT_PUBLIC_FIREBASE_VAPID_KEY には、Firebase Cloud Messaging の Web Push 証明書に表示される「鍵ペアの公開鍵」を設定してください。サーバーキー、秘密鍵、キーIDではありません。");
+  }
 
   const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
   const messaging = await getFirebaseMessaging();
@@ -58,6 +61,10 @@ export async function enablePushNotifications(userId: string) {
     { merge: true }
   );
   return token;
+}
+
+function isLikelyVapidPublicKey(value: string) {
+  return /^B[A-Za-z0-9_-]{80,}$/.test(value);
 }
 
 export async function saveNotificationPreferences(userId: string, preferences: NotificationPreferences, enabled: boolean) {
