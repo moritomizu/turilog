@@ -52,9 +52,9 @@ function ShareCatchCard({ item, mode }: { item: Catch; mode: ShareMode }) {
 
       <div className="relative bg-slate-100">
         {item.imageUrl ? (
-          <img src={item.imageUrl} alt={item.fishType} className="h-[48svh] min-h-[270px] w-full object-cover" />
+          <img src={item.imageUrl} alt={item.fishType} className="h-[52svh] min-h-[295px] w-full object-cover" />
         ) : (
-          <div className="flex h-[48svh] min-h-[270px] items-center justify-center text-sm font-bold text-slate-500">写真なし</div>
+          <div className="flex h-[52svh] min-h-[295px] items-center justify-center text-sm font-bold text-slate-500">写真なし</div>
         )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-4 text-white">
           <div className="flex items-end justify-between gap-3">
