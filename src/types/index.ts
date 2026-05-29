@@ -473,6 +473,8 @@ export type Catch = TideInfo &
   locationUpdatedAt: string | null;
   isPublic: boolean;
   publicShareEnabledAt: string | null;
+  publicAnglerName?: string;
+  publicAnglerAvatarUrl?: string | null;
   tournamentId: string | null;
   isTournamentEntry: boolean;
   tournamentEntryStatus: TournamentEntryStatus;

@@ -139,7 +139,9 @@ export async function updateCatchPublicStatus(catchId: string, userId: string, i
     publicShareEnabledAt: isPublic ? new Date().toISOString() : null
   });
   if (isPublic) {
-    await setDoc(publicRef, removeUndefinedDeep(sanitizeCatchForEmbed(normalizeCatchDoc(snapshot.id, snapshot.data()))));
+    const item = normalizeCatchDoc(snapshot.id, snapshot.data());
+    const publicAngler = await getPublicAngler(item.actualAnglerUserId || item.userId);
+    await setDoc(publicRef, removeUndefinedDeep(sanitizeCatchForEmbed(item, publicAngler)));
   } else {
     await deleteDoc(publicRef);
   }
@@ -167,6 +169,8 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
     locationUpdatedAt: typeof data.locationUpdatedAt === "string" ? data.locationUpdatedAt : null,
     isPublic: data.isPublic === true,
     publicShareEnabledAt: typeof data.publicShareEnabledAt === "string" ? data.publicShareEnabledAt : null,
+    publicAnglerName: typeof data.publicAnglerName === "string" ? data.publicAnglerName : "",
+    publicAnglerAvatarUrl: typeof data.publicAnglerAvatarUrl === "string" ? data.publicAnglerAvatarUrl : null,
     tournamentId: typeof data.tournamentId === "string" ? data.tournamentId : null,
     isTournamentEntry: data.isTournamentEntry === true,
     tournamentEntryStatus:
@@ -204,14 +208,26 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
   };
 }
 
-function sanitizeCatchForEmbed(item: Catch): Omit<Catch, "id"> {
+async function getPublicAngler(userId: string) {
+  if (!userId) return { name: "", avatarUrl: null as string | null };
+  const snapshot = await getDoc(doc(getFirebaseDb(), "users", userId)).catch(() => null);
+  const data = snapshot?.exists() ? snapshot.data() : null;
+  return {
+    name: typeof data?.displayName === "string" && data.displayName.trim() ? data.displayName.trim() : "",
+    avatarUrl: typeof data?.avatarUrl === "string" ? data.avatarUrl : null
+  };
+}
+
+function sanitizeCatchForEmbed(item: Catch, publicAngler?: { name: string; avatarUrl: string | null }): Omit<Catch, "id"> {
   return {
     ...item,
     latitude: null,
     longitude: null,
     pointName: "",
     isPublic: true,
-    publicShareEnabledAt: new Date().toISOString()
+    publicShareEnabledAt: new Date().toISOString(),
+    publicAnglerName: publicAngler?.name || item.publicAnglerName || "",
+    publicAnglerAvatarUrl: publicAngler?.avatarUrl ?? item.publicAnglerAvatarUrl ?? null
   };
 }
 

@@ -170,7 +170,7 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
               <button type="button" onClick={copyEmbedCode} className="tap-target w-full rounded bg-water px-4 py-2 text-sm font-black text-white">
                 コードをコピー
               </button>
-              <a href={shareUrl} target="_blank" rel="noreferrer" className="tap-target block rounded border border-slate-300 px-4 py-2 text-center text-sm font-black text-ink">
+              <a href={shareUrl} className="tap-target block rounded border border-slate-300 px-4 py-2 text-center text-sm font-black text-ink">
                 表示を確認
               </a>
             </div>
