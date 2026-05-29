@@ -1,0 +1,55 @@
+{
+  "common": {
+    "appName": "TsuriLog",
+    "terms": "Terms",
+    "privacy": "Privacy Policy",
+    "plans": "Plans",
+    "createdBy": "created by TaPiYoTa",
+    "language": "Language",
+    "japanese": "日本語",
+    "english": "English"
+  },
+  "menu": {
+    "catches": "Log",
+    "ranking": "Ranks",
+    "post": "Post",
+    "map": "Map",
+    "analysis": "Analysis"
+  },
+  "home": {
+    "tournaments": "Tournaments",
+    "groups": "Groups",
+    "aiReport": "AI Report β",
+    "notifications": "Notifications",
+    "plans": "Plans"
+  },
+  "login": {
+    "title": "Login",
+    "google": "Continue with Google",
+    "email": "Email",
+    "password": "Password"
+  },
+  "post": {
+    "title": "Post Catch",
+    "photo": "Catch photo",
+    "fishType": "Fish species",
+    "size": "Size",
+    "caughtAt": "Caught at",
+    "comment": "Comment",
+    "submit": "Post"
+  },
+  "tournament": {
+    "title": "Tournaments",
+    "new": "Create Tournament",
+    "join": "Join",
+    "ranking": "Tournament Ranking",
+    "members": "Participants"
+  },
+  "group": {
+    "title": "Groups",
+    "new": "Create Group",
+    "join": "Join",
+    "ranking": "Group Ranking",
+    "members": "Members"
+  }
+}

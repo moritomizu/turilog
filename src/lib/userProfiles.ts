@@ -59,6 +59,7 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     email: typeof data.email === "string" ? data.email : null,
     avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : null,
     selfIntroduction: typeof data.selfIntroduction === "string" ? data.selfIntroduction : "",
+    preferredLocale: data.preferredLocale === "en" ? "en" : data.preferredLocale === "ja" ? "ja" : undefined,
     ageRange: typeof data.ageRange === "string" ? (data.ageRange as UserProfile["ageRange"]) : undefined,
     residenceArea: typeof data.residenceArea === "string" ? data.residenceArea : "",
     fishingAreas: Array.isArray(data.fishingAreas) ? data.fishingAreas.filter((item): item is string => typeof item === "string") : [],

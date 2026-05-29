@@ -2,32 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { getLocaleFromPathname, localizePath, stripLocaleFromPathname } from "@/lib/i18n";
 
 const tabs = [
-  { href: "/catches", label: "一覧", icon: ListIcon },
-  { href: "/ranking", label: "順位", icon: TrophyIcon },
-  { href: "/post", label: "投稿", icon: PlusIcon },
-  { href: "/map", label: "マップ", icon: PinIcon },
-  { href: "/analysis", label: "分析", icon: ChartIcon }
+  { href: "/catches", labelKey: "catches", icon: ListIcon },
+  { href: "/ranking", labelKey: "ranking", icon: TrophyIcon },
+  { href: "/post", labelKey: "post", icon: PlusIcon },
+  { href: "/map", labelKey: "map", icon: PinIcon },
+  { href: "/analysis", labelKey: "analysis", icon: ChartIcon }
 ];
 
 const hiddenPrefixes = ["/embed", "/login", "/post", "/catches/"];
 
 export function AppTabBar() {
   const pathname = usePathname();
-  if (hiddenPrefixes.some((prefix) => pathname.startsWith(prefix))) return null;
+  const locale = getLocaleFromPathname(pathname);
+  const cleanPathname = stripLocaleFromPathname(pathname);
+  const t = useTranslations("menu");
+  if (hiddenPrefixes.some((prefix) => cleanPathname.startsWith(prefix))) return null;
 
   return (
     <>
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-teal-100 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(15,118,110,0.08)] backdrop-blur">
         <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
           {tabs.map((tab) => {
-            const active = pathname === tab.href || (tab.href !== "/post" && pathname.startsWith(`${tab.href}/`));
+            const active = cleanPathname === tab.href || (tab.href !== "/post" && cleanPathname.startsWith(`${tab.href}/`));
             const Icon = tab.icon;
             return (
-              <Link key={tab.href} href={tab.href} className={`tap-target flex flex-col items-center justify-center gap-1 rounded px-2 py-1.5 text-[11px] font-black ${active ? "bg-foam text-water" : "text-slate-500"}`} aria-current={active ? "page" : undefined}>
+              <Link key={tab.href} href={localizePath(tab.href, locale)} className={`tap-target flex flex-col items-center justify-center gap-1 rounded px-2 py-1.5 text-[11px] font-black ${active ? "bg-foam text-water" : "text-slate-500"}`} aria-current={active ? "page" : undefined}>
                 <Icon className="h-5 w-5" />
-                <span>{tab.label}</span>
+                <span>{t(tab.labelKey)}</span>
               </Link>
             );
           })}

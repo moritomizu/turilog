@@ -1,7 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
+import { NextIntlClientProvider } from "next-intl";
 import { AppFooter } from "@/components/AppFooter";
 import { AppTabBar } from "@/components/AppTabBar";
+import { defaultLocale, isAppLocale } from "@/lib/i18n";
 import { createPageMetadata, getSiteUrl } from "@/lib/metadata";
+import enMessages from "../../messages/en.json";
+import jaMessages from "../../messages/ja.json";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -53,12 +58,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerLocale = headers().get("x-tsurilog-locale") ?? undefined;
+  const locale = isAppLocale(headerLocale) ? headerLocale : defaultLocale;
+  const messages = locale === "en" ? enMessages : jaMessages;
+
   return (
-    <html lang="ja">
+    <html lang={locale}>
       <body className="min-h-screen bg-foam text-ink">
-        {children}
-        <AppTabBar />
-        <AppFooter />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+          <AppTabBar />
+          <AppFooter />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

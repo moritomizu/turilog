@@ -1,0 +1,55 @@
+{
+  "common": {
+    "appName": "TsuriLog",
+    "terms": "利用規約",
+    "privacy": "プライバシーポリシー",
+    "plans": "プラン",
+    "createdBy": "created by TaPiYoTa",
+    "language": "言語",
+    "japanese": "日本語",
+    "english": "English"
+  },
+  "menu": {
+    "catches": "一覧",
+    "ranking": "順位",
+    "post": "投稿",
+    "map": "マップ",
+    "analysis": "分析"
+  },
+  "home": {
+    "tournaments": "釣り大会",
+    "groups": "グループ",
+    "aiReport": "AIレポートβ",
+    "notifications": "通知設定",
+    "plans": "プラン"
+  },
+  "login": {
+    "title": "ログイン",
+    "google": "Googleでログイン",
+    "email": "メールアドレス",
+    "password": "パスワード"
+  },
+  "post": {
+    "title": "釣果投稿",
+    "photo": "釣果写真",
+    "fishType": "魚種",
+    "size": "サイズ",
+    "caughtAt": "釣った日時",
+    "comment": "コメント",
+    "submit": "投稿する"
+  },
+  "tournament": {
+    "title": "釣り大会",
+    "new": "大会作成",
+    "join": "参加する",
+    "ranking": "大会ランキング",
+    "members": "参加者管理"
+  },
+  "group": {
+    "title": "グループ",
+    "new": "グループ作成",
+    "join": "参加する",
+    "ranking": "グループランキング",
+    "members": "メンバー管理"
+  }
+}

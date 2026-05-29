@@ -249,6 +249,7 @@ export type User = {
   email: string | null;
   avatarUrl?: string | null;
   selfIntroduction?: string;
+  preferredLocale?: "ja" | "en";
   createdAt: Date;
   termsAccepted?: boolean;
   privacyAccepted?: boolean;
@@ -276,6 +277,7 @@ export type UserProfile = {
   email?: string | null;
   avatarUrl?: string | null;
   selfIntroduction?: string;
+  preferredLocale?: "ja" | "en";
   ageRange?: AgeRange;
   residenceArea?: string;
   fishingAreas?: string[];
