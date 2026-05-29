@@ -8,6 +8,7 @@ import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 import { getGroupCatchComments } from "@/lib/groupCatchComments";
 import { canManageGroupMembersSync, findGroupMember } from "@/lib/groupPermissions";
 import { getGroupJoinRequests, getGroupMembers, getGroupsForUser } from "@/lib/groups";
+import { isAdminProfile } from "@/lib/features";
 import { canManageApprovals, canManageMembers, findParticipant } from "@/lib/tournamentPermissions";
 import { getTournamentParticipants, getTournaments } from "@/lib/tournaments";
 import { getUserProfile } from "@/lib/userProfiles";
@@ -46,6 +47,7 @@ const bannerSlides = [
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [approvalSummary, setApprovalSummary] = useState<ApprovalSummary>(emptyApprovalSummary());
   const [activeBanner, setActiveBanner] = useState(0);
 
@@ -58,11 +60,18 @@ export default function Home() {
     if (!user) {
       setApprovalSummary(emptyApprovalSummary());
       setProfileAvatarUrl(null);
+      setIsAdmin(false);
       return;
     }
     getUserProfile(user.uid)
-      .then((profile) => setProfileAvatarUrl(profile?.avatarUrl ?? user.photoURL ?? null))
-      .catch(() => setProfileAvatarUrl(user.photoURL ?? null));
+      .then((profile) => {
+        setProfileAvatarUrl(profile?.avatarUrl ?? user.photoURL ?? null);
+        setIsAdmin(isAdminProfile(profile));
+      })
+      .catch(() => {
+        setProfileAvatarUrl(user.photoURL ?? null);
+        setIsAdmin(false);
+      });
     loadApprovalSummary(user.uid)
       .then(setApprovalSummary)
       .catch(() => setApprovalSummary(emptyApprovalSummary()));
@@ -186,6 +195,16 @@ export default function Home() {
         <Link href="/login" className="mt-6 inline-flex w-full items-center justify-center rounded border border-water px-5 py-4 font-bold text-water">
           ログイン設定
         </Link>
+
+        {isAdmin ? (
+          <footer className="mt-5 rounded border border-slate-200 bg-white p-4 shadow-soft">
+            <p className="text-xs font-black text-slate-500">ADMIN</p>
+            <Link href="/admin" className="tap-target mt-2 flex items-center justify-between gap-3 rounded bg-slate-900 px-4 py-3 text-sm font-black text-white">
+              <span>管理者画面TOP</span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          </footer>
+        ) : null}
       </section>
     </main>
   );
