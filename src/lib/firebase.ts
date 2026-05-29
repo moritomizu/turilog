@@ -30,6 +30,7 @@ let auth: Auth | null = null;
 let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
 let messaging: Messaging | null = null;
+let messagingApp: FirebaseApp | null = null;
 
 export function getFirebaseApp() {
   if (!isFirebaseConfigured) {
@@ -62,8 +63,21 @@ export async function getFirebaseMessaging() {
   if (!(await isSupported())) {
     throw new Error("このブラウザはWeb Push通知に対応していません。");
   }
-  if (!messaging) messaging = getMessaging(getFirebaseApp());
+  if (!messaging) messaging = getMessaging(getFirebaseMessagingApp());
   return messaging;
 }
 
 export const googleProvider = new GoogleAuthProvider();
+
+function getFirebaseMessagingApp() {
+  const messagingApiKey = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_API_KEY;
+  if (!messagingApiKey) return getFirebaseApp();
+  if (!isFirebaseConfigured) {
+    throw new Error(`Firebase設定が不足しています: ${missingFirebaseEnv.join(", ")}`);
+  }
+  if (!messagingApp) {
+    const existing = getApps().find((item) => item.name === "tsurilog-messaging");
+    messagingApp = existing ?? initializeApp({ ...firebaseConfig, apiKey: messagingApiKey }, "tsurilog-messaging");
+  }
+  return messagingApp;
+}

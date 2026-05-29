@@ -1413,6 +1413,22 @@ Firebase Console で対象プロジェクトを開き、Cloud Messaging の設�
 NEXT_PUBLIC_FIREBASE_VAPID_KEY=your_firebase_web_push_vapid_key
 ```
 
+Googleログインを安定させるため、`NEXT_PUBLIC_FIREBASE_API_KEY` はFirebase Webアプリの元のAPIキーのままにします。FCM token 登録だけ別APIキーで切り分けたい場合は、以下を追加できます。
+
+```text
+NEXT_PUBLIC_FIREBASE_MESSAGING_API_KEY=your_firebase_messaging_api_key
+```
+
+このキーには、少なくとも以下のAPIを許可します。
+
+```text
+Firebase Installations API
+FCM Registration API
+Firebase Cloud Messaging API
+```
+
+`NEXT_PUBLIC_FIREBASE_MESSAGING_API_KEY` を設定しない場合は、従来どおり `NEXT_PUBLIC_FIREBASE_API_KEY` を使ってFCM tokenを取得します。
+
 通知送信用 API では Firebase サービスアカウントを使います。
 
 ```text
