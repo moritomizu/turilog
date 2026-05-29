@@ -85,7 +85,12 @@ function NotificationSettings({ userId }: { userId: string }) {
     setMessage("テスト通知を送信しています。");
     try {
       const result = await sendSelfTestNotification();
-      setMessage(`テスト通知を送信しました。送信数: ${result.sent ?? 0}`);
+      const sent = result.sent ?? 0;
+      const detail = typeof result.message === "string" && sent === 0 ? ` ${result.message}` : "";
+      const diagnostics = result.diagnostics
+        ? ` 対象:${result.diagnostics.targetUsers ?? 0} / ユーザー:${result.diagnostics.existingUsers ?? 0} / ON:${result.diagnostics.notificationEnabledUsers ?? 0} / トークン:${result.diagnostics.tokenCount ?? 0}`
+        : "";
+      setMessage(`テスト通知を送信しました。送信数: ${sent}${detail}${diagnostics}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "テスト通知を送信できませんでした。");
     } finally {

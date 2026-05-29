@@ -23,18 +23,19 @@ export async function POST(request: Request) {
     const accessToken = await getServiceAccountAccessToken();
     const targetUserIds = await resolveTargetUserIds(payload, accessToken);
     const users = await Promise.all(targetUserIds.map((userId) => fetchUserNotificationDoc(userId, accessToken)));
+    const diagnostics = buildNotificationDiagnostics(users, payload.category);
     const tokens = users.flatMap((user) => {
       if (!user.notificationEnabled) return [];
       if (!isPreferenceEnabled(user.notificationPreferences, payload.category)) return [];
       return user.fcmTokens;
     });
     const uniqueTokens = [...new Set(tokens)].filter(Boolean);
-    if (!uniqueTokens.length) return NextResponse.json({ sent: 0, skipped: targetUserIds.length, message: "送信対象の通知トークンがありません。" });
+    if (!uniqueTokens.length) return NextResponse.json({ sent: 0, skipped: targetUserIds.length, message: getNoTokenMessage(diagnostics, payload.category), diagnostics });
 
     const results = await Promise.allSettled(uniqueTokens.map((token) => sendFcmMessage(accessToken, token, payload)));
     const sent = results.filter((result) => result.status === "fulfilled").length;
     const failed = results.length - sent;
-    return NextResponse.json({ sent, failed, targets: targetUserIds.length });
+    return NextResponse.json({ sent, failed, targets: targetUserIds.length, diagnostics });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "通知を送信できませんでした。" }, { status: getStatus(error) });
   }
@@ -110,16 +111,35 @@ async function fetchUserNotificationDoc(userId: string, accessToken: string) {
   const response = await fetch(`${firestoreBaseUrl}/users/${userId}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
-  if (response.status === 404) return { userId, notificationEnabled: false, fcmTokens: [], notificationPreferences: {} as Record<string, boolean> };
+  if (response.status === 404) return { userId, exists: false, notificationEnabled: false, fcmTokens: [], notificationPreferences: {} as Record<string, boolean> };
   const data = await response.json();
   if (!response.ok) throw new Error("通知設定を取得できませんでした。");
   const fields = data.fields ?? {};
   return {
     userId,
+    exists: true,
     notificationEnabled: fields.notificationEnabled?.booleanValue === true,
     fcmTokens: (fields.fcmTokens?.arrayValue?.values ?? []).map((item: { stringValue?: string }) => item.stringValue).filter((item: unknown): item is string => typeof item === "string"),
     notificationPreferences: fromMapValue(fields.notificationPreferences)
   };
+}
+
+function buildNotificationDiagnostics(users: Awaited<ReturnType<typeof fetchUserNotificationDoc>>[], category: NotificationCategory) {
+  return {
+    targetUsers: users.length,
+    existingUsers: users.filter((user) => user.exists).length,
+    notificationEnabledUsers: users.filter((user) => user.notificationEnabled).length,
+    categoryEnabledUsers: users.filter((user) => isPreferenceEnabled(user.notificationPreferences, category)).length,
+    tokenCount: users.reduce((total, user) => total + user.fcmTokens.length, 0)
+  };
+}
+
+function getNoTokenMessage(diagnostics: ReturnType<typeof buildNotificationDiagnostics>, category: NotificationCategory) {
+  if (diagnostics.existingUsers === 0) return "通知対象ユーザーがFirestore上で見つかりません。FIREBASE_PROJECT_ID がアプリのFirebase projectIdと一致しているか確認してください。";
+  if (diagnostics.notificationEnabledUsers === 0) return "通知全体がOFFになっています。";
+  if (diagnostics.categoryEnabledUsers === 0) return `${category} の通知カテゴリがOFFになっています。`;
+  if (diagnostics.tokenCount === 0) return "通知トークンが保存されていません。通知を有効にする操作をもう一度行ってください。";
+  return "送信対象の通知トークンがありません。";
 }
 
 function fromMapValue(value: { mapValue?: { fields?: Record<string, { booleanValue?: boolean }> } } | undefined) {
