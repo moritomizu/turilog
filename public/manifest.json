@@ -9,6 +9,7 @@
   "theme_color": "#0f766e",
   "background_color": "#eef8f5",
   "lang": "ja",
+  "gcm_sender_id": "103953800507",
   "categories": ["sports", "lifestyle", "utilities"],
   "icons": [
     {
