@@ -12,7 +12,7 @@ export function AppFooter() {
   const t = useTranslations("common");
 
   return (
-    <footer className="border-t border-teal-100 bg-foam px-4 py-6">
+    <footer className="border-t border-teal-100 bg-foam px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 sm:pb-8">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 text-xs font-bold text-slate-600 sm:flex-row sm:items-center sm:justify-between">
         <p>{t("createdBy")}</p>
         <nav className="flex flex-wrap items-center gap-4">
