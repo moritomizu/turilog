@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 
@@ -9,15 +10,16 @@ const navItems = [
   { href: "#premium", label: "Premium" }
 ];
 
-const catchFields = ["魚種", "サイズ", "時間", "エリア", "潮位", "タックル"];
+const catchFields = ["魚種", "サイズ", "時間帯", "エリア", "潮位", "風向き", "風速", "水温", "天気", "タックル"];
 
 const aiInsights = [
-  "今月は下げ潮で大型率が高い傾向",
-  "マダイは朝7〜10時台に集中",
+  "下げ潮と北西風の日に良型が出やすい傾向",
+  "マダイは朝の釣行データに反応が集中",
   "タイラバ用メインで平均サイズが高め"
 ];
 
 const proofMessages = ["GPS確認済み", "潮位データ取得済み", "サイズ確認写真あり", "異常検知なし"];
+const catchValues = ["マダイ", "62cm", "朝", "大阪湾", "下げ三分", "北西", "3m", "18.7℃", "くもり", "タイラバ"];
 
 export function LandingPage() {
   return (
@@ -69,17 +71,16 @@ function LandingHeader() {
 function HeroSection() {
   return (
     <section className="relative isolate min-h-[760px] overflow-hidden bg-[#06131f] pt-24 text-white">
-      <div className="absolute inset-0 bg-[url('/icons/tsurilog-icon.png')] bg-cover bg-center opacity-35" aria-hidden="true" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.36),transparent_34%),linear-gradient(110deg,rgba(3,7,18,0.95)_0%,rgba(6,19,31,0.76)_48%,rgba(15,118,110,0.54)_100%)]" aria-hidden="true" />
+      <HeroBackground imageUrl="/images/lp/IMG_7885.jpg" overlayOpacity={0.72} objectPosition="center right" />
       <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 lg:grid-cols-[1fr_0.88fr] lg:px-8 lg:py-28">
-        <div className="max-w-3xl">
-          <p className="text-sm font-black uppercase tracking-[0.24em] text-orange-200">Personal fishing data platform</p>
-          <h1 className="mt-5 text-5xl font-black leading-[1.04] tracking-normal sm:text-6xl lg:text-7xl">
-            釣果を記録するたび、
-            <span className="block text-[#7dd3fc]">次の1匹に近づく。</span>
+        <div className="max-w-2xl">
+          <p className="text-sm font-black uppercase tracking-[0.24em] text-orange-200">PERSONAL FISHING LOG</p>
+          <h1 className="mt-5 text-4xl font-black leading-[1.08] tracking-normal sm:text-5xl lg:text-6xl">
+            記録するほど、
+            <span className="block text-[#7dd3fc]">理想の1匹に近づく。</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg font-bold leading-9 text-slate-100 sm:text-xl">
-            ツリログは、釣果記録・大会・グループ共有・AI分析をひとつにした、釣り人のための釣果データプラットフォームです。
+            ツリログは、釣果・ポイント・潮位・気象条件・タックルをかんたんに記録し、あとから振り返れる釣り人のためのパーソナル釣果ログです。
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-7 text-base font-black text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
@@ -93,6 +94,31 @@ function HeroSection() {
         <HeroMockup />
       </div>
     </section>
+  );
+}
+
+function HeroBackground({ imageUrl, overlayOpacity, objectPosition }: { imageUrl?: string; overlayOpacity?: number; objectPosition?: string }) {
+  return (
+    <div className="absolute inset-0" aria-hidden="true">
+      {imageUrl ? (
+        <Image
+          src={imageUrl}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+          style={{ objectPosition }}
+        />
+      ) : (
+        <div className="h-full w-full bg-[radial-gradient(circle_at_70%_30%,rgba(14,165,233,0.34),transparent_34%),linear-gradient(135deg,#06131f,#0f766e)]" />
+      )}
+      <div
+        className="absolute inset-0 bg-[linear-gradient(105deg,rgba(3,7,18,0.92)_0%,rgba(6,19,31,0.78)_36%,rgba(6,19,31,0.34)_62%,rgba(6,19,31,0.08)_100%)]"
+        style={{ opacity: overlayOpacity ?? 0.7 }}
+      />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.22),transparent_34%)]" />
+    </div>
   );
 }
 
@@ -134,8 +160,8 @@ function FeatureSection() {
     <FeatureBlock
       id="features"
       eyebrow="Catch log"
-      title="その日の釣果を、次の釣果につなげる。"
-      description="魚種・サイズ・釣れた時間・エリア・潮位・タックルを記録。釣果を重ねるほど、自分だけの釣れるパターンが見えてきます。"
+      title="その日の釣りを、次の釣りのヒントに。"
+      description="魚種、サイズ、釣れた時間、エリア、潮位、風向き、水温、天気、タックルをまとめて記録。あとから見返すことで、自分だけの釣れる条件が見えてきます。"
       visual={<CatchLogMockup />}
     />
   );
@@ -145,12 +171,18 @@ function CatchLogMockup() {
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-900/10">
       <div className="rounded-3xl bg-[#f8fafc] p-4">
-        <div className="h-48 rounded-2xl bg-[url('/icons/tsurilog-icon.png')] bg-cover bg-center" />
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="relative h-56 overflow-hidden rounded-2xl bg-[url('/images/lp/IMG_7638.jpg')] bg-cover bg-center">
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">PERSONAL LOG</p>
+            <p className="mt-1 text-2xl font-black text-white">今日の釣りを残す</p>
+          </div>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {catchFields.map((field, index) => (
             <div key={field} className="rounded-2xl bg-white p-4 shadow-sm">
               <p className="text-xs font-black text-slate-400">{field}</p>
-              <p className="mt-1 text-base font-black text-slate-900">{["マダイ", "62cm", "06:42", "大阪湾", "下げ三分", "タイラバ"][index]}</p>
+              <p className="mt-1 text-base font-black text-slate-900">{catchValues[index]}</p>
             </div>
           ))}
         </div>
@@ -164,8 +196,8 @@ function AIReportSection() {
     <FeatureBlock
       id="ai"
       eyebrow="AI report beta"
-      title="釣果を記録するほど、AIが賢くなる。"
-      description="過去の釣果から、釣れやすい潮・時間帯・エリア・タックル傾向を分析。次回釣行のヒントをレポートします。"
+      title="あなたの釣果から、釣れるパターンを見つける。"
+      description="過去の釣果と潮位・気象条件・タックル情報をもとに、釣れやすい時間帯や条件を分析。次回釣行のヒントをレポートします。"
       reverse
       visual={<AIReportMockup />}
       cta={<Link href="/ai-report" className="inline-flex rounded-full bg-[#0f766e] px-6 py-3 font-black text-white transition hover:-translate-y-0.5 hover:bg-[#115e59]">AI分析を試す</Link>}
@@ -202,8 +234,8 @@ function TournamentSection() {
     <FeatureBlock
       id="tournament"
       eyebrow="Tournament"
-      title="仲間と、全国と、オンラインで競える。"
-      description="大会を作成し、釣果を投稿するだけでランキングを自動更新。主催者は承認管理や釣果確認も行えます。"
+      title="仲間が集まると、釣りはもっと楽しくなる。"
+      description="釣果ログを使う仲間が増えることで、グループ共有やオンライン釣り大会も楽しめます。まずは自分の釣果記録から始めて、仲間との釣り体験へ広げていけます。"
       visual={<TournamentMockup />}
     />
   );
@@ -242,8 +274,8 @@ function GroupSection() {
   return (
     <FeatureBlock
       eyebrow="Group"
-      title="釣り仲間の釣果が、見える。"
-      description="グループ内で釣果を共有し、月別・魚種別・エリア別に振り返れます。仲間内ランキングや釣果マップにも対応。"
+      title="仲間と共有すると、釣果がもっと面白くなる。"
+      description="釣り仲間同士で釣果を共有し、月別・魚種別・エリア別に振り返れます。個人の記録が、仲間との楽しみに変わります。"
       reverse
       visual={<GroupMockup />}
     />
@@ -284,8 +316,8 @@ function VerificationSection() {
   return (
     <FeatureBlock
       eyebrow="Catch proof beta"
-      title="釣果の信頼性を、見える化。"
-      description="写真・GPS・時刻・潮位・サイズ確認写真・大会条件などをもとに、釣果の信頼度を参考スコアとして表示します。"
+      title="釣果の信頼性を、独自技術で見える化。"
+      description="写真・GPS・時刻・潮位・サイズ確認写真・大会条件などをもとに、釣果の信頼度を参考スコアとして表示。ツリログでは、この仕組みを「釣果デジタル証明」として特許出願準備中です。"
       visual={<VerificationMockup />}
       note="このスコアは釣果の真正性を完全に保証するものではなく、大会運営や確認作業を補助する参考情報です。"
     />
@@ -295,7 +327,12 @@ function VerificationSection() {
 function VerificationMockup() {
   return (
     <div className="rounded-[2rem] border border-emerald-100 bg-white p-6 shadow-2xl shadow-slate-900/10">
-      <p className="text-sm font-black text-[#0f766e]">釣果デジタル証明 β</p>
+      <div className="flex flex-wrap gap-2">
+        {["Catch Proof β", "特許出願準備中", "独自技術"].map((label) => (
+          <span key={label} className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-[#0f766e]">{label}</span>
+        ))}
+      </div>
+      <p className="mt-4 text-sm font-black text-[#0f766e]">釣果デジタル証明 β</p>
       <div className="mt-4 flex items-end justify-between gap-4">
         <div>
           <p className="text-sm font-bold text-slate-500">証明スコア</p>
@@ -347,8 +384,8 @@ function PricingSection() {
       <div className="mx-auto max-w-7xl">
         <div className="max-w-3xl">
           <p className="text-sm font-black uppercase tracking-[0.22em] text-orange-200">Premium</p>
-          <h2 className="mt-4 text-4xl font-black leading-tight sm:text-5xl">本気で釣果を伸ばしたいアングラーへ。</h2>
-          <p className="mt-5 text-lg font-bold leading-8 text-slate-200">無料で釣果記録を始め、本気で分析したくなったらPremiumへ。</p>
+          <h2 className="mt-4 text-3xl font-black leading-tight sm:text-4xl lg:text-[2.65rem]">もっと深く、自分の釣りを知りたい人へ。</h2>
+          <p className="mt-5 text-lg font-bold leading-8 text-slate-200">AI分析、詳細潮位分析、気象条件分析、タックル別分析など、釣果を伸ばしたいアングラー向けの機能を用意しています。</p>
         </div>
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
           <PlanCard
@@ -363,7 +400,7 @@ function PricingSection() {
             price="月額980円"
             caption="現在のPremium設定に合わせた価格です。"
             highlight
-            items={["AI釣果レポート", "詳細潮位分析", "タックル分析", "高度な検索", "デジタル証明詳細"]}
+            items={["AI釣果レポート", "詳細潮位分析", "気象条件分析", "タックル別分析", "年間/月間レポート", "高度な検索"]}
             href="/plans"
             action="Premiumを試す"
           />
@@ -421,13 +458,17 @@ function UseCaseSection() {
 function VisionSection() {
   return (
     <section className="px-5 py-24 lg:px-8">
-      <div className="mx-auto max-w-7xl rounded-[2.5rem] bg-gradient-to-br from-[#0f766e] via-[#0f3b55] to-[#06131f] p-8 text-white shadow-2xl shadow-teal-950/20 sm:p-12 lg:p-16">
-        <p className="text-sm font-black uppercase tracking-[0.22em] text-cyan-100">Vision</p>
-        <h2 className="mt-4 max-w-4xl text-4xl font-black leading-tight sm:text-5xl">釣果データが、釣りの未来を変える。</h2>
-        <p className="mt-6 max-w-3xl text-lg font-bold leading-9 text-slate-100">
-          ツリログは、釣果記録アプリではなく、釣果データを活用した釣りの意思決定インフラを目指します。
-        </p>
-        <TagRow items={["AI", "大会", "データ分析", "国際展開", "API", "釣果証明"]} light />
+      <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] bg-[#06131f] p-8 text-white shadow-2xl shadow-teal-950/20 sm:p-12 lg:p-16">
+        <div className="absolute inset-0 bg-[url('/images/lp/IMG_7748.jpg')] bg-cover bg-center opacity-45" aria-hidden="true" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/75 to-slate-950/20" aria-hidden="true" />
+        <div className="relative">
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-cyan-100">Vision</p>
+          <h2 className="mt-4 max-w-4xl text-3xl font-black leading-tight sm:text-4xl lg:text-[2.65rem]">釣果データが、釣りの未来を変える。</h2>
+          <p className="mt-6 max-w-3xl text-lg font-bold leading-9 text-slate-100">
+            ツリログは、日々の釣果記録から始まり、AI分析、仲間との共有、大会運営へ広がる釣りの意思決定インフラを目指します。
+          </p>
+          <TagRow items={["AI", "大会", "データ分析", "国際展開", "API", "釣果証明"]} light />
+        </div>
       </div>
     </section>
   );
@@ -436,12 +477,16 @@ function VisionSection() {
 function FinalCTA() {
   return (
     <section className="px-5 py-24 lg:px-8">
-      <div className="mx-auto max-w-4xl text-center">
-        <p className="text-sm font-black uppercase tracking-[0.22em] text-[#0f766e]">Start today</p>
-        <h2 className="mt-4 text-4xl font-black leading-tight text-slate-950 sm:text-6xl">まずは、今日の1匹を記録しよう。</h2>
-        <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-8 font-black text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">無料で始める</Link>
-          <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full border border-slate-300 bg-white px-8 font-black text-slate-950 transition hover:-translate-y-0.5 hover:border-[#0f766e]">ログインする</Link>
+      <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] bg-[#06131f] px-6 py-20 text-center text-white shadow-2xl shadow-slate-900/15 sm:px-10">
+        <div className="absolute inset-0 bg-[url('/images/lp/IMG_7638.jpg')] bg-cover bg-center opacity-50" aria-hidden="true" />
+        <div className="absolute inset-0 bg-slate-950/55" aria-hidden="true" />
+        <div className="relative">
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-orange-200">Start today</p>
+          <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-black leading-tight sm:text-5xl">まずは、今日の1匹を記録しよう。</h2>
+          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-8 font-black text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">無料で始める</Link>
+            <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-8 font-black text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">ログインする</Link>
+          </div>
         </div>
       </div>
     </section>
@@ -472,7 +517,7 @@ function FeatureBlock({ id, eyebrow, title, description, visual, cta, note, reve
       <div className={`mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 ${reverse ? "lg:[&>*:first-child]:order-2" : ""}`}>
         <div>
           <p className="text-sm font-black uppercase tracking-[0.22em] text-[#0f766e]">{eyebrow}</p>
-          <h2 className="mt-4 text-4xl font-black leading-tight text-slate-950 sm:text-5xl">{title}</h2>
+          <h2 className="mt-4 max-w-3xl text-3xl font-black leading-[1.15] text-slate-950 sm:text-4xl lg:text-[2.65rem]">{title}</h2>
           <p className="mt-5 text-lg font-bold leading-9 text-slate-600">{description}</p>
           {note ? <p className="mt-5 rounded-2xl bg-orange-50 p-4 text-sm font-bold leading-7 text-orange-800">{note}</p> : null}
           {cta ? <div className="mt-7">{cta}</div> : null}
@@ -487,7 +532,7 @@ function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) 
   return (
     <div className="max-w-3xl">
       <p className="text-sm font-black uppercase tracking-[0.22em] text-[#0f766e]">{eyebrow}</p>
-      <h2 className="mt-4 text-4xl font-black leading-tight text-slate-950 sm:text-5xl">{title}</h2>
+      <h2 className="mt-4 text-3xl font-black leading-[1.15] text-slate-950 sm:text-4xl lg:text-[2.65rem]">{title}</h2>
     </div>
   );
 }

@@ -3,9 +3,9 @@ import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata = createPageMetadata({
   title: "ツリログ｜釣果記録・釣り大会・AI分析アプリ",
-  description: "ツリログは、釣果記録・オンライン釣り大会・グループ共有・AI分析をひとつにした釣り人向け釣果データプラットフォームです。",
+  description: "ツリログは、釣果・ポイント・潮位・気象条件・タックルをかんたんに記録し、あとから振り返れる釣り人のためのパーソナル釣果ログです。",
   path: "/lp",
-  image: "/icons/tsurilog-icon.png"
+  image: "/images/lp/IMG_7885.jpg"
 });
 
 export default function Page() {
