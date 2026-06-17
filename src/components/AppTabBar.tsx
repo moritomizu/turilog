@@ -13,7 +13,7 @@ const tabs = [
   { href: "/analysis", labelKey: "analysis", icon: ChartIcon }
 ];
 
-const hiddenPrefixes = ["/embed", "/login", "/post", "/catches/"];
+const hiddenPrefixes = ["/embed", "/login", "/lp", "/post", "/catches/"];
 
 export function AppTabBar() {
   const pathname = usePathname();

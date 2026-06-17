@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
-import { getLocaleFromPathname, localizePath } from "@/lib/i18n";
+import { getLocaleFromPathname, localizePath, stripLocaleFromPathname } from "@/lib/i18n";
 
 export function AppFooter() {
   const pathname = usePathname();
   const locale = getLocaleFromPathname(pathname);
+  const cleanPathname = stripLocaleFromPathname(pathname);
   const t = useTranslations("common");
+
+  if (cleanPathname.startsWith("/lp")) return null;
 
   return (
     <footer className="border-t border-teal-100 bg-foam px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 sm:pb-8">
