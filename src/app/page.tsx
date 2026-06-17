@@ -12,6 +12,7 @@ import { isAdminProfile } from "@/lib/features";
 import { canManageApprovals, canManageMembers, findParticipant } from "@/lib/tournamentPermissions";
 import { getTournamentParticipants, getTournaments } from "@/lib/tournaments";
 import { getUserProfile } from "@/lib/userProfiles";
+import { LandingPage } from "@/components/landing/LandingPage";
 import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 import type { Catch, GroupCatchComment } from "@/types";
 
@@ -46,14 +47,21 @@ const bannerSlides = [
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [approvalSummary, setApprovalSummary] = useState<ApprovalSummary>(emptyApprovalSummary());
   const [activeBanner, setActiveBanner] = useState(0);
 
   useEffect(() => {
-    if (!isFirebaseConfigured) return;
-    return onAuthStateChanged(getFirebaseAuth(), setUser);
+    if (!isFirebaseConfigured) {
+      setAuthReady(true);
+      return;
+    }
+    return onAuthStateChanged(getFirebaseAuth(), (nextUser) => {
+      setUser(nextUser);
+      setAuthReady(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -86,6 +94,19 @@ export default function Home() {
 
   const approvalCount = approvalSummary.groupRequests + approvalSummary.tournamentEntries + approvalSummary.tournamentPaymentReviews;
   const commentCount = approvalSummary.commentDetails.reduce((sum, item) => sum + item.count, 0);
+
+  if (!authReady) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-foam px-6">
+        <div className="text-center">
+          <TsuriLogLogo className="mx-auto h-12 w-44 object-contain" />
+          <p className="mt-4 text-sm font-black text-slate-500">読み込み中...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) return <LandingPage />;
 
   return (
     <main className="min-h-screen bg-foam px-4 py-5">

@@ -28,7 +28,7 @@ const locationCards = ["個人ログでは正確に記録", "グループでは�
 
 export function LandingPage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f6fbfb] text-slate-950">
+    <main data-landing-page="true" className="min-h-screen overflow-hidden bg-[#f6fbfb] text-slate-950">
       <LandingHeader />
       <HeroSection />
       <FeatureSection />

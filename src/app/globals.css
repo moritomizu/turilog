@@ -42,6 +42,12 @@ select {
   min-height: 48px;
 }
 
+main[data-landing-page="true"] ~ nav,
+main[data-landing-page="true"] ~ footer,
+main[data-landing-page="true"] ~ div[aria-hidden="true"] {
+  display: none;
+}
+
 @keyframes float {
   0%,
   100% {
