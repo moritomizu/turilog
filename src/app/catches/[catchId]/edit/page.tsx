@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
-import { emptyTackleInfo, getCatchById, getUserCatches, updateCatch, uploadCatchImage } from "@/lib/catches";
+import { emptyTackleInfo, getCatchById, getUserCatches, updateCatch, uploadMeasurementPhoto } from "@/lib/catches";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { formatCoordinate } from "@/lib/location";
 import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
@@ -119,7 +119,7 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
       const inferredArea = location ? getAreaFromLocation(location.latitude, location.longitude) : { areaName: "", areaCode: "" };
       const savedAreaName = areaName || inferredArea.areaName;
       let nextMeasurementPhotoUrl = removeMeasurementPhoto ? null : measurementPhotoUrl;
-      if (measurementFile) nextMeasurementPhotoUrl = await uploadCatchImage(userId, measurementFile);
+      if (measurementFile) nextMeasurementPhotoUrl = await uploadMeasurementPhoto(userId, measurementFile);
       const nextMeasurementMethod = nextMeasurementPhotoUrl ? "measurePhoto" : "manual";
       const basePatch = {
         fishType: fishType.trim(),

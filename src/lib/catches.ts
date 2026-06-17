@@ -15,6 +15,12 @@ export async function uploadCatchImage(userId: string, file: File) {
   return getDownloadURL(storageRef);
 }
 
+export async function uploadMeasurementPhoto(userId: string, file: File) {
+  const storageRef = ref(getFirebaseStorage(), `measurementPhotos/${userId}/${crypto.randomUUID()}-${file.name}`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
+}
+
 export async function createCatch(data: Omit<Catch, "id" | "createdAt">) {
   const ref = await addDoc(collection(getFirebaseDb(), "catches"), {
     ...data,

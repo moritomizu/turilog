@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isImage() {
+      return request.resource != null && request.resource.contentType.matches('image/.*');
+    }
+
+    function isUnder10MB() {
+      return request.resource != null && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    function isSafeImageUpload(userId) {
+      return isOwner(userId) && isImage() && isUnder10MB();
+    }
+
+    // 釣果写真: 新規投稿・既存投稿ともに本人のみ書き込み、ログインユーザーのみ閲覧。
+    match /catches/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isSafeImageUpload(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // サイズ確認用写真: 新規アップロード先。MVPでは本人のみ閲覧。
+    match /measurementPhotos/{userId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow create, update: if isSafeImageUpload(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // プロフィール画像: 新規アップロード先。公開プロフィールやランキング表示のため全員閲覧可。
+    match /avatars/{userId}/{fileName} {
+      allow read: if true;
+      allow create, update: if isSafeImageUpload(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // 旧プロフィール画像パスとの互換性。
+    match /users/{userId}/avatars/{fileName} {
+      allow read: if true;
+      allow create, update: if isSafeImageUpload(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // グループアイコン: グループ一覧・招待画面で表示するため全員閲覧可。
+    match /groups/{ownerId}/icons/{fileName} {
+      allow read: if true;
+      allow create, update: if isSafeImageUpload(ownerId);
+      allow delete: if isOwner(ownerId);
+    }
+
+    // 大会カバー画像: 大会一覧・詳細で表示するため全員閲覧可。
+    match /tournaments/{ownerId}/covers/{fileName} {
+      allow read: if true;
+      allow create, update: if isSafeImageUpload(ownerId);
+      allow delete: if isOwner(ownerId);
+    }
+
+    // 大会参加者アイコン: MVPではログインユーザーのみ閲覧。
+    match /tournamentParticipants/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isSafeImageUpload(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // 管理された公開素材。クライアントからの書き込みは禁止。
+    match /public/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // 想定外パスはすべて拒否。
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

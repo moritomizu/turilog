@@ -6,7 +6,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type Poin
 import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
-import { createCatch, emptyTackleInfo, getUserCatches, updateCatchEnrichment, uploadCatchImage } from "@/lib/catches";
+import { createCatch, emptyTackleInfo, getUserCatches, updateCatchEnrichment, uploadCatchImage, uploadMeasurementPhoto } from "@/lib/catches";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { getPostableGroupsForUser } from "@/lib/groups";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
@@ -348,7 +348,7 @@ function PostForm({ userId }: { userId: string }) {
       let imageUrl: string | null = null;
       if (file) imageUrl = await uploadCatchImage(userId, file);
       let measurementPhotoUrl: string | null = null;
-      if (measurementFile) measurementPhotoUrl = await uploadCatchImage(userId, measurementFile);
+      if (measurementFile) measurementPhotoUrl = await uploadMeasurementPhoto(userId, measurementFile);
       setSubmitStage("釣果を保存しています。");
       const caughtAtIso = new Date(caughtAt).toISOString();
       const emptyTideInfo = getEmptyTideInfo();

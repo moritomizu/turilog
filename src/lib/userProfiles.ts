@@ -24,7 +24,7 @@ export async function saveUserProfileData(userId: string, data: Partial<UserProf
 }
 
 export async function uploadUserAvatar(userId: string, file: File) {
-  const storageRef = ref(getFirebaseStorage(), `users/${userId}/avatars/${crypto.randomUUID()}-${file.name}`);
+  const storageRef = ref(getFirebaseStorage(), `avatars/${userId}/${crypto.randomUUID()}-${file.name}`);
   await uploadBytes(storageRef, file);
   return getDownloadURL(storageRef);
 }

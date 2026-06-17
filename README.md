@@ -94,8 +94,51 @@ match /publicCatches/{catchId} {
 
 1. Firebase Consoleで「Storage」を開きます。
 2. 「始める」を押します。
-3. まずはテストモードで開始できます。
-4. 本番公開時はログインユーザーだけが自分の画像を保存できるルールに変更してください。
+3. ロケーションを選択して有効化します。
+4. 本番公開前には、テストモードのままにせず `storage.rules` をデプロイしてください。
+
+### Cloud Storage Security Rules 方針
+
+このアプリでは、Firebase Storage に釣果写真、サイズ確認用写真、プロフィール画像、グループ画像、大会画像などを保存します。
+
+本番公開前提のルールは `storage.rules` で管理しています。`firebase.json` では以下のように Storage Rules を参照しています。
+
+```json
+{
+  "storage": {
+    "rules": "storage.rules"
+  }
+}
+```
+
+主な保存パスとルール方針:
+
+| パス | 用途 | 読み取り | 書き込み |
+| --- | --- | --- | --- |
+| `/catches/{userId}/{fileName}` | 釣果写真 | ログインユーザー | 本人のみ |
+| `/measurementPhotos/{userId}/{fileName}` | サイズ確認用写真 | 本人のみ | 本人のみ |
+| `/avatars/{userId}/{fileName}` | プロフィール画像 | 全員 | 本人のみ |
+| `/groups/{ownerId}/icons/{fileName}` | グループアイコン | 全員 | 所有者のみ |
+| `/tournaments/{ownerId}/covers/{fileName}` | 大会カバー画像 | 全員 | 所有者のみ |
+| `/tournamentParticipants/{userId}/{fileName}` | 大会参加者アイコン | ログインユーザー | 本人のみ |
+| `/public/{fileName}` | 公開素材 | 全員 | クライアント書き込み禁止 |
+
+共通ルール:
+
+- 未ログインユーザーの書き込みは禁止
+- アップロードできるのは画像ファイルのみ
+- 画像サイズは10MB未満
+- 想定外のStorageパスはすべて拒否
+
+既存のプロフィール画像パス `/users/{userId}/avatars/{fileName}` は、過去に保存した画像が表示できなくならないよう互換パスとして読み取りを許可しています。
+
+Storage Rules を反映するコマンド:
+
+```bash
+firebase deploy --only storage
+```
+
+注意: サイズ確認用写真はMVPでは本人のみ閲覧できます。大会主催者や管理者がサイズ確認用写真を閲覧する権限は、今後 Storage パス設計またはサーバー経由の署名URL発行で拡張する想定です。
 
 ## Google Maps APIキーの取得方法
 

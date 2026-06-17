@@ -6,7 +6,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { FeatureLock } from "@/components/FeatureLock";
 import { PageHeader } from "@/components/PageHeader";
 import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
-import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage } from "@/lib/catches";
+import { createCatch, emptyTackleInfo, getUserCatches, uploadCatchImage, uploadMeasurementPhoto } from "@/lib/catches";
 import { canProxyPostToGroup } from "@/lib/groupPermissions";
 import { getGroup, getGroupMembers } from "@/lib/groups";
 import { getFeatureAccess } from "@/lib/features";
@@ -62,7 +62,7 @@ function GroupPost({ groupId, userId }: { groupId: string; userId: string }) {
       const location = await getCurrentLocation().catch(() => null);
       const caughtAtIso = new Date(caughtAt).toISOString();
       const imageUrl = file ? await uploadCatchImage(userId, file) : null;
-      const measurementPhotoUrl = measurementFile ? await uploadCatchImage(userId, measurementFile) : null;
+      const measurementPhotoUrl = measurementFile ? await uploadMeasurementPhoto(userId, measurementFile) : null;
       const isProxyPost = actualAnglerUserId !== userId;
       const blurRadiusMeters = location ? getDefaultBlurRadius() : null;
       const blurredLocation = location && blurRadiusMeters ? generateBlurredLocation(location.latitude, location.longitude, blurRadiusMeters) : null;
