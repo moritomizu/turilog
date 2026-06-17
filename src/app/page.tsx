@@ -13,6 +13,7 @@ import { canManageApprovals, canManageMembers, findParticipant } from "@/lib/tou
 import { getTournamentParticipants, getTournaments } from "@/lib/tournaments";
 import { getUserProfile } from "@/lib/userProfiles";
 import { LandingPage } from "@/components/landing/LandingPage";
+import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 import type { Catch, GroupCatchComment } from "@/types";
 
@@ -117,6 +118,8 @@ export default function Home() {
             {profileAvatarUrl ? <img src={profileAvatarUrl} alt="" className="h-full w-full object-cover" /> : user ? getInitial(user.displayName ?? user.email) : "人"}
           </Link>
         </div>
+
+        <PwaInstallBanner userId={user.uid} />
 
         <section className="relative mb-4 overflow-hidden rounded bg-ink text-white shadow-soft">
           <div className="flex transition-transform duration-500 ease-out" style={{ transform: `translateX(-${activeBanner * 100}%)` }}>
