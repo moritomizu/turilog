@@ -20,6 +20,7 @@ const aiInsights = [
 
 const proofMessages = ["GPS確認済み", "潮位データ取得済み", "サイズ確認写真あり", "異常検知なし"];
 const catchValues = ["マダイ", "62cm", "朝", "大阪湾", "下げ三分", "北西", "3m", "18.7℃", "くもり", "タイラバ"];
+const catchDashboardTags = ["最大サイズ", "よく釣れる魚種", "好調な潮", "よく行くエリア", "平均釣速"];
 const proofInputs = ["写真", "GPS", "時刻", "潮位", "サイズ確認写真", "大会条件"];
 const proofJudgements = ["信頼度スコア", "要確認フラグ", "異常検知", "ランキング反映可否"];
 const locationRules = ["本人：正確位置", "仲間：ぼかし表示", "一般：エリア表示", "非公開：位置非表示"];
@@ -161,13 +162,24 @@ function HeroMockup() {
 
 function FeatureSection() {
   return (
-    <FeatureBlock
-      id="features"
-      eyebrow="Catch log"
-      title="その日の釣りを、次の釣りのヒントに。"
-      description="魚種、サイズ、釣れた時間、エリア、潮位、風向き、水温、天気、タックルをまとめて記録。あとから見返すことで、自分だけの釣れる条件が見えてきます。"
-      visual={<CatchLogMockup />}
-    />
+    <section id="features" className="px-5 py-24 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="grid items-center gap-12 lg:grid-cols-2">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-[#0f766e]">Catch log</p>
+            <h2 className="mt-4 max-w-3xl text-3xl font-black leading-[1.15] text-slate-950 sm:text-4xl lg:text-[2.65rem]">その日の釣りを、次の釣りのヒントに。</h2>
+            <p className="mt-5 text-lg font-bold leading-9 text-slate-600">
+              魚種、サイズ、釣れた時間、エリア、潮位、風向き、水温、天気、タックルをまとめて記録。あとから見返すことで、自分だけの釣れる条件が見えてきます。
+            </p>
+            <p className="mt-5 rounded-2xl bg-orange-50 p-4 text-sm font-black leading-7 text-orange-800">
+              記録するだけでは終わらない。釣果を重ねるほど、自分だけの釣れる条件が見えてきます。
+            </p>
+          </div>
+          <CatchLogMockup />
+        </div>
+        <CatchDashboardScreenshot />
+      </div>
+    </section>
   );
 }
 
@@ -178,7 +190,7 @@ function CatchLogMockup() {
         <div className="relative h-56 overflow-hidden rounded-2xl bg-[url('/images/lp/IMG_7638.jpg')] bg-cover bg-center">
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">PERSONAL LOG</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">記録から見えてくる釣果データ</p>
             <p className="mt-1 text-2xl font-black text-white">今日の釣りを残す</p>
           </div>
         </div>
@@ -191,6 +203,44 @@ function CatchLogMockup() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function CatchDashboardScreenshot() {
+  return (
+    <div className="mt-14 rounded-[2rem] border border-teal-100 bg-gradient-to-br from-white via-[#f8fffd] to-[#e9fbf6] p-4 shadow-2xl shadow-slate-900/10 sm:p-6 lg:p-8">
+      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.6fr] lg:items-center">
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-[#0f766e]">Actual screen</p>
+          <h3 className="mt-3 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">実際のツリログ画面</h3>
+          <p className="mt-4 text-base font-bold leading-8 text-slate-600">
+            記録した釣果は、ダイジェストとして自動集計。最大サイズ、よく釣れる魚種、好調な潮、よく行くエリアなどをひと目で振り返れます。
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {catchDashboardTags.map((tag) => (
+              <span key={tag} className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#0f766e] shadow-sm ring-1 ring-teal-100">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="-mx-2 overflow-x-auto px-2 pb-2">
+          <div className="min-w-[760px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 lg:min-w-0">
+            <Image
+              src="/images/lp/catch-dashboard-screenshot.png"
+              alt="釣果ダイジェストを表示した実際のツリログ画面"
+              width={2066}
+              height={1554}
+              className="h-auto w-full"
+              sizes="(min-width: 1024px) 760px, 760px"
+            />
+          </div>
+        </div>
+      </div>
+      <p className="mt-4 text-xs font-bold leading-6 text-slate-500">
+        画面内の数値はサンプル表示です。釣果を記録するほど、自分の釣りを振り返る材料が増えていきます。
+      </p>
     </div>
   );
 }

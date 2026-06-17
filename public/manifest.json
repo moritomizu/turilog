@@ -2,7 +2,7 @@
   "name": "TsuriLog - 釣果ログ",
   "short_name": "TsuriLog",
   "description": "釣果写真、潮位、水温、天候、タックル、グループや大会まで記録して振り返れる釣りログです。",
-  "start_url": "/",
+  "start_url": "/ja",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
