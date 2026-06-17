@@ -6,7 +6,7 @@ import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 const navItems = [
   { href: "#features", label: "機能" },
   { href: "#ai", label: "AI分析" },
-  { href: "#tournament", label: "大会" },
+  { href: "#group", label: "グループ" },
   { href: "#premium", label: "Premium" }
 ];
 
@@ -20,6 +20,10 @@ const aiInsights = [
 
 const proofMessages = ["GPS確認済み", "潮位データ取得済み", "サイズ確認写真あり", "異常検知なし"];
 const catchValues = ["マダイ", "62cm", "朝", "大阪湾", "下げ三分", "北西", "3m", "18.7℃", "くもり", "タイラバ"];
+const proofInputs = ["写真", "GPS", "時刻", "潮位", "サイズ確認写真", "大会条件"];
+const proofJudgements = ["信頼度スコア", "要確認フラグ", "異常検知", "ランキング反映可否"];
+const locationRules = ["本人：正確位置", "仲間：ぼかし表示", "一般：エリア表示", "非公開：位置非表示"];
+const locationCards = ["個人ログでは正確に記録", "グループでは共有範囲に応じて表示", "大会では主催者・参加者で表示を切替", "公開時はポイント流出を防止"];
 
 export function LandingPage() {
   return (
@@ -28,8 +32,8 @@ export function LandingPage() {
       <HeroSection />
       <FeatureSection />
       <AIReportSection />
-      <TournamentSection />
       <GroupSection />
+      <TournamentSection />
       <VerificationSection />
       <MapBlurSection />
       <PricingSection />
@@ -234,9 +238,11 @@ function TournamentSection() {
     <FeatureBlock
       id="tournament"
       eyebrow="Tournament"
-      title="仲間が集まると、釣りはもっと楽しくなる。"
-      description="釣果ログを使う仲間が増えることで、グループ共有やオンライン釣り大会も楽しめます。まずは自分の釣果記録から始めて、仲間との釣り体験へ広げていけます。"
+      title="仲間と、オンライン釣り大会を楽しむ。"
+      description="釣り仲間やグループメンバー同士で、オンライン釣り大会を開催できます。魚種や期間を設定すれば、投稿された釣果をもとにランキングを自動集計。離れた場所にいても、同じ大会を楽しめます。"
       visual={<TournamentMockup />}
+      note="まずは仲間内の小さな大会から。大会を安心して楽しむために、釣果の信頼性を確認する仕組みも用意しています。"
+      cta={<Link href="/tournaments" className="inline-flex rounded-full bg-[#0f766e] px-6 py-3 font-black text-white transition hover:-translate-y-0.5 hover:bg-[#115e59]">大会機能を見る</Link>}
     />
   );
 }
@@ -265,7 +271,7 @@ function TournamentMockup() {
           </div>
         ))}
       </div>
-      <TagRow items={["大会作成", "ランキング", "承認管理", "釣果デジタル証明"]} />
+      <TagRow items={["仲間内大会", "月例チャレンジ", "自動ランキング", "承認管理", "釣果デジタル証明"]} />
     </div>
   );
 }
@@ -273,11 +279,14 @@ function TournamentMockup() {
 function GroupSection() {
   return (
     <FeatureBlock
+      id="group"
       eyebrow="Group"
-      title="仲間と共有すると、釣果がもっと面白くなる。"
-      description="釣り仲間同士で釣果を共有し、月別・魚種別・エリア別に振り返れます。個人の記録が、仲間との楽しみに変わります。"
+      title="仲間と釣果を共有し、理想の釣りを見つける。"
+      description="仲間の釣果を見ることで、釣れた時間帯、使っていたタックル、魚種ごとの傾向など、自分だけでは気づけなかったヒントが見つかります。"
       reverse
       visual={<GroupMockup />}
+      note="仲間と切磋琢磨することで、新しい釣り方や釣果アップのヒントが見つかります。大切なポイントを守りながら、必要な範囲で釣果を共有できます。"
+      cta={<Link href="/groups" className="inline-flex rounded-full bg-[#0f766e] px-6 py-3 font-black text-white transition hover:-translate-y-0.5 hover:bg-[#115e59]">グループ機能を見る</Link>}
     />
   );
 }
@@ -300,6 +309,7 @@ function GroupMockup() {
           ))}
         </div>
       </div>
+      <TagRow items={["釣果共有", "仲間内ランキング", "月別振り返り", "魚種別分析", "エリア別傾向"]} />
       <div className="relative h-44 overflow-hidden rounded-3xl bg-[#dbeafe]">
         <div className="absolute left-5 top-7 h-20 w-20 rounded-full bg-[#0f766e]/20" />
         <div className="absolute right-7 top-10 h-28 w-28 rounded-full bg-blue-500/20" />
@@ -317,9 +327,9 @@ function VerificationSection() {
     <FeatureBlock
       eyebrow="Catch proof beta"
       title="釣果の信頼性を、独自技術で見える化。"
-      description="写真・GPS・時刻・潮位・サイズ確認写真・大会条件などをもとに、釣果の信頼度を参考スコアとして表示。ツリログでは、この仕組みを「釣果デジタル証明」として特許出願準備中です。"
+      description="オンライン大会や釣果共有では、「本当にその日時・場所で釣った魚なのか」を確認したい場面があります。ツリログでは、写真・GPS・時刻・潮位・サイズ確認写真・大会条件などをもとに、釣果の信頼度を参考スコアとして表示します。"
       visual={<VerificationMockup />}
-      note="このスコアは釣果の真正性を完全に保証するものではなく、大会運営や確認作業を補助する参考情報です。"
+      note="ツリログでは、この仕組みを「釣果デジタル証明」として特許出願準備中です。このスコアは釣果の真正性を完全に保証するものではなく、大会運営や確認作業を補助する参考情報です。"
     />
   );
 }
@@ -328,7 +338,7 @@ function VerificationMockup() {
   return (
     <div className="rounded-[2rem] border border-emerald-100 bg-white p-6 shadow-2xl shadow-slate-900/10">
       <div className="flex flex-wrap gap-2">
-        {["Catch Proof β", "特許出願準備中", "独自技術"].map((label) => (
+        {["Catch Proof β", "特許出願準備中", "独自技術", "参考スコア"].map((label) => (
           <span key={label} className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-[#0f766e]">{label}</span>
         ))}
       </div>
@@ -345,6 +355,23 @@ function VerificationMockup() {
           <div key={item} className="rounded-2xl bg-slate-50 p-4 text-sm font-black text-slate-700">{item}</div>
         ))}
       </div>
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <ProofListCard title="取得する情報" items={proofInputs} />
+        <ProofListCard title="判定する内容" items={proofJudgements} />
+      </div>
+    </div>
+  );
+}
+
+function ProofListCard({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="rounded-3xl bg-[#f8fafc] p-5">
+      <p className="text-sm font-black text-slate-950">{title}</p>
+      <div className="mt-4 grid gap-2">
+        {items.map((item) => (
+          <div key={item} className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm">{item}</div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -353,10 +380,11 @@ function MapBlurSection() {
   return (
     <FeatureBlock
       eyebrow="Location privacy"
-      title="釣れる場所は、守る。"
-      description="釣果は共有しながら、正確なポイントは自動でぼかして表示。仲間との共有と漁場保護を両立します。"
+      title="釣果共有と、ポイント保護を両立する。"
+      description="釣り人にとって、釣れる場所は大切な情報です。ツリログでは、正確な位置を保存しながら、共有時にはエリア表示やぼかし表示に切り替えることができます。"
       reverse
       visual={<MapBlurMockup />}
+      note="共有したい。でも、守りたい。その両方を実現するための位置情報設計です。"
     />
   );
 }
@@ -373,6 +401,16 @@ function MapBlurMockup() {
           <p className="text-xs font-black text-slate-500">AREA</p>
           <p className="text-lg font-black">大阪湾北部</p>
         </div>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {locationRules.map((item) => (
+          <div key={item} className="rounded-2xl bg-white/10 p-4 text-sm font-black text-white ring-1 ring-white/10">{item}</div>
+        ))}
+      </div>
+      <div className="mt-4 grid gap-3">
+        {locationCards.map((item) => (
+          <div key={item} className="rounded-2xl bg-white p-4 text-sm font-black text-slate-800">{item}</div>
+        ))}
       </div>
     </div>
   );
