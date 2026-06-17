@@ -7,6 +7,7 @@ const navItems = [
   { href: "#features", label: "機能" },
   { href: "#ai", label: "AI分析" },
   { href: "#group", label: "グループ" },
+  { href: "/how-to-use-app", label: "アプリ化" },
   { href: "#premium", label: "Premium" }
 ];
 
@@ -55,9 +56,9 @@ function LandingHeader() {
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-black text-slate-700 md:flex">
           {navItems.map((item) => (
-            <a key={item.href} href={item.href} className="transition hover:text-[#0f766e]">
+            <Link key={item.href} href={item.href} className="transition hover:text-[#0f766e]">
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="flex items-center gap-2">
@@ -590,6 +591,7 @@ function LandingFooter() {
           <p className="mt-3 text-sm font-bold text-slate-500">Copyright © TsuriLog</p>
         </div>
         <div className="flex flex-wrap gap-5 text-sm font-black text-slate-600">
+          <Link href="/how-to-use-app" className="hover:text-[#0f766e]">アプリのように使う方法</Link>
           <Link href="/terms" className="hover:text-[#0f766e]">利用規約</Link>
           <Link href="/privacy" className="hover:text-[#0f766e]">プライバシーポリシー</Link>
           <Link href="/login" className="hover:text-[#0f766e]">お問い合わせ</Link>
