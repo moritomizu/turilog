@@ -592,6 +592,7 @@ function LandingFooter() {
         </div>
         <div className="flex flex-wrap gap-5 text-sm font-black text-slate-600">
           <Link href="/how-to-use-app" className="hover:text-[#0f766e]">アプリのように使う方法</Link>
+          <Link href="/feedback" className="hover:text-[#0f766e]">ご意見・ご感想</Link>
           <Link href="/terms" className="hover:text-[#0f766e]">利用規約</Link>
           <Link href="/privacy" className="hover:text-[#0f766e]">プライバシーポリシー</Link>
           <Link href="/login" className="hover:text-[#0f766e]">お問い合わせ</Link>

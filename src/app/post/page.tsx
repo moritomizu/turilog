@@ -4,9 +4,11 @@ import { Loader } from "@googlemaps/js-api-loader";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { AuthGate } from "@/components/AuthGate";
+import { FeedbackPrompt } from "@/components/FeedbackPrompt";
 import { PageHeader } from "@/components/PageHeader";
 import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibility } from "@/lib/catchVerification";
 import { createCatch, emptyTackleInfo, getUserCatches, updateCatchEnrichment, uploadCatchImage, uploadMeasurementPhoto } from "@/lib/catches";
+import { markAfterCatchFeedbackShown, shouldShowAfterCatchCreatedFeedback } from "@/lib/feedback";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
 import { getPostableGroupsForUser } from "@/lib/groups";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
@@ -102,6 +104,7 @@ function PostForm({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
   const [submitStage, setSubmitStage] = useState("");
   const [successSummary, setSuccessSummary] = useState("");
+  const [showPostFeedback, setShowPostFeedback] = useState(false);
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
   const selectedTournamentForUi = useMemo(
     () => tournamentOptions.find((item) => item.id === selectedTournamentId) ?? null,
@@ -416,6 +419,7 @@ function PostForm({ userId }: { userId: string }) {
       };
       const proofGeneratedAt = new Date().toISOString();
       const previousCatches = await getUserCatches(userId).catch(() => []);
+      const nextCatchCount = previousCatches.length + 1;
       const catchProof = buildCatchProofPackage(
         { ...baseCatchData, createdAt: proofGeneratedAt },
         {
@@ -450,6 +454,12 @@ function PostForm({ userId }: { userId: string }) {
       setCaughtAt(toLocalInputValue(new Date()));
       setSuccessSummary(`${savedFishType} ${savedSizeCm}cm を投稿しました。`);
       setMessage(`${buildPostMessage(selectedTournament, tournamentCheck, selectedGroup)} 潮位・天候・水温は裏側で追記中です。`);
+      if (await shouldShowAfterCatchCreatedFeedback(userId, nextCatchCount).catch(() => false)) {
+        await markAfterCatchFeedbackShown(userId).catch(() => undefined);
+        setShowPostFeedback(true);
+      } else {
+        setShowPostFeedback(false);
+      }
       clearPostDraft(userId);
       await Promise.all([saveDraftFile(userId, "catchPhoto", null), saveDraftFile(userId, "measurementPhoto", null)]).catch(() => undefined);
       setDraftNotice("");
@@ -755,6 +765,7 @@ function PostForm({ userId }: { userId: string }) {
                   onClick={() => {
                     setSuccessSummary("");
                     setMessage("");
+                    setShowPostFeedback(false);
                     setCaughtAt(toLocalInputValue(new Date()));
                   }}
                   className="tap-target rounded bg-water px-4 py-3 text-sm font-black text-white"
@@ -765,6 +776,16 @@ function PostForm({ userId }: { userId: string }) {
                   一覧で確認
                 </Link>
               </div>
+              {showPostFeedback ? (
+                <div className="mt-4">
+                  <FeedbackPrompt
+                    userId={userId}
+                    trigger="after_catch_created"
+                    category="catch_log"
+                    onClose={() => setShowPostFeedback(false)}
+                  />
+                </div>
+              ) : null}
             </section>
           ) : null}
 

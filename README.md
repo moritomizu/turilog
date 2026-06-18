@@ -1647,3 +1647,121 @@ src/lib/localeFormat.ts
 - メジャー画像からサイズ推定
 - LINE通知
 - 多言語対応
+
+## ユーザーフィードバック機能
+
+TSURILOGUEのMVP利用者から、自然なタイミングで感想や不満を集めるための機能です。
+
+ブランド名は将来変更できるよう、以下で定数管理しています。
+
+```text
+src/lib/brand.ts
+```
+
+現在の表示名は `TSURILOGUE` / `ツリローグ` です。
+
+### feedbacks コレクション
+
+ユーザーの回答は Firestore の `feedbacks` コレクションに保存します。
+
+```text
+feedbacks/{feedbackId}
+- userId
+- appName
+- trigger
+- rating
+- category
+- comment
+- path
+- userAgent
+- locale
+- createdAt
+- appVersion
+```
+
+`createdAt` は `serverTimestamp()` で保存します。
+
+### 表示トリガー
+
+現在は以下のタイミングで取得します。
+
+- 釣果投稿完了後: `after_catch_created`
+- AIレポート閲覧後: `after_ai_report_viewed`
+- 手動送信ページ: `manual_feedback`
+
+釣果投稿後は、初回投稿後と3回目投稿後に表示します。
+
+### 表示頻度制御
+
+ユーザーごとの表示状態は `users/{userId}.feedbackState` に保存します。
+
+```text
+feedbackState:
+- afterCatchCreatedShownCount
+- lastShownAt
+- lastSubmittedAt
+- dismissedAt
+```
+
+初期ルール:
+
+- 初回釣果投稿後に表示
+- 3回目釣果投稿後に表示
+- 一度閉じたら7日間は非表示
+- 一度送信したら14日間は非表示
+
+### 手動フィードバック
+
+ログインユーザーは `/feedback` からいつでも送信できます。
+
+カテゴリ:
+
+- 全体について
+- 不具合
+- 改善要望
+- 釣果ログ
+- AIレポート
+- グループ
+- 大会
+- 釣果デジタル証明
+- 位置情報保護
+- Premium
+
+### 管理者画面
+
+管理者は `/admin/feedbacks` からフィードバック一覧を確認できます。
+
+表示項目:
+
+- createdAt
+- rating
+- category
+- trigger
+- comment
+- userId
+- path
+- locale
+
+カテゴリ、評価、トリガーで絞り込みできます。
+
+### Firestore Rules 方針
+
+既存の Firestore Rules を運用している場合は、以下の方針を追加してください。
+
+```js
+match /feedbacks/{feedbackId} {
+  allow create: if request.auth != null
+    && request.resource.data.userId == request.auth.uid;
+  allow read: if isAdmin();
+  allow update, delete: if false;
+}
+```
+
+`isAdmin()` は既存の管理者判定に合わせて定義してください。一般ユーザーに他人のフィードバック一覧を読ませないことが重要です。
+
+### 今後追加予定
+
+- NPS
+- 機能別満足度
+- Premium課金意向
+- ユーザーインタビュー候補抽出

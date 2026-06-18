@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { FeatureGate } from "@/components/FeatureGate";
+import { SimpleFeedbackPrompt } from "@/components/FeedbackPrompt";
 import { PageHeader } from "@/components/PageHeader";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { getGroupCatches, getUserCatches } from "@/lib/catches";
@@ -260,18 +261,18 @@ function AiReportContent({ userId }: { userId: string }) {
           </button>
         </form>
 
-        {activeReport ? <ReportCard report={activeReport} title="生成結果" /> : null}
+        {activeReport ? <ReportCard report={activeReport} title="生成結果" userId={userId} /> : null}
 
         <section className="space-y-3">
           <h2 className="text-xl font-black">過去のAIレポート</h2>
-          {reports.length ? reports.map((report) => <ReportCard key={report.id} report={report} compact />) : <p className="rounded bg-white p-4 text-sm font-bold text-slate-600 shadow-soft">過去に生成したレポートはまだありません。</p>}
+          {reports.length ? reports.map((report) => <ReportCard key={report.id} report={report} compact userId={userId} />) : <p className="rounded bg-white p-4 text-sm font-bold text-slate-600 shadow-soft">過去に生成したレポートはまだありません。</p>}
         </section>
       </main>
     </>
   );
 }
 
-function ReportCard({ report, title, compact = false }: { report: AiReport; title?: string; compact?: boolean }) {
+function ReportCard({ report, title, compact = false, userId }: { report: AiReport; title?: string; compact?: boolean; userId: string }) {
   return (
     <article className="rounded border border-teal-100 bg-white p-4 shadow-soft">
       <div className="flex items-start justify-between gap-3">
@@ -289,6 +290,9 @@ function ReportCard({ report, title, compact = false }: { report: AiReport; titl
       </div>
       <div className={`mt-4 space-y-3 text-sm font-bold leading-7 text-slate-700 ${compact ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
         {renderReportText(report.reportText)}
+      </div>
+      <div className="mt-4">
+        <SimpleFeedbackPrompt userId={userId} trigger="after_ai_report_viewed" category="ai_report" title="このAIレポートは参考になりましたか？" />
       </div>
     </article>
   );

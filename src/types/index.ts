@@ -70,6 +70,25 @@ export type FeatureEventType =
   | "clickLearnMore"
   | "attemptUseFeature"
   | "useFeature";
+export type FeedbackTrigger =
+  | "after_catch_created"
+  | "after_ai_report_viewed"
+  | "after_tournament_created"
+  | "after_group_created"
+  | "manual_feedback"
+  | "nps";
+export type FeedbackRating = "excellent" | "good" | "neutral" | "poor" | "bad";
+export type FeedbackCategory =
+  | "general"
+  | "bug"
+  | "feature_request"
+  | "catch_log"
+  | "ai_report"
+  | "group"
+  | "tournament"
+  | "catch_proof"
+  | "location_privacy"
+  | "premium";
 export type ProofFlag =
   | "photo_present"
   | "exif_present"
@@ -302,7 +321,15 @@ export type UserProfile = {
   fcmTokens?: string[];
   notificationPreferences?: NotificationPreferences;
   notificationUpdatedAt?: string | null;
+  feedbackState?: FeedbackState;
   updatedAt?: string | null;
+};
+
+export type FeedbackState = {
+  afterCatchCreatedShownCount: number;
+  lastShownAt?: string | null;
+  lastSubmittedAt?: string | null;
+  dismissedAt?: string | null;
 };
 
 export type FeatureEvent = {
@@ -315,6 +342,21 @@ export type FeatureEvent = {
   createdAt: string;
   metadata: Record<string, unknown>;
 };
+
+export interface UserFeedback {
+  id?: string;
+  userId: string;
+  appName: string;
+  trigger: FeedbackTrigger;
+  rating?: FeedbackRating;
+  category?: FeedbackCategory;
+  comment?: string;
+  path?: string;
+  userAgent?: string;
+  locale?: string;
+  createdAt: Date | string;
+  appVersion?: string;
+}
 
 export type AiReportFilters = {
   fishType: string;

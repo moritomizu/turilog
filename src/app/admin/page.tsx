@@ -21,6 +21,12 @@ const adminLinks = [
     label: "ログ確認"
   },
   {
+    href: "/admin/feedbacks",
+    title: "ユーザーフィードバック",
+    body: "投稿後・AIレポート・手動送信で届いた感想や不満を確認します。",
+    label: "声を確認"
+  },
+  {
     href: "/admin/generate-catch-proof",
     title: "釣果デジタル証明",
     body: "既存釣果の証明スコア生成・再計算を行います。",

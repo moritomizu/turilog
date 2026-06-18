@@ -84,6 +84,7 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     fcmTokens: Array.isArray(data.fcmTokens) ? data.fcmTokens.filter((item): item is string => typeof item === "string") : [],
     notificationPreferences: normalizeNotificationPreferences(data.notificationPreferences),
     notificationUpdatedAt: normalizeDateString(data.notificationUpdatedAt),
+    feedbackState: normalizeFeedbackState(data.feedbackState),
     updatedAt: normalizeDateString(data.updatedAt)
   };
 }
@@ -108,6 +109,16 @@ function normalizeDateString(value: unknown) {
     if (typeof timestamp.toDate === "function") return timestamp.toDate().toISOString();
   }
   return null;
+}
+
+function normalizeFeedbackState(value: unknown) {
+  const data = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  return {
+    afterCatchCreatedShownCount: Number(data.afterCatchCreatedShownCount ?? 0),
+    lastShownAt: normalizeDateString(data.lastShownAt),
+    lastSubmittedAt: normalizeDateString(data.lastSubmittedAt),
+    dismissedAt: normalizeDateString(data.dismissedAt)
+  };
 }
 
 function removeUndefinedFields<T extends Record<string, unknown>>(data: T) {

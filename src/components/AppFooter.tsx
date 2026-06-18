@@ -28,6 +28,9 @@ export function AppFooter() {
           <Link href={localizePath("/plans", locale)} className="text-water">
             {t("plans")}
           </Link>
+          <Link href={localizePath("/feedback", locale)} className="text-water">
+            ご意見・ご感想
+          </Link>
           <Link href={localizePath("/how-to-use-app", locale)} className="text-water">
             ホーム画面に追加する方法
           </Link>
