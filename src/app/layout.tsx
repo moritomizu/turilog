@@ -11,11 +11,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  applicationName: "TsuriLog",
+  applicationName: "TSURILOGUE",
   manifest: "/manifest.json",
   title: {
-    default: "TsuriLog | 心に残る一枚のための釣果ログ",
-    template: "%s | TsuriLog"
+    default: "TSURILOGUE | 心に残る一枚のための釣果ログ",
+    template: "%s | TSURILOGUE"
   },
   icons: {
     icon: [
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "TsuriLog",
+    title: "TSURILOGUE",
     statusBarStyle: "default"
   },
   formatDetection: {
@@ -36,11 +36,11 @@ export const metadata: Metadata = {
   other: {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-title": "TsuriLog",
+    "apple-mobile-web-app-title": "TSURILOGUE",
     "apple-mobile-web-app-status-bar-style": "default"
   },
   ...createPageMetadata({
-    title: "TsuriLog | 心に残る一枚のための釣果ログ",
+    title: "TSURILOGUE | 心に残る一枚のための釣果ログ",
     description: "釣果写真、潮位、水温、天候、タックル、釣り仲間とのグループや大会まで記録して振り返れる個人用釣りログです。",
     path: "/"
   })

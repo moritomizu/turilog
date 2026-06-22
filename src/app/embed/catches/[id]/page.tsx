@@ -41,7 +41,7 @@ export default function EmbedCatchPage({ params }: { params: { id: string } }) {
 }
 
 function ShareCatchCard({ item, mode }: { item: Catch; mode: ShareMode }) {
-  const anglerName = item.publicAnglerName?.trim() || "TsuriLog Angler";
+  const anglerName = item.publicAnglerName?.trim() || "TSURILOGUE Angler";
   const infoItems = getShareInfoItems(item, mode);
   return (
     <article className="flex flex-1 flex-col overflow-hidden rounded border border-teal-100 bg-white shadow-soft">

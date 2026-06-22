@@ -58,7 +58,7 @@ type NotificationPayload = {
 
 function normalizePayload(value: Record<string, unknown>): NotificationPayload {
   const category = normalizeCategory(value.category);
-  const title = typeof value.title === "string" && value.title.trim() ? value.title.trim() : "TsuriLog";
+  const title = typeof value.title === "string" && value.title.trim() ? value.title.trim() : "TSURILOGUE";
   const body = typeof value.body === "string" ? value.body.trim() : "";
   const url = typeof value.url === "string" && value.url.startsWith("/") ? value.url : "/";
   const userId = typeof value.userId === "string" && value.userId.trim() ? value.userId.trim() : undefined;

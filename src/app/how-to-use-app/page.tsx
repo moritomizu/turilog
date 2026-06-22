@@ -2,12 +2,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ツリログをスマホアプリのように使う方法 | TsuriLog",
-  description: "ツリログをスマホのホーム画面に追加して、App Store不要でアプリのようにすばやく起動する方法を案内します。"
+  title: "釣りローグをスマホアプリのように使う方法 | TSURILOGUE",
+  description: "釣りローグをスマホのホーム画面に追加して、App Store不要でアプリのようにすばやく起動する方法を案内します。"
 };
 
 const benefits = [
-  ["すぐに開ける", "ホーム画面のアイコンから、ツリログをすぐ起動できます。"],
+  ["すぐに開ける", "ホーム画面のアイコンから、釣りローグをすぐ起動できます。"],
   ["釣果投稿がしやすい", "釣れた直後に、写真と記録をすばやく残せます。"],
   ["ブラウザ検索の手間がない", "URL検索やブックマーク探しをせずに開けます。"],
   ["釣行中でも迷わず使える", "海上や釣り場でも、いつものアプリ感覚で使えます。"],
@@ -33,18 +33,18 @@ export default function HowToUseAppPage() {
             </Link>
             <p className="mt-10 text-sm font-black uppercase tracking-[0.22em] text-orange-200">HOME SCREEN</p>
             <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight sm:text-5xl">
-              ツリログを、
+              釣りローグを、
               <span className="block text-cyan-200">スマホアプリのように使おう。</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg font-bold leading-9 text-slate-100">
-              ツリログは、スマホのホーム画面に追加することで、アプリのようにすばやく起動できます。釣り場で釣果を記録したいときにも便利です。
+              釣りローグは、スマホのホーム画面に追加することで、アプリのようにすばやく起動できます。釣り場で釣果を記録したいときにも便利です。
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a href="#steps" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-7 text-base font-black text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
                 ホーム画面に追加する方法を見る
               </a>
               <Link href="/" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-7 text-base font-black text-white backdrop-blur transition hover:bg-white/20">
-                ツリログを開く
+                釣りローグを開く
               </Link>
             </div>
           </div>
@@ -75,11 +75,11 @@ export default function HowToUseAppPage() {
             note="iPhoneではSafariから追加してください。"
             accent="bg-sky-50 text-sky-700"
             steps={[
-              "Safariでツリログを開く",
+              "Safariで釣りローグを開く",
               "画面下の共有ボタンをタップ",
               "「ホーム画面に追加」を選択",
               "名前を確認して「追加」をタップ",
-              "ホーム画面のアイコンからツリログを開く"
+              "ホーム画面のアイコンから釣りローグを開く"
             ]}
           />
           <HowToCard
@@ -87,11 +87,11 @@ export default function HowToUseAppPage() {
             title="Androidでホーム画面に追加する方法"
             accent="bg-emerald-50 text-emerald-700"
             steps={[
-              "Chromeでツリログを開く",
+              "Chromeで釣りローグを開く",
               "メニューを開く",
               "「アプリをインストール」または「ホーム画面に追加」を選択",
               "追加をタップ",
-              "ホーム画面のアイコンからツリログを開く"
+              "ホーム画面のアイコンから釣りローグを開く"
             ]}
           />
         </div>
@@ -122,7 +122,7 @@ export default function HowToUseAppPage() {
           </h2>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-8 font-black text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
-              ツリログを開く
+              釣りローグを開く
             </Link>
             <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-8 font-black text-white backdrop-blur transition hover:bg-white/20">
               無料で始める

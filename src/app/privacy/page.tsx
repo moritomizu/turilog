@@ -4,8 +4,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { privacyMarkdown } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: "プライバシーポリシー | TsuriLog",
-  description: "TsuriLogのプライバシーポリシーです。"
+  title: "プライバシーポリシー | TSURILOGUE",
+  description: "TSURILOGUEのプライバシーポリシーです。"
 };
 
 export default function PrivacyPage() {

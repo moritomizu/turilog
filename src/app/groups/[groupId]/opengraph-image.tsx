@@ -7,7 +7,7 @@ export const contentType = "image/png";
 
 export default async function Image({ params }: { params: { groupId: string } }) {
   const summary = await getGroupOgSummary(params.groupId).catch(() => null);
-  const name = summary?.name ?? "TsuriLogグループ";
+  const name = summary?.name ?? "TSURILOGUEグループ";
   const description = summary?.description ?? "釣り仲間で釣果を共有中";
   const monthCount = summary?.monthCount ?? 0;
   const monthMax = summary?.monthMax ?? 0;
@@ -31,7 +31,7 @@ export default async function Image({ params }: { params: { groupId: string } })
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontSize: 30, fontWeight: 900, color: "#0f766e" }}>TsuriLog GROUP</div>
+          <div style={{ fontSize: 30, fontWeight: 900, color: "#0f766e" }}>TSURILOGUE GROUP</div>
           <div style={{ borderRadius: 999, background: "#f97316", color: "white", padding: "12px 22px", fontSize: 24, fontWeight: 900 }}>
             釣果共有中
           </div>

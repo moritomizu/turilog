@@ -4,8 +4,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { termsMarkdown } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: "利用規約 | TsuriLog",
-  description: "TsuriLogの利用規約です。"
+  title: "利用規約 | TSURILOGUE",
+  description: "TSURILOGUEの利用規約です。"
 };
 
 export default function TermsPage() {

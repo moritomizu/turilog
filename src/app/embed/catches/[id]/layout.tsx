@@ -5,8 +5,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const item = await getPublicCatchMetadata(params.id).catch(() => null);
   if (!item) {
     return createPageMetadata({
-      title: "TsuriLog釣果",
-      description: "TsuriLogで公開された釣果を確認できます。釣果写真、サイズ、潮位、水温、タックルを一緒に振り返れる釣りログです。",
+      title: "TSURILOGUE釣果",
+      description: "TSURILOGUEで公開された釣果を確認できます。釣果写真、サイズ、潮位、水温、タックルを一緒に振り返れる釣りログです。",
       path: `/embed/catches/${params.id}`
     });
   }

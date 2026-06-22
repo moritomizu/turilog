@@ -48,7 +48,7 @@ export function PwaInstallBanner({ userId }: { userId: string }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-black text-ink">ツリログをアプリのように使えます</h2>
+              <h2 className="text-base font-black text-ink">釣りローグをアプリのように使えます</h2>
               <p className="mt-1 text-sm font-bold leading-6 text-slate-600">
                 ホーム画面に追加すると、釣り場でもすぐ起動できます。
               </p>

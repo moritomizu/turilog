@@ -27,7 +27,7 @@ export default function AdminNotificationsPage() {
 
 function AdminNotifications({ userId }: { userId: string }) {
   const [allowed, setAllowed] = useState<boolean | null>(null);
-  const [title, setTitle] = useState("TsuriLogからのお知らせ");
+  const [title, setTitle] = useState("TSURILOGUEからのお知らせ");
   const [body, setBody] = useState("");
   const [url, setUrl] = useState("/");
   const [busy, setBusy] = useState(false);

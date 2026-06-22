@@ -1,4 +1,4 @@
-# TsuriLog
+# TSURILOGUE
 
 スマートフォンで釣果写真を投稿し、魚種・サイズ・釣った場所・釣った時刻・潮位情報を保存できる個人用の釣果ログWebアプリです。
 
@@ -1382,7 +1382,7 @@ Feature Flags では `catchVerification` を定義しています。Tester は�
 
 ## ライトPWA対応
 
-TsuriLog はスマートフォンのホーム画面に追加して、アプリのように起動できるライトPWAに対応しています。
+TSURILOGUE はスマートフォンのホーム画面に追加して、アプリのように起動できるライトPWAに対応しています。
 
 今回の対応範囲:
 
@@ -1403,7 +1403,7 @@ TsuriLog はスマートフォンのホーム画面に追加して、アプリ�
 1. Safariで公開URLを開きます。
 2. 共有ボタンをタップします。
 3. 「ホーム画面に追加」を選びます。
-4. 名前が `TsuriLog` になっていることを確認して追加します。
+4. 名前が `TSURILOGUE` になっていることを確認して追加します。
 
 ### Androidでホーム画面に追加する方法
 
@@ -1424,7 +1424,7 @@ TsuriLog はスマートフォンのホーム画面に追加して、アプリ�
 
 ## PWA通知機能 MVP
 
-TsuriLog は Firebase Cloud Messaging を使った Web Push 通知の土台を用意しています。
+TSURILOGUE は Firebase Cloud Messaging を使った Web Push 通知の土台を用意しています。
 
 通知対象の例:
 
@@ -1553,7 +1553,7 @@ Android Chrome では、通常のWebページまたはホーム画面追加後�
 
 ## 多言語対応基盤
 
-TsuriLog は将来的な国際展開に備えて、`next-intl` を使った日本語・英語対応の基盤を追加しています。
+TSURILOGUE は将来的な国際展開に備えて、`next-intl` を使った日本語・英語対応の基盤を追加しています。
 
 対応ロケール:
 
@@ -1658,7 +1658,7 @@ TSURILOGUEのMVP利用者から、自然なタイミングで感想や不満を�
 src/lib/brand.ts
 ```
 
-現在の表示名は `TSURILOGUE` / `ツリローグ` です。
+現在の表示名は `TSURILOGUE` / `釣りローグ` です。
 
 ### feedbacks コレクション
 

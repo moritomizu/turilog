@@ -1,20 +1,20 @@
 import Image from "next/image";
+import { APP_NAME } from "@/lib/brand";
 
 type TsuriLogLogoProps = {
   className?: string;
   title?: string;
 };
 
-export function TsuriLogLogo({ className, title = "TsuriLog" }: TsuriLogLogoProps) {
+export function TsuriLogLogo({ className, title = APP_NAME }: TsuriLogLogoProps) {
   return (
     <Image
-      src="/icons/tsurilog-logo.svg"
+      src="/icons/trlg-logo.png"
       alt={title}
-      width={611}
-      height={123}
-      className={className}
+      width={1000}
+      height={401}
+      className={`object-contain ${className ?? ""}`}
       priority
-      unoptimized
     />
   );
 }

@@ -92,7 +92,7 @@ export async function sendSelfTestNotification() {
     body: JSON.stringify({
       userId: user.uid,
       category: "systemNotice",
-      title: "TsuriLog テスト通知",
+      title: "TSURILOGUE テスト通知",
       body: "通知設定は有効です。釣果や大会のお知らせを受け取れます。",
       url: "/"
     })

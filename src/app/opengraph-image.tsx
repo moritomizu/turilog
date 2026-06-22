@@ -23,7 +23,7 @@ export default function Image() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontSize: 34, fontWeight: 800, color: "#0f766e" }}>Personal fishing log</div>
           <div style={{ borderRadius: 999, background: "#ff7a59", color: "white", padding: "14px 24px", fontSize: 28, fontWeight: 800 }}>
-            TsuriLog
+            TSURILOGUE
           </div>
         </div>
         <div>

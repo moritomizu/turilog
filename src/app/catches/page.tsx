@@ -62,7 +62,7 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/embed/catches/${item.id}`;
-  const embedCode = `<iframe src="${shareUrl}" width="100%" height="560" style="border:0;border-radius:8px;max-width:420px;" loading="lazy" title="TsuriLog catch"></iframe>`;
+  const embedCode = `<iframe src="${shareUrl}" width="100%" height="560" style="border:0;border-radius:8px;max-width:420px;" loading="lazy" title="TSURILOGUE catch"></iframe>`;
 
   async function togglePublic() {
     setBusy(true);

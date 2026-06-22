@@ -5,9 +5,9 @@ import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 
 const navItems = [
   { href: "#features", label: "機能" },
-  { href: "#ai", label: "AI分析" },
+  { href: "#tournament", label: "釣り大会" },
   { href: "#group", label: "グループ" },
-  { href: "/how-to-use-app", label: "アプリ化" },
+  { href: "#ai", label: "AI機能" },
   { href: "#premium", label: "Premium" }
 ];
 
@@ -51,8 +51,8 @@ function LandingHeader() {
   return (
     <header className="fixed left-0 right-0 top-0 z-40 border-b border-white/50 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-4 lg:px-8">
-        <Link href="/lp" aria-label="ツリログLPトップ" className="flex items-center">
-          <TsuriLogLogo className="h-9 w-36 object-contain sm:h-10 sm:w-40" />
+        <Link href="/lp" aria-label="釣りローグLPトップ" className="flex items-center">
+          <TsuriLogLogo className="h-10 w-28 sm:h-12 sm:w-32" />
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-black text-slate-700 md:flex">
           {navItems.map((item) => (
@@ -86,7 +86,7 @@ function HeroSection() {
             <span className="block text-[#7dd3fc]">理想の1匹に近づく。</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg font-bold leading-9 text-slate-100 sm:text-xl">
-            ツリログは、釣果・ポイント・潮位・気象条件・タックルをかんたんに記録し、あとから振り返れる釣り人のためのパーソナル釣果ログです。
+            釣りローグは、釣果・ポイント・潮位・気象条件・タックルをかんたんに記録し、あとから振り返れる釣り人のためのパーソナル釣果ログです。
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-7 text-base font-black text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
@@ -214,7 +214,7 @@ function CatchDashboardScreenshot() {
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.6fr] lg:items-center">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.22em] text-[#0f766e]">Actual screen</p>
-          <h3 className="mt-3 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">実際のツリログ画面</h3>
+          <h3 className="mt-3 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">実際の釣りローグ画面</h3>
           <p className="mt-4 text-base font-bold leading-8 text-slate-600">
             記録した釣果は、ダイジェストとして自動集計。最大サイズ、よく釣れる魚種、好調な潮、よく行くエリアなどをひと目で振り返れます。
           </p>
@@ -230,7 +230,7 @@ function CatchDashboardScreenshot() {
           <div className="min-w-[760px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 lg:min-w-0">
             <Image
               src="/images/lp/catch-dashboard-screenshot.png"
-              alt="釣果ダイジェストを表示した実際のツリログ画面"
+              alt="釣果ダイジェストを表示した実際の釣りローグ画面"
               width={2066}
               height={1554}
               className="h-auto w-full"
@@ -378,9 +378,9 @@ function VerificationSection() {
     <FeatureBlock
       eyebrow="Catch proof beta"
       title="釣果の信頼性を、独自技術で見える化。"
-      description="オンライン大会や釣果共有では、「本当にその日時・場所で釣った魚なのか」を確認したい場面があります。ツリログでは、写真・GPS・時刻・潮位・サイズ確認写真・大会条件などをもとに、釣果の信頼度を参考スコアとして表示します。"
+      description="オンライン大会や釣果共有では、「本当にその日時・場所で釣った魚なのか」を確認したい場面があります。釣りローグでは、写真・GPS・時刻・潮位・サイズ確認写真・大会条件などをもとに、釣果の信頼度を参考スコアとして表示します。"
       visual={<VerificationMockup />}
-      note="ツリログでは、この仕組みを「釣果デジタル証明」として特許出願準備中です。このスコアは釣果の真正性を完全に保証するものではなく、大会運営や確認作業を補助する参考情報です。"
+      note="釣りローグでは、この仕組みを「釣果デジタル証明」として特許出願準備中です。このスコアは釣果の真正性を完全に保証するものではなく、大会運営や確認作業を補助する参考情報です。"
     />
   );
 }
@@ -432,7 +432,7 @@ function MapBlurSection() {
     <FeatureBlock
       eyebrow="Location privacy"
       title="釣果共有と、ポイント保護を両立する。"
-      description="釣り人にとって、釣れる場所は大切な情報です。ツリログでは、正確な位置を保存しながら、共有時にはエリア表示やぼかし表示に切り替えることができます。"
+      description="釣り人にとって、釣れる場所は大切な情報です。釣りローグでは、正確な位置を保存しながら、共有時にはエリア表示やぼかし表示に切り替えることができます。"
       reverse
       visual={<MapBlurMockup />}
       note="共有したい。でも、守りたい。その両方を実現するための位置情報設計です。"
@@ -554,7 +554,7 @@ function VisionSection() {
           <p className="text-sm font-black uppercase tracking-[0.22em] text-cyan-100">Vision</p>
           <h2 className="mt-4 max-w-4xl text-3xl font-black leading-tight sm:text-4xl lg:text-[2.65rem]">釣果データが、釣りの未来を変える。</h2>
           <p className="mt-6 max-w-3xl text-lg font-bold leading-9 text-slate-100">
-            ツリログは、日々の釣果記録から始まり、AI分析、仲間との共有、大会運営へ広がる釣りの意思決定インフラを目指します。
+            釣りローグは、日々の釣果記録から始まり、AI分析、仲間との共有、大会運営へ広がる釣りの意思決定インフラを目指します。
           </p>
           <TagRow items={["AI", "大会", "データ分析", "国際展開", "API", "釣果証明"]} light />
         </div>
@@ -588,7 +588,7 @@ function LandingFooter() {
       <div className="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <TsuriLogLogo className="h-9 w-36 object-contain" />
-          <p className="mt-3 text-sm font-bold text-slate-500">Copyright © TsuriLog</p>
+          <p className="mt-3 text-sm font-bold text-slate-500">Copyright © TSURILOGUE</p>
         </div>
         <div className="flex flex-wrap gap-5 text-sm font-black text-slate-600">
           <Link href="/how-to-use-app" className="hover:text-[#0f766e]">アプリのように使う方法</Link>

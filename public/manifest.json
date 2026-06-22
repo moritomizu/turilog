@@ -1,6 +1,6 @@
 {
-  "name": "TsuriLog - 釣果ログ",
-  "short_name": "TsuriLog",
+  "name": "TSURILOGUE - 釣果ログ",
+  "short_name": "TSURILOGUE",
   "description": "釣果写真、潮位、水温、天候、タックル、グループや大会まで記録して振り返れる釣りログです。",
   "start_url": "/ja",
   "scope": "/",

@@ -2,7 +2,7 @@ self.addEventListener("push", (event) => {
   const payload = event.data ? event.data.json() : {};
   const notification = payload.notification || {};
   const data = payload.data || {};
-  const title = notification.title || data.title || "TsuriLog";
+  const title = notification.title || data.title || "TSURILOGUE";
   const options = {
     body: notification.body || data.body || "",
     icon: "/icons/tsurilog-icon.png",
