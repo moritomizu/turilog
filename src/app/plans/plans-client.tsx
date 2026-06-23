@@ -60,8 +60,11 @@ export function PlansClient() {
     setLoadingPlan("checkout");
     setMessage("Stripe Checkoutを準備しています。");
     try {
-      await logFeatureInterest(user.uid, "plan_premium", { plan: "premium", priceLabel: planPrices.premium, action: "startCheckout" });
+      logFeatureInterest(user.uid, "plan_premium", { plan: "premium", priceLabel: planPrices.premium, action: "startCheckout" }).catch((error) => {
+        console.warn("Premium checkout interest logging failed", error);
+      });
       const token = await user.getIdToken();
+      setMessage("決済画面を開いています。");
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: {
