@@ -64,13 +64,20 @@ export function PlansClient() {
       const token = await user.getIdToken();
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ returnPath: getCheckoutReturnPath() })
       });
-      const data = await response.json();
-      if (!response.ok || typeof data.url !== "string") throw new Error(typeof data.error === "string" ? data.error : "Checkoutを開始できませんでした。");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || typeof data.url !== "string") {
+        console.error("Stripe Checkout session creation failed", data);
+        throw new Error("決済画面を開けませんでした。時間をおいて再度お試しください。");
+      }
       window.location.href = data.url;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Checkoutを開始できませんでした。時間をおいてもう一度お試しください。");
+      setMessage(error instanceof Error ? error.message : "決済画面を開けませんでした。時間をおいて再度お試しください。");
       setLoadingPlan(null);
     }
   }
@@ -207,6 +214,12 @@ export function PlansClient() {
       </main>
     </>
   );
+}
+
+function getCheckoutReturnPath() {
+  if (typeof window === "undefined") return "/pricing";
+  const pathname = window.location.pathname || "/pricing";
+  return pathname.startsWith("/") ? pathname : "/pricing";
 }
 
 function getPlanCuriosityCopy(plan: SubscriptionPlan) {

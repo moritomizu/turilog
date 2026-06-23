@@ -1086,9 +1086,24 @@ customer.subscription.deleted
 
 ```text
 STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PREMIUM_PRICE_ID=price_...
+NEXT_PUBLIC_APP_URL=https://tsurilogue.com
 ```
+
+Checkout Session 作成時は、`NEXT_PUBLIC_APP_URL` を基準に `success_url` / `cancel_url` を生成します。本番環境では Vercel の Production Environment Variables に `NEXT_PUBLIC_APP_URL=https://tsurilogue.com` を設定してください。
+
+Stripeのテストモードで確認する場合は、以下をすべてテスト用でそろえてください。
+
+- `STRIPE_SECRET_KEY`: `sk_test_...`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: `pk_test_...`
+- `STRIPE_PREMIUM_PRICE_ID`: テスト環境で作成した `price_...`
+- `STRIPE_WEBHOOK_SECRET`: テスト用Webhook endpointの `whsec_...`
+
+本番モードで確認する場合は、`sk_live_...` / `pk_live_...` と本番環境で作成したPrice IDを使います。テストキーと本番Price IDを混在させると、Checkout画面を開けません。
+
+Checkout画面が開かない場合は、Vercel Logsで `create checkout session failed` または `stripe checkout sessions API error` を確認してください。環境変数不足、Price IDの間違い、StripeキーとPriceのモード混在、Firebaseログイン確認失敗などが表示されます。
 
 WebhookではFirestoreの `users` に以下を保存します。
 
