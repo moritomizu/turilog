@@ -1105,6 +1105,8 @@ Stripeのテストモードで確認する場合は、以下をすべてテス�
 
 Checkout画面が開かない場合は、Vercel Logsで `create checkout session failed` または `stripe checkout sessions API error` を確認してください。環境変数不足、Price IDの間違い、StripeキーとPriceのモード混在、Firebaseログイン確認失敗などが表示されます。
 
+決済完了後のPremium反映はStripe Webhookで行います。加えて、Checkout完了後に `/api/stripe/sync-subscription` でSubscription状態を再確認する保険処理を入れています。Webhookが遅延・失敗した場合でも、ログイン中ユーザーがプラン画面へ戻ったタイミング、または再度Premiumボタンを押したタイミングで、Stripe側に有効なSubscriptionがあれば `users/{uid}` をPremiumへ同期します。
+
 WebhookではFirestoreの `users` に以下を保存します。
 
 ```text

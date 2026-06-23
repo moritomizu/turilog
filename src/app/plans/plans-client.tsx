@@ -42,10 +42,18 @@ export function PlansClient() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
-      setMessage("Premium登録を受け付けました。反映まで少し時間がかかる場合があります。");
+      setMessage("Premium登録を確認しています。");
       if (user) {
-        getUserProfile(user.uid).then(setProfile).catch(() => undefined);
-        const timer = window.setTimeout(() => getUserProfile(user.uid).then(setProfile).catch(() => undefined), 2500);
+        const sessionId = params.get("session_id") ?? "";
+        syncPremiumStatus(user, sessionId).then((success) => {
+          if (success) {
+            setMessage("Premium登録が反映されました。");
+          } else {
+            setMessage("Premium登録を受け付けました。反映まで少し時間がかかる場合があります。");
+          }
+          getUserProfile(user.uid).then(setProfile).catch(() => undefined);
+        });
+        const timer = window.setTimeout(() => getUserProfile(user.uid).then(setProfile).catch(() => undefined), 3000);
         return () => window.clearTimeout(timer);
       }
     }
@@ -74,6 +82,13 @@ export function PlansClient() {
         body: JSON.stringify({ returnPath: getCheckoutReturnPath() })
       });
       const data = await response.json().catch(() => ({}));
+      if (response.ok && data.alreadyPremium === true) {
+        setMessage("既にPremiumが有効です。表示を更新しています。");
+        const nextProfile = await getUserProfile(user.uid);
+        setProfile(nextProfile);
+        setLoadingPlan(null);
+        return;
+      }
       if (!response.ok || typeof data.url !== "string") {
         console.error("Stripe Checkout session creation failed", data);
         throw new Error("決済画面を開けませんでした。時間をおいて再度お試しください。");
@@ -223,6 +238,25 @@ function getCheckoutReturnPath() {
   if (typeof window === "undefined") return "/pricing";
   const pathname = window.location.pathname || "/pricing";
   return pathname.startsWith("/") ? pathname : "/pricing";
+}
+
+async function syncPremiumStatus(user: FirebaseUser, sessionId: string) {
+  try {
+    const token = await user.getIdToken();
+    const response = await fetch("/api/stripe/sync-subscription", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ sessionId })
+    });
+    const data = await response.json().catch(() => ({}));
+    return response.ok && (data.subscriptionPlan === "premium" || data.subscriptionStatus === "active" || data.subscriptionStatus === "trialing");
+  } catch (error) {
+    console.warn("Premium status sync failed", error);
+    return false;
+  }
 }
 
 function getPlanCuriosityCopy(plan: SubscriptionPlan) {
