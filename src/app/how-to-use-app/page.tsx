@@ -1,10 +1,11 @@
 import Link from "next/link";
-import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "釣りローグをスマホアプリのように使う方法 | TSURILOGUE",
-  description: "釣りローグをスマホのホーム画面に追加して、App Store不要でアプリのようにすばやく起動する方法を案内します。"
-};
+  description: "釣りローグをスマホのホーム画面に追加して、App Store不要でアプリのようにすばやく起動する方法を案内します。",
+  path: "/install"
+});
 
 const benefits = [
   ["すぐに開ける", "ホーム画面のアイコンから、釣りローグをすぐ起動できます。"],
@@ -22,6 +23,10 @@ const faqs = [
 ];
 
 export default function HowToUseAppPage() {
+  return <HowToUseAppContent />;
+}
+
+export function HowToUseAppContent() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#f6fbfb] text-slate-950">
       <section className="relative bg-[#06131f] px-4 pb-16 pt-8 text-white sm:px-6 lg:px-8">

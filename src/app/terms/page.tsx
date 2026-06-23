@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
 import { LegalDocument } from "@/components/LegalDocument";
 import { PageHeader } from "@/components/PageHeader";
 import { termsMarkdown } from "@/lib/legal";
+import { createPageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "利用規約 | TSURILOGUE",
-  description: "TSURILOGUEの利用規約です。"
-};
+  description: "TSURILOGUEの利用規約です。",
+  path: "/terms"
+});
 
 export default function TermsPage() {
   return (

@@ -1765,3 +1765,76 @@ match /feedbacks/{feedbackId} {
 - 機能別満足度
 - Premium課金意向
 - ユーザーインタビュー候補抽出
+
+## SEO / Search Console 対応
+
+TSURILOGUE は Google Search Console で登録しやすいように、Next.js App Router の `MetadataRoute` で `sitemap.xml` と `robots.txt` を生成します。
+
+### sitemap.xml
+
+`/sitemap.xml` は `src/app/sitemap.ts` で生成します。
+
+現在の登録対象:
+
+- `/`
+- `/features`
+- `/pricing`
+- `/install`
+- `/feedback`
+- `/app/ja`
+- `/app/en`
+
+今後 WordPress などで `/media` 配下を運用する場合は、同じ `sitemap.ts` に以下を追加できる想定です。
+
+- `/media/*`
+- `/media/category/*`
+- `/media/tag/*`
+
+公開URL:
+
+```text
+https://tsurilogue.com/sitemap.xml
+```
+
+### robots.txt
+
+`/robots.txt` は `src/app/robots.ts` で生成します。
+
+内容は全ページのクロールを許可し、サイトマップを明示します。
+
+```text
+User-agent: *
+Allow: /
+
+Sitemap: https://tsurilogue.com/sitemap.xml
+```
+
+公開URL:
+
+```text
+https://tsurilogue.com/robots.txt
+```
+
+### canonical
+
+主要ページは `src/lib/metadata.ts` の `createPageMetadata()` を使い、canonical と OGP をまとめて設定します。
+
+例:
+
+- `https://tsurilogue.com/`
+- `https://tsurilogue.com/features`
+- `https://tsurilogue.com/pricing`
+- `https://tsurilogue.com/install`
+
+`NEXT_PUBLIC_APP_URL` が設定されていない場合は、canonical の基準URLとして `https://tsurilogue.com` を使います。
+
+### Search Console 設定方法
+
+1. Google Search Console を開きます。
+2. プロパティを追加します。
+3. ドメインプロパティ、または URL プレフィックスで `https://tsurilogue.com` を登録します。
+4. 指示に従って所有権確認を行います。
+5. 「サイトマップ」から `https://tsurilogue.com/sitemap.xml` を送信します。
+6. `/robots.txt` と `/sitemap.xml` がブラウザで表示できることを確認します。
+
+Search Console に反映されるまで時間がかかる場合があります。

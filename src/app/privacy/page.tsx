@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
 import { LegalDocument } from "@/components/LegalDocument";
 import { PageHeader } from "@/components/PageHeader";
 import { privacyMarkdown } from "@/lib/legal";
+import { createPageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "プライバシーポリシー | TSURILOGUE",
-  description: "TSURILOGUEのプライバシーポリシーです。"
-};
+  description: "TSURILOGUEのプライバシーポリシーです。",
+  path: "/privacy"
+});
 
 export default function PrivacyPage() {
   return (
