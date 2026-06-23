@@ -77,8 +77,8 @@ export async function verifyStripePrice(secretKey: string, priceId: string) {
   if (data.type !== "recurring") throw new Error("Stripe Price が月額サブスクリプション用ではありません。");
 }
 
-export async function saveSubscriptionToUser(userId: string, subscription: StripeSubscription, fallbackCustomerId?: string | null, forceFree = false) {
-  const accessToken = await getServiceAccountAccessToken();
+export async function saveSubscriptionToUser(userId: string, subscription: StripeSubscription, fallbackCustomerId?: string | null, forceFree = false, fallbackAccessToken?: string) {
+  const accessToken = await getSubscriptionWriteToken(fallbackAccessToken);
   const status = subscription.status ?? "active";
   const activePremium = !forceFree && isActivePremiumStatus(status);
   const subscriptionPlan: SubscriptionPlan = activePremium ? "premium" : "free";
@@ -98,7 +98,7 @@ export async function saveSubscriptionToUser(userId: string, subscription: Strip
   return { subscriptionPlan, subscriptionStatus: forceFree ? "canceled" : status };
 }
 
-export async function syncCheckoutSessionToUser(sessionId: string, expectedUserId: string, secretKey: string) {
+export async function syncCheckoutSessionToUser(sessionId: string, expectedUserId: string, secretKey: string, fallbackAccessToken?: string) {
   const session = await fetchStripeCheckoutSession(sessionId, secretKey);
   const userId = session.metadata?.userId || session.client_reference_id || "";
   if (userId !== expectedUserId) {
@@ -109,7 +109,7 @@ export async function syncCheckoutSessionToUser(sessionId: string, expectedUserI
   const subscriptionId = getSubscriptionId(session);
   if (!subscriptionId) throw new Error("Checkout SessionにSubscriptionがありません。");
   const subscription = await fetchStripeSubscription(subscriptionId, secretKey);
-  return saveSubscriptionToUser(expectedUserId, subscription, getCustomerIdFromSession(session));
+  return saveSubscriptionToUser(expectedUserId, subscription, getCustomerIdFromSession(session), false, fallbackAccessToken);
 }
 
 export async function findActiveSubscriptionByEmail(email: string | undefined, secretKey: string) {
@@ -174,4 +174,16 @@ function getSubscriptionId(session: StripeCheckoutSession) {
   if (typeof session.subscription === "string") return session.subscription;
   if (session.subscription && typeof session.subscription === "object" && typeof session.subscription.id === "string") return session.subscription.id;
   return "";
+}
+
+async function getSubscriptionWriteToken(fallbackAccessToken?: string) {
+  try {
+    return await getServiceAccountAccessToken();
+  } catch (error) {
+    if (fallbackAccessToken) {
+      console.warn("Firebase service account unavailable. Falling back to user token for subscription sync.", error);
+      return fallbackAccessToken;
+    }
+    throw error;
+  }
 }

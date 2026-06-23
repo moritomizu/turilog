@@ -13,14 +13,14 @@ export async function POST(request: Request) {
     const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
 
     if (sessionId) {
-      const result = await syncCheckoutSessionToUser(sessionId, authUser.uid, secretKey);
+      const result = await syncCheckoutSessionToUser(sessionId, authUser.uid, secretKey, token);
       return NextResponse.json(result);
     }
 
     const subscription = await findActiveSubscriptionByEmail(authUser.email, secretKey);
     if (!subscription) return NextResponse.json({ subscriptionPlan: "free", subscriptionStatus: "none", synced: false });
 
-    const result = await saveSubscriptionToUser(authUser.uid, subscription);
+    const result = await saveSubscriptionToUser(authUser.uid, subscription, undefined, false, token);
     return NextResponse.json({ ...result, synced: true });
   } catch (error) {
     console.error("sync stripe subscription failed", error);

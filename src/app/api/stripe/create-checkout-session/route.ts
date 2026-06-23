@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       ? await findActiveSubscriptionByCustomerId(existingCustomerId, secretKey)
       : await findActiveSubscriptionByEmail(authUser.email, secretKey);
     if (existingActiveSubscription) {
-      const result = await saveSubscriptionToUser(authUser.uid, existingActiveSubscription);
+      const result = await saveSubscriptionToUser(authUser.uid, existingActiveSubscription, undefined, false, token);
       return NextResponse.json({ alreadyPremium: true, ...result });
     }
 

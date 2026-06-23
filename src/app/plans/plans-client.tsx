@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { logFeatureInterest } from "@/lib/featureEvents";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 import { featureDefinitions, planDefinitions } from "@/lib/plans";
+import { isPremiumProfile, syncPremiumStatus } from "@/lib/stripeSubscriptionClient";
 import { getUserProfile } from "@/lib/userProfiles";
 import type { FeatureKey, SubscriptionPlan, UserProfile } from "@/types";
 
@@ -30,14 +31,35 @@ export function PlansClient() {
   const [selectedFeature, setSelectedFeature] = useState<FeatureKey | null>(null);
   const [revealedPlans, setRevealedPlans] = useState<SubscriptionPlan[]>(["free", "premium"]);
   const [loadingPlan, setLoadingPlan] = useState<"checkout" | "portal" | null>(null);
+  const [subscriptionChecking, setSubscriptionChecking] = useState(false);
+  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     return onAuthStateChanged(getFirebaseAuth(), async (authUser) => {
       setUser(authUser);
       setProfile(authUser ? await getUserProfile(authUser.uid) : null);
+      setSubscriptionChecked(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (!user || subscriptionChecked || isPremiumProfile(profile)) return;
+    setSubscriptionChecking(true);
+    syncPremiumStatus(user)
+      .then((synced) => {
+        if (synced) {
+          setMessage("Premium契約を確認し、表示を更新しました。");
+          return getUserProfile(user.uid).then(setProfile);
+        }
+        return undefined;
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        setSubscriptionChecked(true);
+        setSubscriptionChecking(false);
+      });
+  }, [profile, subscriptionChecked, user]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -159,7 +181,7 @@ export function PlansClient() {
           {visiblePlans.map((plan) => {
             const definition = planDefinitions[plan];
             const priceRevealed = plan === "premium" || revealedPlans.includes(plan);
-            const premiumActive = profile?.subscriptionPlan === "premium" || profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing";
+            const premiumActive = isPremiumProfile(profile);
             return (
               <article key={plan} className="flex flex-col rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <h2 className="text-xl font-black">{definition.label}</h2>
@@ -216,6 +238,13 @@ export function PlansClient() {
                             {loadingPlan === "portal" ? "準備中..." : "契約・カードを管理する"}
                           </button>
                         </div>
+                      ) : subscriptionChecking ? (
+                        <div className="mt-3 space-y-2">
+                          <p className="rounded bg-foam p-3 text-sm font-black text-slate-600">契約状態を確認しています。</p>
+                          <button type="button" disabled className="tap-target w-full rounded bg-slate-200 px-4 py-3 font-black text-slate-500">
+                            確認中...
+                          </button>
+                        </div>
                       ) : (
                         <button type="button" onClick={handlePremiumCheckout} disabled={loadingPlan !== null} className="tap-target mt-3 w-full rounded bg-water px-4 py-3 font-black text-white disabled:opacity-60">
                           {loadingPlan === "checkout" ? "Checkout準備中..." : "Premiumに登録する"}
@@ -238,25 +267,6 @@ function getCheckoutReturnPath() {
   if (typeof window === "undefined") return "/pricing";
   const pathname = window.location.pathname || "/pricing";
   return pathname.startsWith("/") ? pathname : "/pricing";
-}
-
-async function syncPremiumStatus(user: FirebaseUser, sessionId: string) {
-  try {
-    const token = await user.getIdToken();
-    const response = await fetch("/api/stripe/sync-subscription", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ sessionId })
-    });
-    const data = await response.json().catch(() => ({}));
-    return response.ok && (data.subscriptionPlan === "premium" || data.subscriptionStatus === "active" || data.subscriptionStatus === "trialing");
-  } catch (error) {
-    console.warn("Premium status sync failed", error);
-    return false;
-  }
 }
 
 function getPlanCuriosityCopy(plan: SubscriptionPlan) {
