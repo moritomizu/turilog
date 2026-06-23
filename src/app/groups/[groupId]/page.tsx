@@ -59,7 +59,7 @@ function GroupDetail({ groupId, userId }: { groupId: string; userId: string }) {
 
   async function handleDeleteCatch(item: Catch) {
     if (!window.confirm("このグループ釣果を削除しますか？")) return;
-    await deleteCatch(item.id);
+    await deleteCatch(item.id, userId);
     await reloadItems();
   }
 

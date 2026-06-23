@@ -116,9 +116,16 @@ export async function updateCatch(
   }
 }
 
-export async function deleteCatch(catchId: string) {
+export async function deleteCatch(catchId: string, userId?: string) {
   const db = getFirebaseDb();
-  await Promise.all([deleteDoc(doc(db, "catches", catchId)), deleteDoc(doc(db, "publicCatches", catchId))]);
+  const catchRef = doc(db, "catches", catchId);
+  const snapshot = await getDoc(catchRef);
+  if (!snapshot.exists()) throw new Error("釣果が見つかりませんでした。");
+  if (userId && snapshot.data().userId !== userId) throw new Error("この釣果を削除する権限がありません。");
+  await deleteDoc(catchRef);
+  await deleteDoc(doc(db, "publicCatches", catchId)).catch((error) => {
+    console.warn("public catch cleanup failed", error);
+  });
 }
 
 export async function updateTournamentEntryStatus(catchId: string, status: Catch["tournamentEntryStatus"]) {

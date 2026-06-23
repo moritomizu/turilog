@@ -97,7 +97,7 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
     setBusy(true);
     setMessage("削除しています。");
     try {
-      await deleteCatch(item.id);
+      await deleteCatch(item.id, userId);
       onDelete(item.id);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "釣果を削除できませんでした。");
