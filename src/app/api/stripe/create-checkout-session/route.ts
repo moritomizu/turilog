@@ -25,8 +25,19 @@ export async function POST(request: Request) {
       ? await findActiveSubscriptionByCustomerId(existingCustomerId, secretKey)
       : await findActiveSubscriptionByEmail(authUser.email, secretKey);
     if (existingActiveSubscription) {
-      const result = await saveSubscriptionToUser(authUser.uid, existingActiveSubscription, undefined, false, token);
-      return NextResponse.json({ alreadyPremium: true, ...result });
+      try {
+        const result = await saveSubscriptionToUser(authUser.uid, existingActiveSubscription, undefined, false, token);
+        return NextResponse.json({ alreadyPremium: true, ...result });
+      } catch (syncError) {
+        console.error("existing stripe subscription detected but Firestore sync failed", syncError);
+        return NextResponse.json({
+          alreadyPremium: true,
+          subscriptionPlan: "premium",
+          subscriptionStatus: existingActiveSubscription.status ?? "active",
+          syncFailed: true,
+          detail: syncError instanceof Error ? syncError.message : "Premium契約のFirestore反映に失敗しました。"
+        });
+      }
     }
 
     const params = new URLSearchParams({

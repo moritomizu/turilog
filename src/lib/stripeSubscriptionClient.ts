@@ -14,10 +14,14 @@ export async function syncPremiumStatus(user: FirebaseUser, sessionId = "") {
       body: JSON.stringify({ sessionId })
     });
     const data = await response.json().catch(() => ({}));
-    return response.ok && (data.subscriptionPlan === "premium" || data.subscriptionStatus === "active" || data.subscriptionStatus === "trialing");
+    return {
+      premium: response.ok && (data.subscriptionPlan === "premium" || data.subscriptionStatus === "active" || data.subscriptionStatus === "trialing" || data.alreadyPremium === true),
+      syncFailed: data.syncFailed === true,
+      message: typeof data.error === "string" ? data.error : typeof data.detail === "string" ? data.detail : ""
+    };
   } catch (error) {
     console.warn("Premium status sync failed", error);
-    return false;
+    return { premium: false, syncFailed: true, message: "Premium状態を確認できませんでした。" };
   }
 }
 

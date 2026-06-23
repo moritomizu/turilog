@@ -33,6 +33,7 @@ export function PlansClient() {
   const [loadingPlan, setLoadingPlan] = useState<"checkout" | "portal" | null>(null);
   const [subscriptionChecking, setSubscriptionChecking] = useState(false);
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
+  const [stripePremiumDetected, setStripePremiumDetected] = useState(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -40,6 +41,7 @@ export function PlansClient() {
       setUser(authUser);
       setProfile(authUser ? await getUserProfile(authUser.uid) : null);
       setSubscriptionChecked(false);
+      setStripePremiumDetected(false);
     });
   }, []);
 
@@ -47,9 +49,10 @@ export function PlansClient() {
     if (!user || subscriptionChecked || isPremiumProfile(profile)) return;
     setSubscriptionChecking(true);
     syncPremiumStatus(user)
-      .then((synced) => {
-        if (synced) {
-          setMessage("Premium契約を確認し、表示を更新しました。");
+      .then((result) => {
+        if (result.premium) {
+          setStripePremiumDetected(true);
+          setMessage(result.syncFailed ? "Stripe側のPremium契約を確認しました。アプリへの完全反映は少し時間がかかる場合があります。" : "Premium契約を確認し、表示を更新しました。");
           return getUserProfile(user.uid).then(setProfile);
         }
         return undefined;
@@ -67,9 +70,10 @@ export function PlansClient() {
       setMessage("Premium登録を確認しています。");
       if (user) {
         const sessionId = params.get("session_id") ?? "";
-        syncPremiumStatus(user, sessionId).then((success) => {
-          if (success) {
-            setMessage("Premium登録が反映されました。");
+        syncPremiumStatus(user, sessionId).then((result) => {
+          if (result.premium) {
+            setStripePremiumDetected(true);
+            setMessage(result.syncFailed ? "Premium登録は確認できました。アプリへの完全反映は少し時間がかかる場合があります。" : "Premium登録が反映されました。");
           } else {
             setMessage("Premium登録を受け付けました。反映まで少し時間がかかる場合があります。");
           }
@@ -105,7 +109,8 @@ export function PlansClient() {
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.alreadyPremium === true) {
-        setMessage("既にPremiumが有効です。表示を更新しています。");
+        setStripePremiumDetected(true);
+        setMessage(data.syncFailed === true ? "Stripe側に既存のPremium契約があります。アプリへの完全反映は少し時間がかかる場合があります。" : "既にPremiumが有効です。表示を更新しています。");
         const nextProfile = await getUserProfile(user.uid);
         setProfile(nextProfile);
         setLoadingPlan(null);
@@ -181,7 +186,7 @@ export function PlansClient() {
           {visiblePlans.map((plan) => {
             const definition = planDefinitions[plan];
             const priceRevealed = plan === "premium" || revealedPlans.includes(plan);
-            const premiumActive = isPremiumProfile(profile);
+            const premiumActive = isPremiumProfile(profile) || stripePremiumDetected;
             return (
               <article key={plan} className="flex flex-col rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <h2 className="text-xl font-black">{definition.label}</h2>

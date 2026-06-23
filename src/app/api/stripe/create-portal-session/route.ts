@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBearerToken, getErrorStatus, getFirestoreDocument, getRequestOrigin, verifyFirebaseIdToken } from "@/lib/server/firebaseRest";
+import { findActiveSubscriptionByEmail, getCustomerId } from "@/lib/server/stripeBilling";
 
 export const runtime = "nodejs";
 
@@ -9,7 +10,11 @@ export async function POST(request: Request) {
     const token = getBearerToken(request);
     const authUser = await verifyFirebaseIdToken(token);
     const userDoc = await getFirestoreDocument(`users/${authUser.uid}`, token).catch(() => null);
-    const customerId = typeof userDoc?.stripeCustomerId === "string" ? userDoc.stripeCustomerId : "";
+    let customerId = typeof userDoc?.stripeCustomerId === "string" ? userDoc.stripeCustomerId : "";
+    if (!customerId) {
+      const subscription = await findActiveSubscriptionByEmail(authUser.email, secretKey);
+      customerId = subscription ? getCustomerId(subscription) : "";
+    }
     if (!customerId) {
       return NextResponse.json({ error: "Stripe Customer がまだ作成されていません。" }, { status: 400 });
     }

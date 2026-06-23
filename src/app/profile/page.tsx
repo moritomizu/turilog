@@ -21,6 +21,7 @@ function ProfileEditor({ user, fallbackName }: { user: FirebaseUser; fallbackNam
   const [profile, setProfile] = useState<ProfileSurveyState>(() => initialProfileSurveyState(null, fallbackName));
   const [accountProfile, setAccountProfile] = useState<UserProfile | null>(null);
   const [planChecking, setPlanChecking] = useState(false);
+  const [stripePremiumDetected, setStripePremiumDetected] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [message, setMessage] = useState("読み込み中です。");
   const [busy, setBusy] = useState(false);
@@ -34,8 +35,16 @@ function ProfileEditor({ user, fallbackName }: { user: FirebaseUser; fallbackNam
         if (!isPremiumProfile(current)) {
           setPlanChecking(true);
           syncPremiumStatus(user)
-            .then((synced) => {
-              if (synced) return getUserProfile(userId).then(setAccountProfile);
+            .then((result) => {
+              if (result.premium) {
+                setStripePremiumDetected(true);
+                return getUserProfile(userId).then((nextProfile) => {
+                  setAccountProfile(nextProfile);
+                  if (!isPremiumProfile(nextProfile)) {
+                    setAccountProfile({ ...(nextProfile ?? { uid: userId }), uid: nextProfile?.uid ?? userId, subscriptionPlan: "premium", subscriptionStatus: "active" });
+                  }
+                });
+              }
               return undefined;
             })
             .finally(() => setPlanChecking(false));
@@ -82,7 +91,7 @@ function ProfileEditor({ user, fallbackName }: { user: FirebaseUser; fallbackNam
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
           <h2 className="mb-4 text-lg font-black">基本プロフィール</h2>
           <AvatarField avatarUrl={profile.avatarUrl} file={avatarFile} displayName={profile.displayName} onChange={setAvatarFile} />
-          <PlanStatusCard profile={accountProfile} checking={planChecking} />
+          <PlanStatusCard profile={accountProfile} checking={planChecking} premiumDetected={stripePremiumDetected} />
           <div className="mt-4" />
           <ProfileStepBasic state={profile} setState={setProfile} />
         </section>
@@ -108,10 +117,10 @@ function ProfileEditor({ user, fallbackName }: { user: FirebaseUser; fallbackNam
   );
 }
 
-function PlanStatusCard({ profile, checking }: { profile: UserProfile | null; checking: boolean }) {
+function PlanStatusCard({ profile, checking, premiumDetected }: { profile: UserProfile | null; checking: boolean; premiumDetected: boolean }) {
   const plan = profile?.subscriptionPlan ?? "free";
   const definition = planDefinitions[plan] ?? planDefinitions.free;
-  const isPremium = isPremiumProfile(profile);
+  const isPremium = isPremiumProfile(profile) || premiumDetected;
   return (
     <div className="mt-3 rounded border border-teal-100 bg-white p-3">
       <div className="flex items-center justify-between gap-3">

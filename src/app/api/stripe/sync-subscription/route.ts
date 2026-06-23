@@ -13,15 +13,36 @@ export async function POST(request: Request) {
     const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
 
     if (sessionId) {
-      const result = await syncCheckoutSessionToUser(sessionId, authUser.uid, secretKey, token);
-      return NextResponse.json(result);
+      try {
+        const result = await syncCheckoutSessionToUser(sessionId, authUser.uid, secretKey, token);
+        return NextResponse.json(result);
+      } catch (syncError) {
+        console.error("checkout session subscription sync failed", syncError);
+        return NextResponse.json({
+          subscriptionPlan: "premium",
+          subscriptionStatus: "active",
+          syncFailed: true,
+          detail: syncError instanceof Error ? syncError.message : "Premium契約のFirestore反映に失敗しました。"
+        });
+      }
     }
 
     const subscription = await findActiveSubscriptionByEmail(authUser.email, secretKey);
     if (!subscription) return NextResponse.json({ subscriptionPlan: "free", subscriptionStatus: "none", synced: false });
 
-    const result = await saveSubscriptionToUser(authUser.uid, subscription, undefined, false, token);
-    return NextResponse.json({ ...result, synced: true });
+    try {
+      const result = await saveSubscriptionToUser(authUser.uid, subscription, undefined, false, token);
+      return NextResponse.json({ ...result, synced: true });
+    } catch (syncError) {
+      console.error("existing stripe subscription detected but Firestore sync failed", syncError);
+      return NextResponse.json({
+        subscriptionPlan: "premium",
+        subscriptionStatus: subscription.status ?? "active",
+        synced: false,
+        syncFailed: true,
+        detail: syncError instanceof Error ? syncError.message : "Premium契約のFirestore反映に失敗しました。"
+      });
+    }
   } catch (error) {
     console.error("sync stripe subscription failed", error);
     return NextResponse.json(
