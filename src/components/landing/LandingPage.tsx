@@ -231,8 +231,8 @@ function CatchDashboardScreenshot() {
             <Image
               src="/images/lp/catch-dashboard-screenshot.png"
               alt="釣果ダイジェストを表示した実際の釣りローグ画面"
-              width={2066}
-              height={1554}
+              width={1600}
+              height={1092}
               className="h-auto w-full"
               sizes="(min-width: 1024px) 760px, 760px"
             />
