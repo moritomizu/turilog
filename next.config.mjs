@@ -11,6 +11,14 @@ const nextConfig = {
         hostname: "**"
       }
     ]
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/media/:path*",
+        destination: "https://tsurilogue.tapiyota.com/:path*"
+      }
+    ];
   }
 };
 

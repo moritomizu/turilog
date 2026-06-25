@@ -1807,6 +1807,29 @@ TSURILOGUE は Google Search Console で登録しやすいように、Next.js Ap
 - `/media/category/*`
 - `/media/tag/*`
 
+### WordPressメディアのRewrite
+
+SEOメディアはコアサーバー上の WordPress をオリジンとして運用し、ユーザーには TSURILOGUE ドメイン配下のURLとして表示します。
+
+Next.js / Vercel 側では `next.config.mjs` の `rewrites()` で以下を設定しています。
+
+```text
+https://tsurilogue.com/media
+https://tsurilogue.com/media/
+https://tsurilogue.com/media/*
+```
+
+上記URLは、ブラウザのURLを変えずに内部的に以下へRewriteされます。
+
+```text
+https://tsurilogue.tapiyota.com/
+https://tsurilogue.tapiyota.com/*
+```
+
+Redirectではないため、ユーザーや検索エンジンからは `https://tsurilogue.com/media` 配下のページとして見えます。
+
+`robots.txt` は `Allow: /` のため、`/media` 配下もクロール可能です。WordPress側の記事をSearch Consoleへ積極的に伝えたい場合は、今後 `src/app/sitemap.ts` に `/media` 配下のURLを追加してください。
+
 公開URL:
 
 ```text
