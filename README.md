@@ -1830,6 +1830,34 @@ Redirectではないため、ユーザーや検索エンジンからは `https:/
 
 `robots.txt` は `Allow: /` のため、`/media` 配下もクロール可能です。WordPress側の記事をSearch Consoleへ積極的に伝えたい場合は、今後 `src/app/sitemap.ts` に `/media` 配下のURLを追加してください。
 
+### WordPress側のcanonical設定
+
+VercelのRewriteだけでは、WordPressが出力するHTML内のcanonicalは自動では変わりません。
+
+そのため、WordPressオリジン `https://tsurilogue.tapiyota.com` 側では、`wordpress/tsurilogue-media-seo.php` をプラグインとして有効化し、すべての投稿・固定ページ・カテゴリ・タグ・トップページのcanonicalを `https://tsurilogue.com/media` 配下へ寄せます。
+
+プラグインの役割:
+
+- WordPress標準の `rel_canonical` を差し替える
+- Yoast SEO / Rank Math / AIOSEO のcanonicalフィルターにも対応する
+- OGP URLも可能な範囲で `https://tsurilogue.com/media` 配下へ寄せる
+- WordPress側の `home_url()` 由来のURLを公開URLへ寄せる
+
+設置方法:
+
+1. `wordpress/tsurilogue-media-seo.php` をWordPressサーバーの `wp-content/plugins/tsurilogue-media-seo/tsurilogue-media-seo.php` に配置します。
+2. WordPress管理画面の「プラグイン」から `TSURILOGUE Media SEO Canonical` を有効化します。
+3. `https://tsurilogue.com/media` と記事ページを開き、HTMLソース内のcanonicalが `https://tsurilogue.com/media/...` になっていることを確認します。
+
+確認例:
+
+```html
+<link rel="canonical" href="https://tsurilogue.com/media/" />
+<link rel="canonical" href="https://tsurilogue.com/media/sample-post/" />
+```
+
+Search Consoleには、Next.js側の `https://tsurilogue.com/sitemap.xml` に加えて、WordPress側のサイトマップが公開URLで出せる場合は `/media` 配下のサイトマップも送信してください。
+
 公開URL:
 
 ```text
