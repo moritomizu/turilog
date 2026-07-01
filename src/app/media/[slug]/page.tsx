@@ -13,7 +13,6 @@ import {
   getMediaPath,
   getMediaPost,
   getPostExcerpt,
-  getPostFullExcerpt,
   getPostTitle,
   getRelatedMediaPosts,
   type WpPost
@@ -70,7 +69,6 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
   const related = await getRelatedMediaPosts(post).catch(() => []);
   const title = getPostTitle(post);
   const canonical = getMediaCanonical(post.slug);
-  const excerpt = getPostFullExcerpt(post);
 
   return (
     <>
@@ -88,7 +86,6 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
           </div>
 
           <h1 className="text-4xl font-black leading-tight text-slate-950 sm:text-5xl">{title}</h1>
-          {excerpt ? <p className="mt-5 text-base font-bold leading-8 text-slate-600">{excerpt}</p> : null}
 
           {post.featuredImage?.url ? (
             <div className="relative mt-8 aspect-[16/10] overflow-hidden rounded-[2rem] bg-teal-50 shadow-2xl shadow-slate-900/10">
