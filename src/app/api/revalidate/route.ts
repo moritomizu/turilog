@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 type RevalidateRequestBody = {
@@ -27,10 +27,12 @@ export async function POST(request: NextRequest) {
   }
 
   const paths = getRevalidatePaths(body);
+  revalidateTag("wordpress-media");
   paths.forEach((path) => revalidatePath(path));
 
   return NextResponse.json({
     revalidated: true,
+    tags: ["wordpress-media"],
     paths,
     now: new Date().toISOString()
   });

@@ -74,7 +74,7 @@ async function wpFetch<T>(path: string, params?: Record<string, string | number 
   });
 
   const response = await fetch(url.toString(), {
-    next: { revalidate: MEDIA_REVALIDATE_SECONDS }
+    next: { revalidate: MEDIA_REVALIDATE_SECONDS, tags: ["wordpress-media"] }
   });
 
   if (!response.ok) {
@@ -131,8 +131,14 @@ export function getPostTitle(post: WpPost) {
   return htmlToText(post.title?.raw || post.title?.rendered || "TSURILOGUE Media");
 }
 
-export function getPostExcerpt(post: WpPost) {
-  return htmlToText(post.excerpt?.raw || post.excerpt?.rendered || post.seo?.description || "").slice(0, 160);
+export function getPostExcerpt(post: WpPost, maxLength = 160) {
+  const excerpt = getPostFullExcerpt(post);
+  if (maxLength <= 0 || excerpt.length <= maxLength) return excerpt;
+  return `${excerpt.slice(0, maxLength).trimEnd()}...`;
+}
+
+export function getPostFullExcerpt(post: WpPost) {
+  return htmlToText(post.excerpt?.raw || post.excerpt?.rendered || post.seo?.description || "");
 }
 
 export function getMediaCanonical(path = "") {

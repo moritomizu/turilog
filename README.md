@@ -1857,6 +1857,7 @@ WordPressのJIN等の表示テーマは使わず、REST APIで取得した投稿
 - APIは `WORDPRESS_REVALIDATE_SECRET` で保護します。
 - `slug` を渡すと `/media/{slug}` と `/ja/media/{slug}`、一覧 `/media` / `/ja/media`、`/sitemap.xml` を再検証します。
 - `categorySlug` / `tagSlug`、または `categories` / `tags` を渡すとカテゴリ・タグ一覧も再検証します。
+- API取得キャッシュは `wordpress-media` tag で管理し、再検証時に `revalidateTag("wordpress-media")` で破棄します。
 
 リクエスト例:
 
