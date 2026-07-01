@@ -1851,6 +1851,32 @@ WordPressのJIN等の表示テーマは使わず、REST APIで取得した投稿
 - `fetch(..., { next: { revalidate: 3600 } })`
 - 1時間を目安にISR/キャッシュ
 
+オンデマンド再検証:
+
+- WordPress記事更新時に `POST /api/revalidate` を呼ぶと、Next.js側のMediaページを即時再検証できます。
+- APIは `WORDPRESS_REVALIDATE_SECRET` で保護します。
+- `slug` を渡すと `/media/{slug}` と `/ja/media/{slug}`、一覧 `/media` / `/ja/media`、`/sitemap.xml` を再検証します。
+- `categorySlug` / `tagSlug`、または `categories` / `tags` を渡すとカテゴリ・タグ一覧も再検証します。
+
+リクエスト例:
+
+```bash
+curl -X POST https://tsurilogue.com/api/revalidate \
+  -H "content-type: application/json" \
+  -H "x-revalidate-secret: ${WORDPRESS_REVALIDATE_SECRET}" \
+  -d '{"slug":"what-is-catch-log","categorySlug":"beginner","tags":["catch-log"]}'
+```
+
+WordPress側から送るJSON例:
+
+```json
+{
+  "slug": "what-is-catch-log",
+  "categorySlug": "beginner",
+  "tags": ["catch-log"]
+}
+```
+
 SEO方針:
 
 - canonical は `https://www.tsurilogue.com/ja/media` 配下を基準にする
