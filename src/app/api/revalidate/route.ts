@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 type RevalidateRequestBody = {
   secret?: string;
+  path?: string;
   slug?: string;
   category?: string;
   categorySlug?: string;
@@ -14,28 +15,38 @@ type RevalidateRequestBody = {
 };
 
 export async function POST(request: NextRequest) {
-  const body = await readBody(request);
-  const configuredSecret = process.env.WORDPRESS_REVALIDATE_SECRET?.trim() || process.env.REVALIDATE_SECRET?.trim();
-  const providedSecret = request.headers.get("x-revalidate-secret") || body.secret || request.nextUrl.searchParams.get("secret");
+  try {
+    const body = await readBody(request);
+    const configuredSecret = process.env.WORDPRESS_REVALIDATE_SECRET?.trim() || process.env.REVALIDATE_SECRET?.trim();
+    const providedSecret = request.headers.get("x-revalidate-secret") || body.secret || request.nextUrl.searchParams.get("secret");
 
-  if (!configuredSecret) {
-    return NextResponse.json({ revalidated: false, error: "WORDPRESS_REVALIDATE_SECRET is not configured." }, { status: 500 });
+    if (!configuredSecret) {
+      return NextResponse.json({ revalidated: false, error: "WORDPRESS_REVALIDATE_SECRET is not configured." }, { status: 500 });
+    }
+
+    if (!providedSecret || providedSecret !== configuredSecret) {
+      return NextResponse.json({ revalidated: false, error: "Invalid revalidation secret." }, { status: 401 });
+    }
+
+    const paths = getRevalidatePaths(body);
+    revalidateTag("wordpress-media");
+    paths.forEach((path) => revalidatePath(path));
+
+    return NextResponse.json({
+      revalidated: true,
+      tags: ["wordpress-media"],
+      paths,
+      received: {
+        path: body.path ?? null,
+        paths: body.paths ?? []
+      },
+      now: new Date().toISOString()
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown revalidation error.";
+    console.error("[api/revalidate] failed", error);
+    return NextResponse.json({ revalidated: false, error: message }, { status: 500 });
   }
-
-  if (!providedSecret || providedSecret !== configuredSecret) {
-    return NextResponse.json({ revalidated: false, error: "Invalid revalidation secret." }, { status: 401 });
-  }
-
-  const paths = getRevalidatePaths(body);
-  revalidateTag("wordpress-media");
-  paths.forEach((path) => revalidatePath(path));
-
-  return NextResponse.json({
-    revalidated: true,
-    tags: ["wordpress-media"],
-    paths,
-    now: new Date().toISOString()
-  });
 }
 
 async function readBody(request: NextRequest): Promise<RevalidateRequestBody> {
@@ -47,25 +58,23 @@ async function readBody(request: NextRequest): Promise<RevalidateRequestBody> {
 }
 
 function getRevalidatePaths(body: RevalidateRequestBody) {
-  const paths = new Set<string>(["/media", "/ja/media", "/sitemap.xml"]);
+  const paths = new Set<string>(["/media", "/sitemap.xml"]);
   const slug = normalizeMediaPathSegment(body.slug);
 
   if (slug) {
     paths.add(`/media/${slug}`);
-    paths.add(`/ja/media/${slug}`);
   }
 
   getUniqueSegments([body.category, body.categorySlug, ...(body.categories ?? [])]).forEach((category) => {
     paths.add(`/media/category/${category}`);
-    paths.add(`/ja/media/category/${category}`);
   });
 
   getUniqueSegments([body.tag, body.tagSlug, ...(body.tags ?? [])]).forEach((tag) => {
     paths.add(`/media/tag/${tag}`);
-    paths.add(`/ja/media/tag/${tag}`);
   });
 
-  (body.paths ?? []).forEach((path) => {
+  [body.path, ...(body.paths ?? [])].forEach((path) => {
+    if (!path) return;
     const normalized = normalizeRevalidatePath(path);
     if (normalized) paths.add(normalized);
   });
@@ -94,10 +103,10 @@ function normalizeMediaPathSegment(value?: string) {
 }
 
 function normalizeRevalidatePath(value: string) {
-  const pathname = getPathname(value.trim()).replace(/\/+$/, "");
-  if (pathname === "/media" || pathname === "/ja/media" || pathname.startsWith("/media/") || pathname.startsWith("/ja/media/")) {
-    return pathname;
-  }
+  const pathname = getPathname(value.trim()).replace(/\/+$/, "") || "/media";
+  if (pathname === "/media" || pathname.startsWith("/media/")) return pathname;
+  if (pathname === "/ja/media") return "/media";
+  if (pathname.startsWith("/ja/media/")) return pathname.replace(/^\/ja\/media/, "/media");
   return "";
 }
 
