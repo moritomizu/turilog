@@ -5,6 +5,7 @@ import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 
 const navItems = [
   { href: "#features", label: "機能" },
+  { href: "/ja/media", label: "メディア" },
   { href: "#tournament", label: "釣り大会" },
   { href: "#group", label: "グループ" },
   { href: "#ai", label: "AI機能" },
@@ -591,6 +592,7 @@ function LandingFooter() {
           <p className="mt-3 text-sm font-bold text-slate-500">Copyright © TSURILOGUE</p>
         </div>
         <div className="flex flex-wrap gap-5 text-sm font-black text-slate-600">
+          <Link href="/ja/media" className="hover:text-[#0f766e]">メディア</Link>
           <Link href="/how-to-use-app" className="hover:text-[#0f766e]">アプリのように使う方法</Link>
           <Link href="/feedback" className="hover:text-[#0f766e]">ご意見・ご感想</Link>
           <Link href="/terms" className="hover:text-[#0f766e]">利用規約</Link>

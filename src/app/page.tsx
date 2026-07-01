@@ -18,6 +18,7 @@ import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 import type { Catch, GroupCatchComment } from "@/types";
 
 const links = [
+  { href: "/media", label: "メディア", body: "釣果記録や釣りのヒントを読む" },
   { href: "/tournaments", label: "釣り大会", body: "大会に参加してランキングを競う" },
   { href: "/groups", label: "グループ", body: "釣り仲間と釣果・ランキング・マップを共有" },
   { href: "/ai-report", label: "AIレポートβ", body: "釣果傾向から次回釣行のヒントを作成" },
