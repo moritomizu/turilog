@@ -2,23 +2,23 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 type RevalidateRequestBody = {
-  secret?: string;
-  path?: string;
-  slug?: string;
-  category?: string;
-  categorySlug?: string;
-  categories?: string[];
-  tag?: string;
-  tagSlug?: string;
-  tags?: string[];
-  paths?: string[];
+  secret?: unknown;
+  path?: unknown;
+  slug?: unknown;
+  category?: unknown;
+  categorySlug?: unknown;
+  categories?: unknown;
+  tag?: unknown;
+  tagSlug?: unknown;
+  tags?: unknown;
+  paths?: unknown;
 };
 
 export async function POST(request: NextRequest) {
   try {
     const body = await readBody(request);
     const configuredSecret = process.env.WORDPRESS_REVALIDATE_SECRET?.trim() || process.env.REVALIDATE_SECRET?.trim();
-    const providedSecret = request.headers.get("x-revalidate-secret") || body.secret || request.nextUrl.searchParams.get("secret");
+    const providedSecret = request.headers.get("x-revalidate-secret") || toText(body.secret) || request.nextUrl.searchParams.get("secret");
 
     if (!configuredSecret) {
       return NextResponse.json({ revalidated: false, error: "WORDPRESS_REVALIDATE_SECRET is not configured." }, { status: 500 });
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
       tags: ["wordpress-media"],
       paths,
       received: {
-        path: body.path ?? null,
-        paths: body.paths ?? []
+        path: toText(body.path) || null,
+        paths: toTextArray(body.paths)
       },
       now: new Date().toISOString()
     });
@@ -65,15 +65,15 @@ function getRevalidatePaths(body: RevalidateRequestBody) {
     paths.add(`/media/${slug}`);
   }
 
-  getUniqueSegments([body.category, body.categorySlug, ...(body.categories ?? [])]).forEach((category) => {
+  getUniqueSegments([body.category, body.categorySlug, ...toTextArray(body.categories)]).forEach((category) => {
     paths.add(`/media/category/${category}`);
   });
 
-  getUniqueSegments([body.tag, body.tagSlug, ...(body.tags ?? [])]).forEach((tag) => {
+  getUniqueSegments([body.tag, body.tagSlug, ...toTextArray(body.tags)]).forEach((tag) => {
     paths.add(`/media/tag/${tag}`);
   });
 
-  [body.path, ...(body.paths ?? [])].forEach((path) => {
+  [body.path, ...toTextArray(body.paths)].forEach((path) => {
     if (!path) return;
     const normalized = normalizeRevalidatePath(path);
     if (normalized) paths.add(normalized);
@@ -82,13 +82,14 @@ function getRevalidatePaths(body: RevalidateRequestBody) {
   return [...paths];
 }
 
-function getUniqueSegments(values: Array<string | undefined>) {
+function getUniqueSegments(values: unknown[]) {
   return [...new Set(values.map(normalizeMediaPathSegment).filter((value): value is string => Boolean(value)))];
 }
 
-function normalizeMediaPathSegment(value?: string) {
-  if (!value) return "";
-  const path = getPathname(value.trim())
+function normalizeMediaPathSegment(value: unknown) {
+  const text = toText(value);
+  if (!text) return "";
+  const path = getPathname(text)
     .replace(/^\/+/, "")
     .replace(/^ja\/media\/?/, "")
     .replace(/^media\/?/, "")
@@ -102,8 +103,10 @@ function normalizeMediaPathSegment(value?: string) {
     .join("/");
 }
 
-function normalizeRevalidatePath(value: string) {
-  const pathname = getPathname(value.trim()).replace(/\/+$/, "") || "/media";
+function normalizeRevalidatePath(value: unknown) {
+  const text = toText(value);
+  if (!text) return "";
+  const pathname = getPathname(text).replace(/\/+$/, "") || "/media";
   if (pathname === "/media" || pathname.startsWith("/media/")) return pathname;
   if (pathname === "/ja/media") return "/media";
   if (pathname.startsWith("/ja/media/")) return pathname.replace(/^\/ja\/media/, "/media");
@@ -111,10 +114,22 @@ function normalizeRevalidatePath(value: string) {
 }
 
 function getPathname(value: string) {
-  if (!value) return "";
+  const text = value.trim();
+  if (!text) return "";
   try {
-    return new URL(value).pathname;
+    return new URL(text).pathname;
   } catch {
-    return value.startsWith("/") ? value : `/${value}`;
+    return text.startsWith("/") ? text : `/${text}`;
   }
+}
+
+function toText(value: unknown) {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value).trim();
+  return "";
+}
+
+function toTextArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map(toText).filter(Boolean);
 }
