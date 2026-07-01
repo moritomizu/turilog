@@ -5,7 +5,7 @@ const staticRoutes = [
   { path: "/", priority: 1 },
   { path: "/features", priority: 0.9 },
   { path: "/pricing", priority: 0.8 },
-  { path: "/media", priority: 0.8 },
+  { path: "/ja/media", priority: 0.8 },
   { path: "/install", priority: 0.7 },
   { path: "/feedback", priority: 0.5 },
   { path: "/app/ja", priority: 0.6 },

@@ -1801,62 +1801,64 @@ TSURILOGUE は Google Search Console で登録しやすいように、Next.js Ap
 - `/app/ja`
 - `/app/en`
 
-今後 WordPress などで `/media` 配下を運用する場合は、同じ `sitemap.ts` に以下を追加できる想定です。
+メディアトップは `src/app/sitemap.ts` に `/ja/media` として登録しています。
 
-- `/media/*`
-- `/media/category/*`
-- `/media/tag/*`
+### TSURILOGUE Headless Media
 
-### WordPressメディアのRewrite
+SEOメディアは、WordPressをCMS専用として利用し、表示は Next.js App Router で行います。
 
-SEOメディアはコアサーバー上の WordPress をオリジンとして運用し、ユーザーには TSURILOGUE ドメイン配下のURLとして表示します。
-
-Next.js / Vercel 側では `next.config.mjs` の `rewrites()` で以下を設定しています。
+公開URL:
 
 ```text
-https://tsurilogue.com/media
-https://tsurilogue.com/media/
-https://tsurilogue.com/media/*
+https://www.tsurilogue.com/ja/media
+https://www.tsurilogue.com/ja/media/{slug}
+https://www.tsurilogue.com/ja/media/category/{slug}
+https://www.tsurilogue.com/ja/media/tag/{slug}
 ```
 
-上記URLは、ブラウザのURLを変えずに内部的に以下へRewriteされます。
+WordPress API Origin:
 
 ```text
-https://tsurilogue.tapiyota.com/
-https://tsurilogue.tapiyota.com/*
+https://tsurilogue.tapiyota.com
 ```
 
-Redirectではないため、ユーザーや検索エンジンからは `https://tsurilogue.com/media` 配下のページとして見えます。
+利用API:
 
-`robots.txt` は `Allow: /` のため、`/media` 配下もクロール可能です。WordPress側の記事をSearch Consoleへ積極的に伝えたい場合は、今後 `src/app/sitemap.ts` に `/media` 配下のURLを追加してください。
-
-### WordPress側のcanonical設定
-
-VercelのRewriteだけでは、WordPressが出力するHTML内のcanonicalは自動では変わりません。
-
-そのため、WordPressオリジン `https://tsurilogue.tapiyota.com` 側では、`wordpress/tsurilogue-media-seo.php` をプラグインとして有効化し、すべての投稿・固定ページ・カテゴリ・タグ・トップページのcanonicalを `https://tsurilogue.com/media` 配下へ寄せます。
-
-プラグインの役割:
-
-- WordPress標準の `rel_canonical` を差し替える
-- Yoast SEO / Rank Math / AIOSEO のcanonicalフィルターにも対応する
-- OGP URLも可能な範囲で `https://tsurilogue.com/media` 配下へ寄せる
-- WordPress側の `home_url()` 由来のURLを公開URLへ寄せる
-
-設置方法:
-
-1. `wordpress/tsurilogue-media-seo.php` をWordPressサーバーの `wp-content/plugins/tsurilogue-media-seo/tsurilogue-media-seo.php` に配置します。
-2. WordPress管理画面の「プラグイン」から `TSURILOGUE Media SEO Canonical` を有効化します。
-3. `https://tsurilogue.com/media` と記事ページを開き、HTMLソース内のcanonicalが `https://tsurilogue.com/media/...` になっていることを確認します。
-
-確認例:
-
-```html
-<link rel="canonical" href="https://tsurilogue.com/media/" />
-<link rel="canonical" href="https://tsurilogue.com/media/sample-post/" />
+```text
+GET /wp-json/tsurilogue/v1/posts
+GET /wp-json/tsurilogue/v1/posts/{slug}
+GET /wp-json/tsurilogue/v1/categories
+GET /wp-json/tsurilogue/v1/tags
 ```
 
-Search Consoleには、Next.js側の `https://tsurilogue.com/sitemap.xml` に加えて、WordPress側のサイトマップが公開URLで出せる場合は `/media` 配下のサイトマップも送信してください。
+実装ファイル:
+
+```text
+src/lib/wordpress.ts
+src/app/media/page.tsx
+src/app/media/[slug]/page.tsx
+src/app/media/category/[slug]/page.tsx
+src/app/media/tag/[slug]/page.tsx
+src/components/media/
+```
+
+`/ja/media` は既存middlewareにより内部的に `/media` へrewriteされ、Next.js側のMediaページを表示します。
+
+WordPressのJIN等の表示テーマは使わず、REST APIで取得した投稿データをTSURILOGUEのデザインシステムで描画します。
+
+キャッシュ方針:
+
+- `fetch(..., { next: { revalidate: 3600 } })`
+- 1時間を目安にISR/キャッシュ
+
+SEO方針:
+
+- canonical は `https://www.tsurilogue.com/ja/media` 配下を基準にする
+- title / description / OGP / Twitter Card は Next.js metadata で生成する
+- 記事詳細では Article JSON-LD / Breadcrumb JSON-LD / Organization JSON-LD を出力する
+- 記事が見つからない場合は `notFound()` を使う
+
+WordPress側はCMS・API配信に専念し、公開表示とSEO metadata はNext.js側で管理します。
 
 公開URL:
 
