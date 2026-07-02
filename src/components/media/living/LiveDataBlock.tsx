@@ -24,6 +24,7 @@ type LiveDataBlockProps = {
   description?: string;
   data?: LiveDataBlockData;
   query?: LiveDataBlockQuery;
+  fallbackQuery?: LiveDataBlockQuery;
 };
 
 const defaultLiveData: LiveDataBlockData = {
@@ -36,37 +37,49 @@ const defaultLiveData: LiveDataBlockData = {
   latestUpdatedAt: null
 };
 
+const defaultQuery: LiveDataBlockQuery = { fish: "チヌ", area: "大阪", days: 30 };
+const defaultFallbackQuery: LiveDataBlockQuery = { fish: "チヌ", area: "大阪", days: 365 };
+
 export function LiveDataBlock({
   title = "TSURILOGUE Live Data",
   description = "記事に関連する釣果傾向を、TSURILOGUEの公開集計データとして表示するLiving Componentです。",
   data,
-  query = { fish: "チヌ", area: "大阪湾", method: "チニング", days: 30 }
+  query = defaultQuery,
+  fallbackQuery = defaultFallbackQuery
 }: LiveDataBlockProps) {
+  const primaryQuery = useMemo(
+    () => ({ fish: query.fish, area: query.area, method: query.method, days: query.days }),
+    [query]
+  );
+  const fallback = useMemo(
+    () => (fallbackQuery ? { fish: fallbackQuery.fish, area: fallbackQuery.area, method: fallbackQuery.method, days: fallbackQuery.days } : undefined),
+    [fallbackQuery]
+  );
   const [liveData, setLiveData] = useState<LiveDataBlockData>(data ?? defaultLiveData);
-  const [status, setStatus] = useState<"loading" | "ready" | "empty" | "error">(data ? "ready" : "loading");
-  const periodLabel = `直近${query.days ?? 30}日`;
-  const queryString = useMemo(() => {
-    const params = new URLSearchParams();
-    if (query.fish) params.set("fish", query.fish);
-    if (query.area) params.set("area", query.area);
-    if (query.method) params.set("method", query.method);
-    if (query.days) params.set("days", String(query.days));
-    return params.toString();
-  }, [query.area, query.days, query.fish, query.method]);
+  const [activeQuery, setActiveQuery] = useState<LiveDataBlockQuery>(primaryQuery);
+  const [status, setStatus] = useState<"loading" | "ready" | "fallback" | "empty" | "error">(data ? "ready" : "loading");
+  const periodLabel = `直近${activeQuery.days ?? 30}日`;
+  const queryString = useMemo(() => serializeQuery(primaryQuery), [primaryQuery]);
+  const fallbackQueryString = useMemo(() => serializeQuery(fallback ?? {}), [fallback]);
 
   useEffect(() => {
     if (data) return;
     let ignore = false;
     setStatus("loading");
-    fetch(`/api/media/live-data${queryString ? `?${queryString}` : ""}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error("live data fetch failed");
-        return (await response.json()) as LiveDataBlockData;
-      })
-      .then((result) => {
+    setActiveQuery(primaryQuery);
+    fetchLiveData(queryString)
+      .then(async (result) => {
         if (ignore) return;
-        setLiveData(result);
-        setStatus(result.totalCatches > 0 ? "ready" : "empty");
+        if (result.totalCatches > 0 || !fallbackQueryString) {
+          setLiveData(result);
+          setStatus(result.totalCatches > 0 ? "ready" : "empty");
+          return;
+        }
+        const fallbackResult = await fetchLiveData(fallbackQueryString);
+        if (ignore) return;
+        setLiveData(fallbackResult);
+        setActiveQuery(fallback ?? primaryQuery);
+        setStatus(fallbackResult.totalCatches > 0 ? "fallback" : "empty");
       })
       .catch(() => {
         if (ignore) return;
@@ -75,7 +88,7 @@ export function LiveDataBlock({
     return () => {
       ignore = true;
     };
-  }, [data, queryString]);
+  }, [data, fallback, fallbackQueryString, primaryQuery, queryString]);
 
   const updatedAtLabel = liveData.latestUpdatedAt ? `${formatDate(liveData.latestUpdatedAt)} 更新` : "";
   const metrics = [
@@ -100,7 +113,7 @@ export function LiveDataBlock({
           <h2 className="mt-4 text-2xl font-black leading-tight sm:text-3xl">{title}</h2>
           <p className="mt-3 max-w-2xl text-sm font-bold leading-7 text-slate-200">{description}</p>
           <p className="mt-3 text-xs font-bold leading-6 text-cyan-100">
-            集計条件: {query.fish || "全魚種"} / {query.area || "全エリア"} / {query.method || "全釣法"} / {periodLabel}
+            集計条件: {activeQuery.fish || "全魚種"} / {activeQuery.area || "全エリア"} / {activeQuery.method || "全釣法"} / {periodLabel}
           </p>
         </div>
       </div>
@@ -120,6 +133,10 @@ export function LiveDataBlock({
           <p className="text-xs font-bold leading-6 text-slate-600">まだ十分な釣果データがありません。投稿が増えるほど、この記事のデータも成長していきます。</p>
         ) : status === "error" ? (
           <p className="text-xs font-bold leading-6 text-red-700">現在データを取得できません</p>
+        ) : status === "fallback" ? (
+          <p className="text-xs font-bold leading-6 text-slate-600">
+            直近30日は十分なデータがないため、参考として直近365日の公開釣果を表示しています。個人情報や正確なGPS座標は表示しません。
+          </p>
         ) : (
           <p className="text-xs font-bold leading-6 text-slate-600">
             公開共有された釣果だけを集計しています。個人情報や正確なGPS座標は表示しません。
@@ -128,6 +145,21 @@ export function LiveDataBlock({
       </div>
     </section>
   );
+}
+
+async function fetchLiveData(queryString: string) {
+  const response = await fetch(`/api/media/live-data${queryString ? `?${queryString}` : ""}`);
+  if (!response.ok) throw new Error("live data fetch failed");
+  return (await response.json()) as LiveDataBlockData;
+}
+
+function serializeQuery(query: LiveDataBlockQuery) {
+  const params = new URLSearchParams();
+  if (query.fish) params.set("fish", query.fish);
+  if (query.area) params.set("area", query.area);
+  if (query.method) params.set("method", query.method);
+  if (query.days) params.set("days", String(query.days));
+  return params.toString();
 }
 
 function formatDate(value: string) {

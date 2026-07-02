@@ -47,7 +47,7 @@ export function getBearerToken(request: Request) {
 
 export async function getServiceAccountAccessToken() {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const privateKey = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
   if (!clientEmail || !privateKey || !projectId) {
     throw new Error("Firebaseサービスアカウント環境変数が未設定です。");
   }
@@ -132,6 +132,16 @@ export function getErrorStatus(error: unknown) {
 
 function ensureFirestoreConfig() {
   if (!firestoreBaseUrl) throw new Error("FIREBASE_PROJECT_ID が未設定です。");
+}
+
+function normalizePrivateKey(value?: string) {
+  if (!value) return "";
+  let normalized = value.trim();
+  if (normalized.endsWith(",")) normalized = normalized.slice(0, -1).trim();
+  if ((normalized.startsWith('"') && normalized.endsWith('"')) || (normalized.startsWith("'") && normalized.endsWith("'"))) {
+    normalized = normalized.slice(1, -1);
+  }
+  return normalized.replace(/\\n/g, "\n");
 }
 
 function base64url(value: string | Buffer) {
