@@ -1905,7 +1905,7 @@ src/components/media/living/CatchProofBlock.tsx
 src/components/media/living/PremiumInsightBlock.tsx
 ```
 
-Phase2 Ver1では `LiveDataBlock` のみ記事詳細ページに表示します。表示データはダミーですが、`data` propで以下を受け取れるため、後からFirebase集計値に差し替えられます。
+Phase2 Ver1では `LiveDataBlock` のみ記事詳細ページに表示します。Phase2 Ver2では、Next.js API Route経由でFirebase / Firestoreの公開釣果集計へ接続します。
 
 - 直近30日の投稿数
 - 平均サイズ
@@ -1913,6 +1913,54 @@ Phase2 Ver1では `LiveDataBlock` のみ記事詳細ページに表示します�
 - 人気時間帯
 - 人気魚種
 - 人気エリア
+
+#### LiveDataBlock Firebase接続
+
+API:
+
+```text
+GET /api/media/live-data
+```
+
+取得パラメータ:
+
+```text
+fish=チヌ
+area=大阪湾
+method=チニング
+days=30
+```
+
+レスポンス:
+
+```json
+{
+  "totalCatches": 128,
+  "averageSize": 42.3,
+  "maxSize": 58,
+  "popularFish": "チヌ",
+  "popularArea": "大阪湾",
+  "popularTimeRange": "6:00〜8:00",
+  "latestUpdatedAt": "2026-07-02T00:00:00.000Z"
+}
+```
+
+集計仕様:
+
+- `publicCatches` コレクションのみを集計対象にする
+- `caughtAt` または `createdAt` が指定日数内の釣果を対象にする
+- `fish` は `fishType` で絞り込む
+- `area` は `areaName` / `areaCode` で絞り込む
+- `method` は `method` / `fishingGenre` / `tackleName` / `lure` / タックル情報で絞り込む
+- API側は5分キャッシュを基本にし、記事表示を壊さないようエラー時はブロック側で案内文を表示する
+
+プライバシー方針:
+
+- 公開共有された釣果のみを集計する
+- `userId` は返さない
+- 正確な緯度経度は返さない
+- 個別の釣果詳細ではなく、集計済みデータのみを返す
+- 位置情報はエリア単位の集計に留める
 
 今後の拡張:
 
