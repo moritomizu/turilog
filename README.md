@@ -1885,6 +1885,42 @@ SEO方針:
 - 記事詳細では Article JSON-LD / Breadcrumb JSON-LD / Organization JSON-LD を出力する
 - 記事が見つからない場合は `notFound()` を使う
 
+### TSURILOGUE Living Components
+
+Living Components は、Headless Mediaの記事本文にTSURILOGUEアプリ側の釣果データや分析結果を差し込むためのコンポーネント基盤です。
+
+目的:
+
+- WordPress記事を静的な読み物で終わらせず、アプリ内の釣果データと接続する
+- 記事テーマに関連する釣果傾向、条件、AI分析、Catch Proof、Premium分析を段階的に表示する
+- 将来的にFirebase集計データ、AIレポート、Premium導線へ差し替えやすい構造にする
+
+初期実装:
+
+```text
+src/components/media/living/LiveDataBlock.tsx
+src/components/media/living/FishingConditionsBlock.tsx
+src/components/media/living/AIInsightBlock.tsx
+src/components/media/living/CatchProofBlock.tsx
+src/components/media/living/PremiumInsightBlock.tsx
+```
+
+Phase2 Ver1では `LiveDataBlock` のみ記事詳細ページに表示します。表示データはダミーですが、`data` propで以下を受け取れるため、後からFirebase集計値に差し替えられます。
+
+- 直近30日の投稿数
+- 平均サイズ
+- 最大サイズ
+- 人気時間帯
+- 人気魚種
+- 人気エリア
+
+今後の拡張:
+
+- 記事カテゴリやタグに応じて表示データを切り替える
+- Firebase Functions等で集計済みデータを生成する
+- Premiumユーザー向けの詳細分析ブロックを出し分ける
+- AIではなく実データを先に表示し、その後AI要約へ接続する
+
 WordPress側はCMS・API配信に専念し、公開表示とSEO metadata はNext.js側で管理します。
 
 公開URL:

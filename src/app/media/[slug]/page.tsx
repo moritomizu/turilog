@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaCta } from "@/components/media/MediaCta";
 import { MediaPostCard } from "@/components/media/MediaPostCard";
+import { LiveDataBlock } from "@/components/media/living/LiveDataBlock";
 import {
   MEDIA_PUBLIC_BASE_URL,
   formatMediaDate,
@@ -97,6 +98,8 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
             className="mt-10 rounded-[1.5rem] bg-white p-5 text-slate-800 shadow-sm sm:p-8 [&_a]:font-bold [&_a]:text-[#0f766e] [&_blockquote]:border-l-4 [&_blockquote]:border-teal-300 [&_blockquote]:pl-4 [&_blockquote]:text-slate-600 [&_h2]:mb-4 [&_h2]:mt-10 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:leading-tight [&_h3]:mb-3 [&_h3]:mt-8 [&_h3]:text-xl [&_h3]:font-black [&_img]:rounded-2xl [&_li]:my-2 [&_ol]:my-5 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-5 [&_p]:text-base [&_p]:font-medium [&_p]:leading-8 [&_strong]:font-black [&_ul]:my-5 [&_ul]:list-disc [&_ul]:pl-6"
             dangerouslySetInnerHTML={{ __html: post.content?.rendered || "" }}
           />
+
+          <LiveDataBlock />
 
           <div className="mt-10 flex flex-wrap gap-2">
             {post.tags?.map((tag) => (
