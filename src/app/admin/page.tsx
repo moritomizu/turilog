@@ -11,7 +11,7 @@ const adminLinks = [
   {
     href: "/admin/users",
     title: "ユーザー機能付与",
-    body: "テスターなど任意ユーザーへPremium機能を個別に付与・解除します。",
+    body: "テスターなど任意ユーザーへPremium・Organizer・Group Pro機能を個別に付与・解除します。",
     label: "ユーザー管理"
   },
   {

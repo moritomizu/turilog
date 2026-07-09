@@ -960,9 +960,9 @@ planUpdatedAt
 
 `enabledFeatures` は個別に機能を開放したい場合、`disabledFeatures` は一時的に制限したい場合に使います。
 
-管理者は `/admin/users` から任意ユーザーへPremium相当の機能を付与できます。付与状態は
+管理者は `/admin/users` から任意ユーザーへPremium・Organizer・Group Pro相当の機能を個別に付与できます。複数プランの同時付与にも対応しています。付与状態は
 `users.adminGrantedPlans` に保存され、Stripeの `subscriptionPlan`・請求・解約状態とは分離されます。
-管理者付与を解除しても、Stripeで契約中のPremium機能には影響しません。
+管理者付与を解除しても、Stripeなどで契約中のプラン機能には影響しません。
 
 ## FeatureLock の使い方
 

@@ -32,6 +32,9 @@ async function getMediaSitemapRoutes(fallbackDate: Date): Promise<MetadataRoute.
     getMediaCategories().catch(() => []),
     getMediaTags().catch(() => [])
   ]);
+  const safePosts = Array.isArray(posts?.items) ? posts.items : [];
+  const safeCategories = Array.isArray(categories) ? categories : [];
+  const safeTags = Array.isArray(tags) ? tags : [];
 
   return [
     {
@@ -40,19 +43,19 @@ async function getMediaSitemapRoutes(fallbackDate: Date): Promise<MetadataRoute.
       changeFrequency: "weekly" as const,
       priority: 0.8
     },
-    ...(posts?.items ?? []).map((post) => ({
+    ...safePosts.map((post) => ({
       url: getMediaCanonical(post.slug),
       lastModified: post.modified || post.date ? new Date(post.modified || post.date || fallbackDate) : fallbackDate,
       changeFrequency: "weekly" as const,
       priority: 0.7
     })),
-    ...categories.map((category) => ({
+    ...safeCategories.map((category) => ({
       url: getMediaCanonical(`category/${category.slug}`),
       lastModified: fallbackDate,
       changeFrequency: "weekly" as const,
       priority: 0.5
     })),
-    ...tags.map((tag) => ({
+    ...safeTags.map((tag) => ({
       url: getMediaCanonical(`tag/${tag.slug}`),
       lastModified: fallbackDate,
       changeFrequency: "weekly" as const,

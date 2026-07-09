@@ -6,6 +6,34 @@ import { AuthGate } from "@/components/AuthGate";
 import { PageHeader } from "@/components/PageHeader";
 import { getFirebaseAuth } from "@/lib/firebase";
 
+type GrantablePlan = "premium" | "organizer" | "groupPro";
+
+const grantablePlans: Array<{
+  key: GrantablePlan;
+  label: string;
+  description: string;
+  activeClassName: string;
+}> = [
+  {
+    key: "premium",
+    label: "Premium",
+    description: "個人AI分析・詳細分析",
+    activeClassName: "border-orange-200 bg-orange-50 text-orange-800"
+  },
+  {
+    key: "organizer",
+    label: "Organizer",
+    description: "大会作成・大会管理",
+    activeClassName: "border-blue-200 bg-blue-50 text-blue-800"
+  },
+  {
+    key: "groupPro",
+    label: "Group Pro",
+    description: "グループ分析・代理投稿",
+    activeClassName: "border-teal-200 bg-teal-50 text-teal-800"
+  }
+];
+
 type AdminUser = {
   uid: string;
   displayName: string;
@@ -24,7 +52,7 @@ function AdminUsers() {
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updatingUid, setUpdatingUid] = useState("");
+  const [updatingKey, setUpdatingKey] = useState("");
   const [message, setMessage] = useState("");
 
   const request = useCallback(async (path: string, init?: RequestInit) => {
@@ -56,21 +84,21 @@ function AdminUsers() {
     void loadUsers("");
   }, [loadUsers]);
 
-  async function togglePremium(user: AdminUser) {
-    const enabled = !user.adminGrantedPlans.includes("premium");
-    setUpdatingUid(user.uid);
+  async function togglePlan(user: AdminUser, plan: GrantablePlan) {
+    const enabled = !user.adminGrantedPlans.includes(plan);
+    setUpdatingKey(`${user.uid}:${plan}`);
     setMessage("");
     try {
       const data = await request("/api/admin/users", {
         method: "PATCH",
-        body: JSON.stringify({ userId: user.uid, plan: "premium", enabled })
+        body: JSON.stringify({ userId: user.uid, plan, enabled })
       });
       setUsers((current) => current.map((item) => (item.uid === user.uid ? data.user : item)));
       setMessage(data.message);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "機能付与を更新できませんでした。");
     } finally {
-      setUpdatingUid("");
+      setUpdatingKey("");
     }
   }
 
@@ -80,9 +108,9 @@ function AdminUsers() {
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-5">
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
           <p className="text-xs font-black text-water">ADMIN ACCESS</p>
-          <h1 className="mt-1 text-2xl font-black text-ink">Premium機能の個別付与</h1>
+          <h1 className="mt-1 text-2xl font-black text-ink">プラン機能の個別付与</h1>
           <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
-            テスターへPremium相当の機能を開放します。Stripe契約や請求状態は変更されません。
+            テスターへPremium・Organizer・Group Pro相当の機能を個別に開放します。Stripe契約や請求状態は変更されません。
           </p>
           <form
             className="mt-4 flex gap-2"
@@ -109,8 +137,6 @@ function AdminUsers() {
 
         <section className="grid gap-3">
           {users.map((user) => {
-            const granted = user.adminGrantedPlans.includes("premium");
-            const paidPremium = user.subscriptionPlan === "premium";
             return (
               <article key={user.uid} className="rounded border border-teal-100 bg-white p-4 shadow-soft">
                 <div className="flex items-center gap-3">
@@ -129,19 +155,37 @@ function AdminUsers() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
                   <span className="rounded bg-slate-100 px-2 py-1 text-slate-700">契約: {user.subscriptionPlan}</span>
-                  {paidPremium ? <span className="rounded bg-orange-100 px-2 py-1 text-orange-700">Stripe Premium</span> : null}
-                  {granted ? <span className="rounded bg-teal-100 px-2 py-1 text-water">管理者付与中</span> : null}
+                  {user.subscriptionPlan !== "free" ? (
+                    <span className="rounded bg-orange-100 px-2 py-1 text-orange-700">Stripe/契約プラン有効</span>
+                  ) : null}
+                  {user.adminGrantedPlans.map((plan) => (
+                    <span key={plan} className="rounded bg-teal-100 px-2 py-1 text-water">
+                      {getPlanLabel(plan)} 管理者付与中
+                    </span>
+                  ))}
                 </div>
-                <button
-                  type="button"
-                  disabled={updatingUid === user.uid}
-                  onClick={() => void togglePremium(user)}
-                  className={`tap-target mt-4 w-full rounded px-4 py-3 text-sm font-black disabled:opacity-50 ${
-                    granted ? "border border-rose-200 bg-white text-rose-700" : "bg-water text-white"
-                  }`}
-                >
-                  {updatingUid === user.uid ? "更新中..." : granted ? "Premium機能の付与を解除" : "Premium機能を付与"}
-                </button>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {grantablePlans.map((plan) => {
+                    const granted = user.adminGrantedPlans.includes(plan.key);
+                    const updating = updatingKey === `${user.uid}:${plan.key}`;
+                    return (
+                      <button
+                        key={plan.key}
+                        type="button"
+                        disabled={Boolean(updatingKey)}
+                        onClick={() => void togglePlan(user, plan.key)}
+                        className={`tap-target rounded border px-3 py-3 text-left transition disabled:opacity-50 ${
+                          granted ? plan.activeClassName : "border-slate-200 bg-white text-slate-700 hover:border-water"
+                        }`}
+                      >
+                        <span className="block text-sm font-black">
+                          {updating ? "更新中..." : `${plan.label} ${granted ? "解除" : "付与"}`}
+                        </span>
+                        <span className="mt-1 block text-[11px] font-bold opacity-75">{plan.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </article>
             );
           })}
@@ -149,4 +193,12 @@ function AdminUsers() {
       </main>
     </>
   );
+}
+
+function getPlanLabel(plan: string) {
+  if (plan === "premium") return "Premium";
+  if (plan === "organizer") return "Organizer";
+  if (plan === "groupPro") return "Group Pro";
+  if (plan === "tester") return "Tester";
+  return plan;
 }

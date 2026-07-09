@@ -85,12 +85,13 @@ async function wpFetch<T>(path: string, params?: Record<string, string | number 
 }
 
 export const getMediaPosts = cache(async ({ page = 1, perPage = 10, category, tag }: PostListParams = {}) => {
-  return wpFetch<WpPostListResponse>("/wp-json/tsurilogue/v1/posts", {
+  const response = await wpFetch<unknown>("/wp-json/tsurilogue/v1/posts", {
     page,
     per_page: perPage,
     category,
     tag
   });
+  return normalizePostListResponse(response, page, perPage);
 });
 
 export const getMediaPost = cache(async (slug: string) => {
@@ -98,11 +99,13 @@ export const getMediaPost = cache(async (slug: string) => {
 });
 
 export const getMediaCategories = cache(async () => {
-  return wpFetch<WpTerm[]>("/wp-json/tsurilogue/v1/categories");
+  const response = await wpFetch<unknown>("/wp-json/tsurilogue/v1/categories");
+  return normalizeTerms(response);
 });
 
 export const getMediaTags = cache(async () => {
-  return wpFetch<WpTerm[]>("/wp-json/tsurilogue/v1/tags");
+  const response = await wpFetch<unknown>("/wp-json/tsurilogue/v1/tags");
+  return normalizeTerms(response);
 });
 
 export async function getRelatedMediaPosts(post: WpPost, limit = 3) {
@@ -169,4 +172,50 @@ export function htmlToText(value: string) {
     .replace(/&#039;/g, "'")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizeTerms(value: unknown): WpTerm[] {
+  const candidates = Array.isArray(value)
+    ? value
+    : value && typeof value === "object"
+      ? Object.values(value as Record<string, unknown>)
+      : [];
+
+  return candidates.filter((item): item is WpTerm => {
+    if (!item || typeof item !== "object") return false;
+    const term = item as Record<string, unknown>;
+    return typeof term.slug === "string" && typeof term.name === "string";
+  });
+}
+
+function normalizePostListResponse(value: unknown, page: number, perPage: number): WpPostListResponse {
+  const data = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const items = Array.isArray(data.items)
+    ? data.items.filter((item): item is WpPost => {
+        if (!item || typeof item !== "object") return false;
+        const post = item as Record<string, unknown>;
+        return typeof post.id === "number" && typeof post.slug === "string";
+      })
+    : [];
+  const pagination = data.pagination && typeof data.pagination === "object"
+    ? (data.pagination as Record<string, unknown>)
+    : {};
+  const total = toFiniteNumber(pagination.total, items.length);
+  const totalPages = toFiniteNumber(pagination.totalPages, Math.max(1, Math.ceil(total / perPage)));
+
+  return {
+    items,
+    pagination: {
+      page: toFiniteNumber(pagination.page, page),
+      perPage: toFiniteNumber(pagination.perPage, perPage),
+      total,
+      totalPages,
+      hasNextPage: typeof pagination.hasNextPage === "boolean" ? pagination.hasNextPage : page < totalPages
+    }
+  };
+}
+
+function toFiniteNumber(value: unknown, fallback: number) {
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) ? number : fallback;
 }

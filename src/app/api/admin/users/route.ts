@@ -12,7 +12,12 @@ import type { SubscriptionPlan } from "@/types";
 
 export const runtime = "nodejs";
 
-const GRANTABLE_PLANS: SubscriptionPlan[] = ["premium"];
+const GRANTABLE_PLANS: SubscriptionPlan[] = ["premium", "organizer", "groupPro"];
+const PLAN_LABELS: Partial<Record<SubscriptionPlan, string>> = {
+  premium: "Premium",
+  organizer: "Organizer",
+  groupPro: "Group Pro"
+};
 
 export async function GET(request: Request) {
   try {
@@ -56,7 +61,9 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       user: toAdminUser(userId, { ...current, adminGrantedPlans: next }),
-      message: enabled ? "Premium機能を付与しました。" : "Premium機能の付与を解除しました。"
+      message: enabled
+        ? `${PLAN_LABELS[plan]}機能を付与しました。`
+        : `${PLAN_LABELS[plan]}機能の付与を解除しました。`
     });
   } catch (error) {
     return NextResponse.json(
