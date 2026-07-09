@@ -483,6 +483,8 @@ function hasFeatureFromUserDoc(userDoc: Record<string, unknown>, featureKey: Fea
   if (plan === "tester") return !stringArray(userDoc.disabledFeatures).includes(featureKey);
   if (stringArray(userDoc.disabledFeatures).includes(featureKey)) return false;
   if (stringArray(userDoc.enabledFeatures).includes(featureKey)) return true;
+  const grantedPlans = stringArray(userDoc.adminGrantedPlans) as SubscriptionPlan[];
+  if (grantedPlans.some((grantedPlan) => (planDefinitions[grantedPlan]?.features ?? []).includes(featureKey))) return true;
   return (planDefinitions[plan]?.features ?? planDefinitions.free.features).includes(featureKey);
 }
 

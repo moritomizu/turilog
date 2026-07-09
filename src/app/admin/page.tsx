@@ -9,6 +9,12 @@ import { getUserProfile } from "@/lib/userProfiles";
 
 const adminLinks = [
   {
+    href: "/admin/users",
+    title: "ユーザー機能付与",
+    body: "テスターなど任意ユーザーへPremium機能を個別に付与・解除します。",
+    label: "ユーザー管理"
+  },
+  {
     href: "/admin/notifications",
     title: "運営からのお知らせ",
     body: "通知ONのユーザーへ運営メッセージを配信します。",

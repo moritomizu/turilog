@@ -286,6 +286,9 @@ export type User = {
   currentPeriodEnd?: string | null;
   enabledFeatures?: FeatureKey[];
   disabledFeatures?: FeatureKey[];
+  adminGrantedPlans?: SubscriptionPlan[];
+  adminGrantUpdatedAt?: Date;
+  adminGrantUpdatedBy?: string;
   trialEndsAt?: Date;
   planUpdatedAt?: Date;
 };
@@ -315,6 +318,9 @@ export type UserProfile = {
   currentPeriodEnd?: string | null;
   enabledFeatures?: FeatureKey[];
   disabledFeatures?: FeatureKey[];
+  adminGrantedPlans?: SubscriptionPlan[];
+  adminGrantUpdatedAt?: string | null;
+  adminGrantUpdatedBy?: string | null;
   trialEndsAt?: string | null;
   planUpdatedAt?: string | null;
   notificationEnabled?: boolean;

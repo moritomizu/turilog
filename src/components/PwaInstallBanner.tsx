@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -42,8 +43,14 @@ export function PwaInstallBanner({ userId }: { userId: string }) {
   return (
     <section className="mb-4 rounded border border-teal-100 bg-white p-4 shadow-soft">
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-foam text-2xl" aria-hidden="true">
-          📱
+        <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] shadow-sm ring-1 ring-slate-200" aria-hidden="true">
+          <Image
+            src="/icons/tsurilog-icon-192.png"
+            alt=""
+            width={44}
+            height={44}
+            className="h-full w-full object-cover"
+          />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">

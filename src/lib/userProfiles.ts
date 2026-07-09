@@ -78,6 +78,11 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     currentPeriodEnd: normalizeDateString(data.currentPeriodEnd),
     enabledFeatures: Array.isArray(data.enabledFeatures) ? data.enabledFeatures.filter((item): item is NonNullable<UserProfile["enabledFeatures"]>[number] => typeof item === "string") : [],
     disabledFeatures: Array.isArray(data.disabledFeatures) ? data.disabledFeatures.filter((item): item is NonNullable<UserProfile["disabledFeatures"]>[number] => typeof item === "string") : [],
+    adminGrantedPlans: Array.isArray(data.adminGrantedPlans)
+      ? data.adminGrantedPlans.filter((item): item is NonNullable<UserProfile["adminGrantedPlans"]>[number] => item === "free" || item === "premium" || item === "organizer" || item === "groupPro" || item === "tester")
+      : [],
+    adminGrantUpdatedAt: normalizeDateString(data.adminGrantUpdatedAt),
+    adminGrantUpdatedBy: typeof data.adminGrantUpdatedBy === "string" ? data.adminGrantUpdatedBy : null,
     trialEndsAt: normalizeDateString(data.trialEndsAt),
     planUpdatedAt: normalizeDateString(data.planUpdatedAt),
     notificationEnabled: data.notificationEnabled === true,

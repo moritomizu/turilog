@@ -22,6 +22,7 @@ export function hasFeatureSync(profile: UserProfile | null, featureKey: FeatureK
   if (plan === "tester") return !profile?.disabledFeatures?.includes(featureKey);
   if (profile?.disabledFeatures?.includes(featureKey)) return false;
   if (profile?.enabledFeatures?.includes(featureKey)) return true;
+  if (profile?.adminGrantedPlans?.some((grantedPlan) => getPlanFeatures(grantedPlan).includes(featureKey))) return true;
   return getPlanFeatures(plan).includes(featureKey);
 }
 
