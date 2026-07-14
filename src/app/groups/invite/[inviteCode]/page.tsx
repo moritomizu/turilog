@@ -5,7 +5,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
-import { getGroupByInviteCode, getGroupMembers, joinGroup } from "@/lib/groups";
+import { getGroupByInviteCode, joinGroup } from "@/lib/groups";
 import { getPreferredParticipantName, rememberParticipantName } from "@/lib/participantName";
 import type { Group } from "@/types";
 
@@ -20,9 +20,9 @@ export default function GroupInvitePage({ params }: { params: { inviteCode: stri
 
   useEffect(() => {
     getGroupByInviteCode(inviteCode)
-      .then(async (nextGroup) => {
+      .then((nextGroup) => {
         setGroup(nextGroup);
-        setMemberCount(nextGroup ? (await getGroupMembers(nextGroup.id)).length : 0);
+        setMemberCount(nextGroup?.memberCount ?? 0);
         setMessage(nextGroup ? "" : "招待コードに一致するグループが見つかりません。");
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "招待内容を読み込めませんでした。"));

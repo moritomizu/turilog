@@ -1,0 +1,274 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function userDoc(userId) {
+      return get(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function isAppAdmin() {
+      return isSignedIn()
+        && (
+          request.auth.token.admin == true
+          || userDoc(request.auth.uid).data.subscriptionPlan == "tester"
+        );
+    }
+
+    function groupMemberDoc(groupId, userId) {
+      return get(/databases/$(database)/documents/groupMembers/$(groupId)_$(userId));
+    }
+
+    function isGroupMember(groupId) {
+      return isSignedIn()
+        && groupId is string
+        && exists(/databases/$(database)/documents/groupMembers/$(groupId)_$(request.auth.uid))
+        && groupMemberDoc(groupId, request.auth.uid).data.status == "active";
+    }
+
+    function isGroupManager(groupId) {
+      return isAppAdmin()
+        || (
+          isGroupMember(groupId)
+          && (
+            groupMemberDoc(groupId, request.auth.uid).data.role in ["owner", "admin"]
+          )
+        );
+    }
+
+    function tournamentParticipantDoc(tournamentId, userId) {
+      return get(/databases/$(database)/documents/tournamentParticipants/$(tournamentId)_$(userId));
+    }
+
+    function isTournamentParticipant(tournamentId) {
+      return isSignedIn()
+        && tournamentId is string
+        && exists(/databases/$(database)/documents/tournamentParticipants/$(tournamentId)_$(request.auth.uid))
+        && tournamentParticipantDoc(tournamentId, request.auth.uid).data.status == "active";
+    }
+
+    function isTournamentOwner(tournamentId) {
+      return isSignedIn()
+        && tournamentId is string
+        && exists(/databases/$(database)/documents/tournaments/$(tournamentId))
+        && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == request.auth.uid;
+    }
+
+    function canManageTournament(tournamentId) {
+      return isAppAdmin()
+        || isTournamentOwner(tournamentId)
+        || (
+          isTournamentParticipant(tournamentId)
+          && tournamentParticipantDoc(tournamentId, request.auth.uid).data.role in ["owner", "admin", "subAdmin"]
+        );
+    }
+
+    function canApproveTournamentEntries(tournamentId) {
+      return canManageTournament(tournamentId)
+        || (
+          isTournamentParticipant(tournamentId)
+          && tournamentParticipantDoc(tournamentId, request.auth.uid).data.canApproveEntries == true
+        );
+    }
+
+    function isCatchOwner(data) {
+      return isSignedIn()
+        && (
+          data.userId == request.auth.uid
+          || data.postedByUserId == request.auth.uid
+          || data.actualAnglerUserId == request.auth.uid
+        );
+    }
+
+    function canReadCatch(data) {
+      return isAppAdmin()
+        || isCatchOwner(data)
+        || (data.primaryGroupId is string && isGroupMember(data.primaryGroupId))
+        || (data.tournamentId is string && isTournamentParticipant(data.tournamentId));
+    }
+
+    function canWriteCatch(data) {
+      return isAppAdmin()
+        || isCatchOwner(data)
+        || (data.primaryGroupId is string && isGroupManager(data.primaryGroupId))
+        || (data.tournamentId is string && canApproveTournamentEntries(data.tournamentId));
+    }
+
+    function onlySafeUserProfileChanges() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        "subscriptionPlan",
+        "subscriptionStatus",
+        "stripeCustomerId",
+        "stripeSubscriptionId",
+        "currentPeriodEnd",
+        "enabledFeatures",
+        "disabledFeatures",
+        "trialEndsAt",
+        "planUpdatedAt",
+        "adminGrantedPlans",
+        "adminGrantUpdatedAt",
+        "adminGrantUpdatedBy"
+      ]);
+    }
+
+    function noSensitiveUserFieldsOnCreate() {
+      return !request.resource.data.keys().hasAny([
+        "subscriptionPlan",
+        "subscriptionStatus",
+        "stripeCustomerId",
+        "stripeSubscriptionId",
+        "currentPeriodEnd",
+        "enabledFeatures",
+        "disabledFeatures",
+        "trialEndsAt",
+        "planUpdatedAt",
+        "adminGrantedPlans",
+        "adminGrantUpdatedAt",
+        "adminGrantUpdatedBy"
+      ]);
+    }
+
+    match /users/{userId} {
+      allow read: if isSelf(userId) || isAppAdmin();
+      allow create: if isSelf(userId) && noSensitiveUserFieldsOnCreate();
+      allow update: if (isSelf(userId) && onlySafeUserProfileChanges()) || isAppAdmin();
+      allow delete: if isAppAdmin();
+    }
+
+    match /catches/{catchId} {
+      allow read: if isSignedIn() && canReadCatch(resource.data);
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && canWriteCatch(request.resource.data);
+      allow update: if isSignedIn()
+        && canWriteCatch(resource.data)
+        && canWriteCatch(request.resource.data);
+      allow delete: if isSignedIn() && canWriteCatch(resource.data);
+    }
+
+    match /publicCatches/{catchId} {
+      allow read: if resource.data.isPublic == true;
+      allow create, update: if isSignedIn()
+        && request.resource.data.isPublic == true
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn()
+        && (resource.data.userId == request.auth.uid || isAppAdmin());
+    }
+
+    match /tackles/{tackleId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAppAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAppAdmin());
+    }
+
+    match /groups/{groupId} {
+      allow read: if isSignedIn()
+        || resource.data.visibility in ["public", "inviteOnly"];
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isGroupManager(groupId)
+        || (
+          isGroupMember(groupId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["memberCount", "catchCount", "updatedAt"])
+        );
+      allow delete: if isGroupManager(groupId);
+    }
+
+    match /groupMembers/{memberDocId} {
+      allow read: if isSignedIn()
+        && (
+          resource.data.userId == request.auth.uid
+          || isGroupMember(resource.data.groupId)
+          || isAppAdmin()
+        );
+      allow create: if isSignedIn()
+        && (
+          request.resource.data.userId == request.auth.uid
+          || isGroupManager(request.resource.data.groupId)
+        );
+      allow update, delete: if isSignedIn()
+        && (
+          resource.data.userId == request.auth.uid
+          || isGroupManager(resource.data.groupId)
+        );
+    }
+
+    match /groupJoinRequests/{requestId} {
+      allow read: if isSignedIn()
+        && (
+          resource.data.userId == request.auth.uid
+          || isGroupManager(resource.data.groupId)
+        );
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && isGroupManager(resource.data.groupId);
+      allow delete: if isAppAdmin();
+    }
+
+    match /groupCatchComments/{commentId} {
+      allow read: if isSignedIn() && isGroupMember(resource.data.groupId);
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && isGroupMember(request.resource.data.groupId);
+      allow update, delete: if isAppAdmin();
+    }
+
+    match /tournaments/{tournamentId} {
+      allow read: if isSignedIn()
+        || resource.data.visibility == "public";
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && (
+          resource.data.ownerId == request.auth.uid
+          || isAppAdmin()
+        );
+    }
+
+    match /tournamentParticipants/{participantId} {
+      allow read: if isSignedIn()
+        && (
+          resource.data.userId == request.auth.uid
+          || isTournamentParticipant(resource.data.tournamentId)
+          || isAppAdmin()
+        );
+      allow create: if isSignedIn()
+        && (
+          request.resource.data.userId == request.auth.uid
+          || canManageTournament(request.resource.data.tournamentId)
+        );
+      allow update, delete: if isSignedIn()
+        && (
+          resource.data.userId == request.auth.uid
+          || canManageTournament(resource.data.tournamentId)
+        );
+    }
+
+    match /feedbacks/{feedbackId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isAppAdmin();
+      allow update, delete: if false;
+    }
+
+    match /featureEvents/{eventId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isAppAdmin();
+      allow update, delete: if false;
+    }
+
+    match /aiReports/{reportId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAppAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAppAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

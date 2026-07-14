@@ -2023,3 +2023,82 @@ https://tsurilogue.com/robots.txt
 6. `/robots.txt` と `/sitemap.xml` がブラウザで表示できることを確認します。
 
 Search Console に反映されるまで時間がかかる場合があります。
+
+## Cloud Firestore Security Rules
+
+Cloud Firestore の本番公開前提ルールは `firestore.rules` で管理します。
+
+Firebase から「Cloud Firestore データベースへのクライアントアクセスが期限切れ」と通知された場合は、テストモードの期限付きルールが残っている可能性があります。Firebase Console の Firestore ルール画面で `request.time < timestamp.date(...)` のような期限付き許可がないか確認し、`firestore.rules` の内容へ差し替えてください。
+
+`firebase.json` では以下のように Firestore Rules を参照しています。
+
+```json
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
+```
+
+### ルール方針
+
+- 未ログインユーザーの通常データ読み書きは禁止
+- `users/{uid}` は本人がプロフィール・通知設定・フィードバック状態などを更新可能
+- `subscriptionPlan` / Stripe関連 / 管理者付与プランなど、課金・管理系フィールドは本人更新不可
+- 管理者は `users/{uid}.subscriptionPlan == "tester"` または Firebase Auth custom claim `admin == true` で判定
+- 釣果 `catches` は投稿者本人、対象グループのメンバー、対象大会の参加者、管理者が閲覧可能
+- 公開埋め込み用の `publicCatches` は `isPublic == true` のものだけ公開読み取り可能
+- `tackles` は本人または管理者のみ閲覧・編集可能
+- `groups` / `groupMembers` / `groupJoinRequests` は参加者・管理者権限に応じて読み書き可能
+- `tournaments` / `tournamentParticipants` は参加者・主催者・管理者権限に応じて読み書き可能
+- `feedbacks` / `featureEvents` は本人が作成でき、一覧閲覧は管理者のみ
+- 想定外コレクションはすべて拒否
+
+### 反映方法
+
+Firebase Console で手動反映する場合:
+
+1. Firebase Console を開く
+2. Firestore Database → ルール を開く
+3. `firestore.rules` の内容を貼り付ける
+4. 公開する
+
+Firebase CLI で反映する場合:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+Storage Rules も同時に反映する場合:
+
+```bash
+firebase deploy --only firestore:rules,storage
+```
+
+### 動作確認項目
+
+ルール反映後は、少なくとも以下を確認してください。
+
+- ログイン
+- プロフィール保存
+- 通知設定保存
+- 釣果投稿・編集・削除
+- 釣果の共有/埋め込み公開
+- グループ作成・参加・投稿・コメント
+- グループ参加申請と承認
+- 大会作成・参加・投稿承認
+- Premium / Stripe同期
+- 管理画面のユーザー機能付与
+- フィードバック送信
+
+### 管理者判定の注意
+
+アプリUI/API側では `NEXT_PUBLIC_ADMIN_UIDS` も管理者判定に使っていますが、Firestore Rules は環境変数を参照できません。
+
+Firestore Rules上でも管理者として扱いたいユーザーは、以下のどちらかにしてください。
+
+- `users/{uid}.subscriptionPlan` を `tester` にする
+- Firebase Admin SDK等で Auth custom claim `admin: true` を付与する
+
+現状のMVPでは、管理者アカウントに `tester` を設定する運用がもっとも簡単です。
