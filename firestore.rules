@@ -23,13 +23,13 @@ service cloud.firestore {
     }
 
     function groupMemberDoc(groupId, userId) {
-      return get(/databases/$(database)/documents/groupMembers/$(groupId)_$(userId));
+      return get(/databases/$(database)/documents/groupMembers/$(groupId + "_" + userId));
     }
 
     function isGroupMember(groupId) {
       return isSignedIn()
         && groupId is string
-        && exists(/databases/$(database)/documents/groupMembers/$(groupId)_$(request.auth.uid))
+        && exists(/databases/$(database)/documents/groupMembers/$(groupId + "_" + request.auth.uid))
         && groupMemberDoc(groupId, request.auth.uid).data.status == "active";
     }
 
@@ -44,13 +44,13 @@ service cloud.firestore {
     }
 
     function tournamentParticipantDoc(tournamentId, userId) {
-      return get(/databases/$(database)/documents/tournamentParticipants/$(tournamentId)_$(userId));
+      return get(/databases/$(database)/documents/tournamentParticipants/$(tournamentId + "_" + userId));
     }
 
     function isTournamentParticipant(tournamentId) {
       return isSignedIn()
         && tournamentId is string
-        && exists(/databases/$(database)/documents/tournamentParticipants/$(tournamentId)_$(request.auth.uid))
+        && exists(/databases/$(database)/documents/tournamentParticipants/$(tournamentId + "_" + request.auth.uid))
         && tournamentParticipantDoc(tournamentId, request.auth.uid).data.status == "active";
     }
 
