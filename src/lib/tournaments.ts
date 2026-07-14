@@ -2,7 +2,7 @@
 
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
+import { getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import type {
   Tournament,
   TournamentLocationVisibility,
@@ -128,8 +128,15 @@ export async function getTournament(id: string): Promise<Tournament | null> {
 }
 
 export async function getTournamentParticipants(tournamentId: string): Promise<TournamentParticipant[]> {
-  const snapshot = await getDocs(query(collection(getFirebaseDb(), "tournamentParticipants"), where("tournamentId", "==", tournamentId)));
-  return snapshot.docs.map((item) => normalizeParticipant(item.id, item.data()));
+  const token = await getFirebaseAuth().currentUser?.getIdToken();
+  if (!token) throw new Error("大会参加者を読み込むにはログインが必要です。");
+  const response = await fetch(`/api/tournaments/${encodeURIComponent(tournamentId)}/participants`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "大会参加者を読み込めませんでした。");
+  const participants: Record<string, unknown>[] = Array.isArray(data.participants) ? data.participants : [];
+  return participants.map((item: Record<string, unknown>) => normalizeParticipant(String(item.id ?? ""), item));
 }
 
 export async function uploadTournamentParticipantIcon(userId: string, file: File) {

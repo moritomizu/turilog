@@ -61,6 +61,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == request.auth.uid;
     }
 
+    function isPublicTournament(tournamentId) {
+      return tournamentId is string
+        && exists(/databases/$(database)/documents/tournaments/$(tournamentId))
+        && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.visibility == "public";
+    }
+
     function canManageTournament(tournamentId) {
       return isAppAdmin()
         || isTournamentOwner(tournamentId)
@@ -91,7 +97,8 @@ service cloud.firestore {
       return isAppAdmin()
         || isCatchOwner(data)
         || (data.primaryGroupId is string && isGroupMember(data.primaryGroupId))
-        || (data.tournamentId is string && isTournamentParticipant(data.tournamentId));
+        || (data.tournamentId is string && isTournamentParticipant(data.tournamentId))
+        || (data.tournamentId is string && data.tournamentEntryStatus == "approved" && isPublicTournament(data.tournamentId));
     }
 
     function canWriteCatch(data) {

@@ -2,7 +2,7 @@
 
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
+import { getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import { emptyLunarInfo } from "@/lib/lunar";
 import { emptyOfficialCurrentReference } from "@/lib/officialCurrent";
 import { emptySeaTemperatureInfo } from "@/lib/seaTemperature";
@@ -47,8 +47,15 @@ export async function getCatchById(catchId: string): Promise<Catch | null> {
 }
 
 export async function getTournamentCatches(tournamentId: string): Promise<Catch[]> {
-  const snapshot = await getDocs(query(collection(getFirebaseDb(), "catches"), where("tournamentId", "==", tournamentId)));
-  return snapshot.docs.map((item) => normalizeCatchDoc(item.id, item.data())).sort((a, b) => getSortableTime(b) - getSortableTime(a));
+  const token = await getFirebaseAuth().currentUser?.getIdToken();
+  if (!token) throw new Error("大会釣果を読み込むにはログインが必要です。");
+  const response = await fetch(`/api/tournaments/${encodeURIComponent(tournamentId)}/catches`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "大会釣果を読み込めませんでした。");
+  const catches: Record<string, unknown>[] = Array.isArray(data.catches) ? data.catches : [];
+  return catches.map((item: Record<string, unknown>) => normalizeCatchDoc(String(item.id ?? ""), item)).sort((a, b) => getSortableTime(b) - getSortableTime(a));
 }
 
 export async function getGroupCatches(groupId: string): Promise<Catch[]> {

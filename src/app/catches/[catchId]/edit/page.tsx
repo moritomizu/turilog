@@ -282,10 +282,15 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
 
   useEffect(() => {
     let mounted = true;
+    const timeoutId = window.setTimeout(() => {
+      if (mounted && !mapInstanceRef.current) {
+        setMessage("地図の読み込みに時間がかかっています。表示されない場合は、Google Maps APIキーのドメイン制限を確認してください。");
+      }
+    }, 8000);
     async function load() {
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
       if (!apiKey) {
-        setMessage("Google Maps APIキーが未設定です。");
+        setMessage("Google Maps APIキーが未設定です。NEXT_PUBLIC_GOOGLE_MAPS_API_KEYを確認してください。");
         return;
       }
       const google = await new Loader({ apiKey, version: "weekly" }).load();
@@ -318,9 +323,13 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
       });
       setMessage("地図をタップ、ピンを動かす、または地図中心を指定して場所を決められます。");
     }
-    load().catch((error) => setMessage(error instanceof Error ? error.message : "地図を表示できませんでした。"));
+    load().catch((error) => {
+      const detail = error instanceof Error ? error.message : "地図を表示できませんでした。";
+      setMessage(`${detail} Google Maps APIキー、Maps JavaScript APIの有効化、HTTPリファラー制限を確認してください。`);
+    });
     return () => {
       mounted = false;
+      window.clearTimeout(timeoutId);
     };
   }, []);
 
