@@ -65,6 +65,9 @@ export default function RootLayout({
 
   return (
     <html lang={locale}>
+      <head>
+        <script src="https://analytics.ahrefs.com/analytics.js" data-key="cJZ2ML3DPpFOZkZrRe5pyA" async />
+      </head>
       <body className="min-h-screen bg-foam text-ink">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
