@@ -57,7 +57,7 @@ export default async function MediaCategoryPage({ params, searchParams }: Catego
 
   return (
     <>
-      <PageHeader title="Media" />
+      <PageHeader title="Media" titleAs="div" />
       <JsonLd data={breadcrumbJsonLd(title, getMediaCanonical(`category/${params.slug}`))} />
       <MediaListPage
         title={title}

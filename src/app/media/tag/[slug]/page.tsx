@@ -57,7 +57,7 @@ export default async function MediaTagPage({ params, searchParams }: TagPageProp
 
   return (
     <>
-      <PageHeader title="Media" />
+      <PageHeader title="Media" titleAs="div" />
       <JsonLd data={breadcrumbJsonLd(title, getMediaCanonical(`tag/${params.slug}`))} />
       <MediaListPage
         title={title}

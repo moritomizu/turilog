@@ -37,7 +37,7 @@ export default async function MediaPage({ searchParams }: MediaPageProps) {
 
   return (
     <>
-      <PageHeader title="Media" />
+      <PageHeader title="Media" titleAs="div" />
       <JsonLd data={[organizationJsonLd(), breadcrumbJsonLd([{ name: "Media", url: MEDIA_PUBLIC_BASE_URL }])]} />
       <MediaListPage
         title="釣果を、次の一匹のヒントに。"

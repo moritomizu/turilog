@@ -90,7 +90,7 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
 
   return (
     <>
-      <PageHeader title="Media" />
+      <PageHeader title="Media" titleAs="div" />
       <JsonLd data={jsonLd} />
       <main className="bg-gradient-to-b from-[#eefbf7] via-white to-[#f8fafc]">
         <article className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
