@@ -16,7 +16,6 @@ import {
   getMediaPost,
   getPostExcerpt,
   getPostKeywords,
-  getPostLeadDescription,
   getPostTitle,
   getPostWordCount,
   getRelatedMediaPosts,
@@ -79,7 +78,6 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
   const related = await getRelatedMediaPosts(post).catch(() => []);
   const title = getPostTitle(post);
   const canonical = getMediaCanonical(post.slug);
-  const description = getPostLeadDescription(post);
   const { html, headings } = enhanceArticleHtml(post.content?.rendered || "");
   const publishedLabel = formatMediaDate(post.date);
   const modifiedLabel = post.modified && post.modified !== post.date ? formatMediaDate(post.modified) : "";
@@ -107,7 +105,7 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
           </div>
 
           <h1 className="text-4xl font-black leading-tight text-slate-950 sm:text-5xl">{title}</h1>
-          <p className="mt-5 text-base font-bold leading-8 text-slate-600">{description || "釣果記録・潮位・気象・タックル分析を次の釣行につなげるための記事です。"}</p>
+          <ArticleDigest post={post} title={title} headings={headings} />
 
           <dl className="mt-6 grid gap-3 rounded-[1.5rem] border border-teal-100 bg-white/90 p-4 text-sm font-bold text-slate-600 shadow-sm sm:grid-cols-3">
             <div>
@@ -171,6 +169,27 @@ function getOgImage(post: WpPost) {
   return post.seo?.ogImage || post.featuredImage?.url || `${MEDIA_PUBLIC_BASE_URL}/opengraph-image`;
 }
 
+function ArticleDigest({ post, title, headings }: { post: WpPost; title: string; headings: MediaHeading[] }) {
+  const items = getArticleDigestItems(post, title, headings);
+
+  return (
+    <section className="mt-6 overflow-hidden rounded-[1.5rem] border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-teal-50 shadow-sm" aria-label="この記事でわかること">
+      <div className="flex items-center gap-3 border-b border-orange-100 px-5 py-3">
+        <span className="rounded-full bg-orange-500 px-3 py-1 text-xs font-black text-white">要点</span>
+        <h2 className="text-base font-black text-slate-950">この記事でわかること</h2>
+      </div>
+      <ul className="grid gap-2 px-5 py-4 text-sm font-bold leading-7 text-slate-700 sm:grid-cols-2">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2">
+            <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#0f766e]" aria-hidden="true" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function ArticleToc({ headings }: { headings: MediaHeading[] }) {
   const compactHeadings = headings.filter((heading) => heading.level === 2);
   const items = compactHeadings.length >= 2 ? compactHeadings : headings;
@@ -192,6 +211,30 @@ function ArticleToc({ headings }: { headings: MediaHeading[] }) {
       </ol>
     </nav>
   );
+}
+
+function getArticleDigestItems(post: WpPost, title: string, headings: MediaHeading[]) {
+  const h2Items = headings
+    .filter((heading) => heading.level === 2)
+    .map((heading) => normalizeDigestText(heading.text))
+    .filter(Boolean)
+    .slice(0, 4);
+
+  if (h2Items.length >= 3) return h2Items;
+
+  const category = post.categories?.[0]?.name;
+  const fallbackItems = [
+    `「${title}」の基本的なポイント`,
+    category ? `${category}で押さえておきたい考え方` : "釣果記録に活かせる考え方",
+    "次の釣行で見直したいヒント",
+    "TSURILOGUEで記録を振り返る視点"
+  ];
+
+  return [...h2Items, ...fallbackItems].filter((item, index, array) => array.indexOf(item) === index).slice(0, 4);
+}
+
+function normalizeDigestText(value: string) {
+  return value.replace(/^[\d０-９]+[.)．、\s-]*/, "").trim();
 }
 
 function articleJsonLd(post: WpPost, canonical: string) {
