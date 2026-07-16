@@ -205,7 +205,7 @@ export function enhanceArticleHtml(value: string) {
 
 export function getMediaCanonical(path = "") {
   const cleanPath = path.replace(/^\/+/, "").replace(/\/$/, "");
-  return cleanPath ? `${MEDIA_PUBLIC_BASE_URL}/${cleanPath}/` : `${MEDIA_PUBLIC_BASE_URL}`;
+  return cleanPath ? `${MEDIA_PUBLIC_BASE_URL}/${cleanPath}` : `${MEDIA_PUBLIC_BASE_URL}`;
 }
 
 export function getMediaPath(path = "") {

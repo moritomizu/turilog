@@ -8,6 +8,13 @@ export function middleware(request: NextRequest) {
 
   if (shouldSkip(pathname)) return NextResponse.next();
 
+  if (shouldRedirectMediaTrailingSlash(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.replace(/\/+$/, "");
+    url.search = search;
+    return NextResponse.redirect(url, 301);
+  }
+
   const appLocaleMatch = pathname.match(/^\/app\/(ja|en)\/?$/);
   if (appLocaleMatch) {
     const locale = appLocaleMatch[1];
@@ -41,6 +48,10 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.rewrite(url, { request: { headers } });
   response.cookies.set("NEXT_LOCALE", locale, { path: "/", sameSite: "lax" });
   return response;
+}
+
+function shouldRedirectMediaTrailingSlash(pathname: string) {
+  return /^\/(ja|en)\/media\/.+\/$/.test(pathname);
 }
 
 function shouldSkip(pathname: string) {
