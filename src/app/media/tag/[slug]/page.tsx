@@ -10,7 +10,7 @@ type TagPageProps = {
   searchParams?: { page?: string };
 };
 
-export const revalidate = 3600;
+export const revalidate = 0;
 
 export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
   const tags = await getMediaTags().catch(() => []);

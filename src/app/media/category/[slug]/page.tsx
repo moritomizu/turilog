@@ -10,7 +10,7 @@ type CategoryPageProps = {
   searchParams?: { page?: string };
 };
 
-export const revalidate = 3600;
+export const revalidate = 0;
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const categories = await getMediaCategories().catch(() => []);

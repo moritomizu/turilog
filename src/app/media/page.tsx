@@ -8,7 +8,7 @@ type MediaPageProps = {
   searchParams?: { page?: string };
 };
 
-export const revalidate = 3600;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "TSURILOGUE Media | 釣果記録と釣り分析のヒント",
