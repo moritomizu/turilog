@@ -147,7 +147,20 @@ export function getPostExcerpt(post: WpPost, maxLength = 160) {
 }
 
 export function getPostFullExcerpt(post: WpPost) {
-  return htmlToText(post.excerpt?.raw || post.excerpt?.rendered || post.seo?.description || "");
+  return htmlToText(post.seo?.description || post.excerpt?.raw || post.excerpt?.rendered || "");
+}
+
+export function getPostLeadDescription(post: WpPost) {
+  const seoDescription = htmlToText(post.seo?.description || "");
+  if (seoDescription && !looksTruncated(seoDescription)) return seoDescription;
+
+  const excerpt = htmlToText(post.excerpt?.raw || post.excerpt?.rendered || "");
+  if (excerpt && !looksTruncated(excerpt)) return excerpt;
+
+  const firstParagraph = getFirstParagraphText(post.content?.rendered || post.content?.raw || "");
+  if (firstParagraph) return firstParagraph;
+
+  return seoDescription || excerpt;
 }
 
 export function getPostKeywords(post: WpPost) {
@@ -231,6 +244,20 @@ function uniqueId(baseId: string, usedIds: Set<string>) {
     index += 1;
   }
   return id;
+}
+
+function getFirstParagraphText(value: string) {
+  const paragraphs = [...value.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
+  for (const paragraph of paragraphs) {
+    const text = htmlToText(paragraph[1] || "");
+    if (text.length >= 24) return text;
+  }
+  return "";
+}
+
+function looksTruncated(value: string) {
+  const text = value.trim();
+  return /(\.\.\.|…|\[…\]|\[...\]|続きを読む|Read more)$/i.test(text);
 }
 
 function normalizeTerms(value: unknown): WpTerm[] {

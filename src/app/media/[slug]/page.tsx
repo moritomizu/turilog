@@ -15,8 +15,8 @@ import {
   getMediaPath,
   getMediaPost,
   getPostExcerpt,
-  getPostFullExcerpt,
   getPostKeywords,
+  getPostLeadDescription,
   getPostTitle,
   getPostWordCount,
   getRelatedMediaPosts,
@@ -79,7 +79,7 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
   const related = await getRelatedMediaPosts(post).catch(() => []);
   const title = getPostTitle(post);
   const canonical = getMediaCanonical(post.slug);
-  const description = getPostFullExcerpt(post);
+  const description = getPostLeadDescription(post);
   const { html, headings } = enhanceArticleHtml(post.content?.rendered || "");
   const publishedLabel = formatMediaDate(post.date);
   const modifiedLabel = post.modified && post.modified !== post.date ? formatMediaDate(post.modified) : "";
