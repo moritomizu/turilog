@@ -47,6 +47,12 @@ export type WpPost = {
   };
 };
 
+export type MediaHeading = {
+  id: string;
+  text: string;
+  level: 2 | 3;
+};
+
 export type WpPagination = {
   page: number;
   perPage: number;
@@ -144,6 +150,39 @@ export function getPostFullExcerpt(post: WpPost) {
   return htmlToText(post.excerpt?.raw || post.excerpt?.rendered || post.seo?.description || "");
 }
 
+export function getPostKeywords(post: WpPost) {
+  return [...(post.categories ?? []), ...(post.tags ?? [])]
+    .map((term) => term.name)
+    .filter(Boolean);
+}
+
+export function getPostWordCount(post: WpPost) {
+  const text = htmlToText(post.content?.rendered || post.content?.raw || "");
+  return text ? text.split(/\s+/).filter(Boolean).length : undefined;
+}
+
+export function enhanceArticleHtml(value: string) {
+  const usedIds = new Set<string>();
+  const headings: MediaHeading[] = [];
+
+  const html = value.replace(/<h([23])([^>]*)>([\s\S]*?)<\/h\1>/gi, (match, levelValue: string, attrs: string, innerHtml: string) => {
+    const level = Number(levelValue) as 2 | 3;
+    const text = htmlToText(innerHtml);
+    if (!text) return match;
+
+    const existingId = attrs.match(/\sid=(["'])(.*?)\1/i)?.[2];
+    const baseId = existingId || slugifyHeading(text);
+    const id = uniqueId(baseId, usedIds);
+    usedIds.add(id);
+    headings.push({ id, text, level });
+
+    const cleanAttrs = existingId ? attrs : `${attrs} id="${id}"`;
+    return `<h${level}${cleanAttrs}>${innerHtml}</h${level}>`;
+  });
+
+  return { html, headings };
+}
+
 export function getMediaCanonical(path = "") {
   const cleanPath = path.replace(/^\/+/, "").replace(/\/$/, "");
   return cleanPath ? `${MEDIA_PUBLIC_BASE_URL}/${cleanPath}/` : `${MEDIA_PUBLIC_BASE_URL}`;
@@ -172,6 +211,26 @@ export function htmlToText(value: string) {
     .replace(/&#039;/g, "'")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function slugifyHeading(value: string) {
+  const normalized = value
+    .toLowerCase()
+    .replace(/&[a-z0-9#]+;/gi, "")
+    .replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~、。・「」『』（）【】\s]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized || "section";
+}
+
+function uniqueId(baseId: string, usedIds: Set<string>) {
+  let id = baseId;
+  let index = 2;
+  while (usedIds.has(id)) {
+    id = `${baseId}-${index}`;
+    index += 1;
+  }
+  return id;
 }
 
 function normalizeTerms(value: unknown): WpTerm[] {
