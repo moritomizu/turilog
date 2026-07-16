@@ -12,24 +12,34 @@ type TagPageProps = {
 
 export const revalidate = 0;
 
+const MEDIA_OG_IMAGE = "https://www.tsurilogue.com/opengraph-image";
+
 export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
   const tags = await getMediaTags().catch(() => []);
   const tag = tags.find((item) => item.slug === params.slug);
   const title = tag ? `#${tag.name}の記事 | TSURILOGUE Media` : "タグ記事 | TSURILOGUE Media";
+  const description = `${tag?.name ?? "タグ"}に関するTSURILOGUE Mediaの記事一覧です。`;
   const canonical = getMediaCanonical(`tag/${params.slug}`);
   return {
     title,
-    description: `${tag?.name ?? "タグ"}に関するTSURILOGUE Mediaの記事一覧です。`,
+    description,
     alternates: { canonical },
     robots: { index: true, follow: true },
     openGraph: {
       type: "website",
       siteName: "TSURILOGUE",
+      locale: "ja_JP",
       title,
-      description: `${tag?.name ?? "タグ"}に関するTSURILOGUE Mediaの記事一覧です。`,
-      url: canonical
+      description,
+      url: canonical,
+      images: [{ url: MEDIA_OG_IMAGE, width: 1200, height: 630, alt: title }]
     },
-    twitter: { card: "summary_large_image", title }
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [MEDIA_OG_IMAGE]
+    }
   };
 }
 
