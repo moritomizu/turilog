@@ -172,14 +172,19 @@ function getOgImage(post: WpPost) {
 }
 
 function ArticleToc({ headings }: { headings: MediaHeading[] }) {
+  const compactHeadings = headings.filter((heading) => heading.level === 2);
+  const items = compactHeadings.length >= 2 ? compactHeadings : headings;
+
   return (
-    <nav className="mt-8 rounded-[1.5rem] border border-teal-100 bg-white p-5 shadow-sm" aria-label="記事の目次">
-      <p className="text-sm font-black uppercase tracking-[0.18em] text-[#0f766e]">Contents</p>
-      <h2 className="mt-2 text-xl font-black text-slate-950">この記事の目次</h2>
-      <ol className="mt-4 space-y-2 text-sm font-bold leading-6 text-slate-700">
-        {headings.map((heading) => (
-          <li key={heading.id} className={heading.level === 3 ? "pl-4" : ""}>
-            <a className="inline-flex rounded-lg px-2 py-1 transition hover:bg-teal-50 hover:text-[#0f766e]" href={`#${heading.id}`}>
+    <nav className="mt-8 overflow-hidden rounded-[1.25rem] border border-teal-200 bg-gradient-to-br from-teal-50 to-white shadow-sm" aria-label="記事の目次">
+      <div className="flex items-center gap-3 border-b border-teal-100 px-4 py-3">
+        <span className="rounded-full bg-[#0f766e] px-3 py-1 text-xs font-black text-white">目次</span>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Contents</p>
+      </div>
+      <ol className="grid gap-x-4 gap-y-1 px-4 py-3 text-sm font-bold leading-6 text-slate-700 sm:grid-cols-2">
+        {items.map((heading) => (
+          <li key={heading.id} className={heading.level === 3 ? "text-xs text-slate-500" : ""}>
+            <a className="line-clamp-2 rounded-lg px-2 py-1 transition hover:bg-white hover:text-[#0f766e]" href={`#${heading.id}`}>
               {heading.text}
             </a>
           </li>

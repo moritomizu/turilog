@@ -151,16 +151,23 @@ export function getPostFullExcerpt(post: WpPost) {
 }
 
 export function getPostLeadDescription(post: WpPost) {
+  const title = getPostTitle(post);
+  const category = post.categories?.[0]?.name;
   const seoDescription = htmlToText(post.seo?.description || "");
-  if (seoDescription && !looksTruncated(seoDescription)) return seoDescription;
+  const seoLead = toCompleteLead(seoDescription);
+  if (seoLead && !looksTruncated(seoDescription)) return seoLead;
 
   const excerpt = htmlToText(post.excerpt?.raw || post.excerpt?.rendered || "");
-  if (excerpt && !looksTruncated(excerpt)) return excerpt;
+  const excerptLead = toCompleteLead(excerpt);
+  if (excerptLead && !looksTruncated(excerpt)) return excerptLead;
 
   const firstParagraph = getFirstParagraphText(post.content?.rendered || post.content?.raw || "");
-  if (firstParagraph) return firstParagraph;
+  const paragraphLead = toCompleteLead(firstParagraph);
+  if (paragraphLead) return paragraphLead;
 
-  return seoDescription || excerpt;
+  return category
+    ? `この記事では「${title}」をテーマに、${category}に役立つ考え方や実践のヒントを整理します。本文で詳しく見ていきましょう。`
+    : `この記事では「${title}」について、釣果記録や次の釣行に活かせるヒントを整理します。本文で詳しく見ていきましょう。`;
 }
 
 export function getPostKeywords(post: WpPost) {
@@ -258,6 +265,28 @@ function getFirstParagraphText(value: string) {
 function looksTruncated(value: string) {
   const text = value.trim();
   return /(\.\.\.|…|\[…\]|\[...\]|続きを読む|Read more)$/i.test(text);
+}
+
+function toCompleteLead(value: string) {
+  const text = value.replace(/\s+/g, " ").trim();
+  if (!text || looksTruncated(text)) return "";
+  if (text.length <= 140) return ensureTerminalPunctuation(text);
+
+  const sentences = text.match(/[^。！？!?]+[。！？!?]/g) ?? [];
+  let lead = "";
+  for (const sentence of sentences) {
+    const next = `${lead}${sentence}`.trim();
+    if (next.length > 150) break;
+    lead = next;
+    if (lead.length >= 56) break;
+  }
+
+  if (lead) return lead;
+  return "";
+}
+
+function ensureTerminalPunctuation(value: string) {
+  return /[。！？!?]$/.test(value) ? value : `${value}。`;
 }
 
 function normalizeTerms(value: unknown): WpTerm[] {
