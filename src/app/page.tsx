@@ -101,6 +101,7 @@ export default function Home() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-foam px-6">
         <div className="text-center">
+          <h1 className="sr-only">TSURILOGUE | 釣果記録・釣りデータプラットフォーム</h1>
           <TsuriLogLogo className="mx-auto h-12 w-44 object-contain" />
           <p className="mt-4 text-sm font-black text-slate-500">読み込み中...</p>
         </div>

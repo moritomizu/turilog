@@ -6,7 +6,7 @@ import { createPageMetadata } from "@/lib/metadata";
 export const metadata = createPageMetadata({
   title: "プライバシーポリシー | TSURILOGUE",
   description: "TSURILOGUEのプライバシーポリシーです。",
-  path: "/privacy"
+  path: "/ja/privacy"
 });
 
 export default function PrivacyPage() {

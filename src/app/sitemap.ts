@@ -3,13 +3,14 @@ import { getSiteUrl } from "@/lib/metadata";
 import { MEDIA_PUBLIC_BASE_URL, getMediaCanonical, getMediaCategories, getMediaPosts, getMediaTags } from "@/lib/wordpress";
 
 const staticRoutes = [
-  { path: "/", priority: 1 },
-  { path: "/features", priority: 0.9 },
-  { path: "/pricing", priority: 0.8 },
-  { path: "/install", priority: 0.7 },
-  { path: "/feedback", priority: 0.5 },
-  { path: "/app/ja", priority: 0.6 },
-  { path: "/app/en", priority: 0.5 }
+  { path: "/ja", priority: 1 },
+  { path: "/ja/about", priority: 0.9 },
+  { path: "/ja/features", priority: 0.9 },
+  { path: "/ja/pricing", priority: 0.8 },
+  { path: "/ja/install", priority: 0.7 },
+  { path: "/ja/feedback", priority: 0.5 },
+  { path: "/ja/terms", priority: 0.3 },
+  { path: "/ja/privacy", priority: 0.3 }
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

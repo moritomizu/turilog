@@ -4,8 +4,9 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/"
+      allow: "/",
+      disallow: ["/api", "/app", "/admin", "/login", "/signup"]
     },
-    sitemap: "https://tsurilogue.com/sitemap.xml"
+    sitemap: "https://www.tsurilogue.com/sitemap.xml"
   };
 }

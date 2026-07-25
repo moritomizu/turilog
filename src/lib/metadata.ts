@@ -4,7 +4,7 @@ type MetadataDoc = Record<string, unknown>;
 
 const appName = "TSURILOGUE";
 const defaultDescription = "心に残る一枚のために。釣果を残して、潮位・水温・タックル・釣行データから振り返れる個人用釣りログです。";
-const productionSiteUrl = "https://tsurilogue.com";
+const productionSiteUrl = "https://www.tsurilogue.com";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -17,8 +17,21 @@ const firebaseConfig = {
 
 export function getSiteUrl() {
   const configured = process.env.NEXT_PUBLIC_APP_URL;
-  if (configured) return configured.replace(/\/$/, "");
+  if (configured) return normalizeCanonicalHost(configured.replace(/\/$/, ""));
   return productionSiteUrl;
+}
+
+function normalizeCanonicalHost(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === "tsurilogue.com") {
+      parsed.hostname = "www.tsurilogue.com";
+      return parsed.toString().replace(/\/$/, "");
+    }
+  } catch {
+    return url;
+  }
+  return url;
 }
 
 export function createPageMetadata({

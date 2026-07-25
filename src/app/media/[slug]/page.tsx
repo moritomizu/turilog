@@ -16,6 +16,7 @@ import {
   getMediaPost,
   getPostExcerpt,
   getPostKeywords,
+  getPostLeadDescription,
   getPostTitle,
   getPostWordCount,
   getRelatedMediaPosts,
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: MediaArticlePageProps): Promi
   }
 
   const title = post.seo?.title || `${getPostTitle(post)} | TSURILOGUE Media`;
-  const description = post.seo?.description || getPostExcerpt(post);
+  const description = getPostLeadDescription(post);
   const canonical = getMediaCanonical(post.slug);
   const image = getOgImage(post);
   const keywords = getPostKeywords(post);
@@ -244,7 +245,7 @@ function articleJsonLd(post: WpPost, canonical: string) {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: getPostTitle(post),
-    description: getPostExcerpt(post),
+    description: getPostLeadDescription(post),
     inLanguage: "ja-JP",
     datePublished: post.date,
     dateModified: post.modified || post.date,

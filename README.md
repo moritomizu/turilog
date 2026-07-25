@@ -2102,3 +2102,103 @@ Firestore Rules上でも管理者として扱いたいユーザーは、以下�
 - Firebase Admin SDK等で Auth custom claim `admin: true` を付与する
 
 現状のMVPでは、管理者アカウントに `tester` を設定する運用がもっとも簡単です。
+
+## TSURILOGUE SEO / Entity SEO
+
+TSURILOGUE の公開SEOページは、`https://www.tsurilogue.com` を正規ホストとして扱います。
+
+### 正規URL方針
+
+- サイト正規ホスト: `https://www.tsurilogue.com`
+- メディア正規URL: `https://www.tsurilogue.com/ja/media`
+- 記事URL: `https://www.tsurilogue.com/ja/media/{slug}`
+- カテゴリURL: `https://www.tsurilogue.com/ja/media/category/{slug}`
+- タグURL: `https://www.tsurilogue.com/ja/media/tag/{slug}`
+- `/ja/media/.../` のような末尾スラッシュ付きURLは、middlewareで末尾スラッシュなしへ301リダイレクトします。
+- `https://tsurilogue.com` はVercel側で `https://www.tsurilogue.com` へ正規化します。
+
+### sitemap.xml
+
+`src/app/sitemap.ts` で Next.js MetadataRoute を使って生成します。
+
+含める主なURL:
+
+- `/ja`
+- `/ja/about`
+- `/ja/features`
+- `/ja/pricing`
+- `/ja/install`
+- `/ja/feedback`
+- `/ja/terms`
+- `/ja/privacy`
+- `/ja/media`
+- `/ja/media/{slug}`
+- `/ja/media/category/{slug}`
+- `/ja/media/tag/{slug}`
+
+WordPress Headless API から投稿・カテゴリ・タグを取得し、`/ja/media` 配下の正規URLとして sitemap に出力します。API取得に失敗した場合でも、静的ページと `/ja/media` は出力される設計です。
+
+### robots.txt
+
+`src/app/robots.ts` で生成します。
+
+- 全体はクロール許可
+- `/api`, `/app`, `/admin`, `/login`, `/signup` はクロール対象外
+- sitemap は `https://www.tsurilogue.com/sitemap.xml`
+
+### canonical / OGP
+
+主要ページは `createPageMetadata()` で canonical、OGP、Twitter Card を生成します。メディア記事・カテゴリ・タグは WordPress API のSEO情報を利用しつつ、canonical は必ず `https://www.tsurilogue.com/ja/media...` へ正規化します。
+
+### About / Entity SEO
+
+`/ja/about` は、Googleに TSURILOGUE の実体を伝えるためのEntity SEO用ページです。
+
+含める主な要素:
+
+- TSURILOGUE / 釣りローグの説明
+- 釣果記録・潮位・気象・AI分析・グループ・大会・釣果デジタル証明・位置情報保護の関連語
+- 運営・ビジョン
+- 機能、メディア、料金、利用規約、プライバシーポリシーへの内部リンク
+- `SoftwareApplication` / `AboutPage` JSON-LD
+
+### SEO監査コマンド
+
+本番公開後、以下で主要ページのHTML監査を実行できます。
+
+```bash
+npm run audit:seo
+```
+
+別ドメインやローカルを確認する場合:
+
+```bash
+SEO_AUDIT_BASE_URL=http://localhost:3000 npm run audit:seo
+```
+
+監査項目:
+
+- HTTPステータス
+- title / meta description
+- canonical
+- OGP
+- H1数
+- JSON-LD数
+- noindex混入
+- 末尾スラッシュ付きcanonical混入
+
+### Search Console確認手順
+
+1. `https://www.tsurilogue.com` プロパティを登録
+2. `https://www.tsurilogue.com/sitemap.xml` を送信
+3. URL検査で以下を確認
+   - `https://www.tsurilogue.com/ja/media`
+   - 主要記事URL
+   - カテゴリURL
+   - タグURL
+4. 「Googleが選択した正規URL」が `/ja/media...` になっているか確認
+5. `robots.txt` と `sitemap.xml` が200で取得できるか確認
+
+### WordPress Headless Mediaの注意
+
+WordPressオリジン `https://tsurilogue.tapiyota.com` はCMSとして使用し、公開SEO URLはNext.js側の `/ja/media` 配下に統一します。WordPress側で記事を更新した場合は `/api/revalidate` へPOSTし、該当記事・一覧・カテゴリ/タグページをオンデマンド再検証します。

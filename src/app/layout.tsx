@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   ...createPageMetadata({
     title: "TSURILOGUE | 心に残る一枚のための釣果ログ",
     description: "釣果写真、潮位、水温、天候、タックル、釣り仲間とのグループや大会まで記録して振り返れる個人用釣りログです。",
-    path: "/"
+    path: "/ja"
   })
 };
 

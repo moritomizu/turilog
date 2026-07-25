@@ -6,7 +6,7 @@ import { createPageMetadata } from "@/lib/metadata";
 export const metadata = createPageMetadata({
   title: "利用規約 | TSURILOGUE",
   description: "TSURILOGUEの利用規約です。",
-  path: "/terms"
+  path: "/ja/terms"
 });
 
 export default function TermsPage() {

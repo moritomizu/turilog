@@ -56,7 +56,6 @@ function shouldRedirectMediaTrailingSlash(pathname: string) {
 
 function shouldSkip(pathname: string) {
   return (
-    isPublicSeoRoute(pathname) ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/icons") ||
@@ -66,10 +65,6 @@ function shouldSkip(pathname: string) {
     pathname.startsWith("/sitemap.xml") ||
     PUBLIC_FILE.test(pathname)
   );
-}
-
-function isPublicSeoRoute(pathname: string) {
-  return ["/features", "/pricing", "/install", "/feedback"].includes(pathname.replace(/\/$/, ""));
 }
 
 export const config = {

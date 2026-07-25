@@ -589,14 +589,20 @@ function LandingFooter() {
       <div className="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <TsuriLogLogo className="h-9 w-36 object-contain" />
+          <p className="mt-3 max-w-md text-sm font-bold leading-7 text-slate-500">
+            TSURILOGUE（釣りローグ）は、釣果記録・潮位気象データ・AI分析・グループ共有・オンライン釣り大会をつなぐ釣りデータプラットフォームです。
+          </p>
           <p className="mt-3 text-sm font-bold text-slate-500">Copyright © TSURILOGUE</p>
         </div>
         <div className="flex flex-wrap gap-5 text-sm font-black text-slate-600">
+          <Link href="/ja/about" className="hover:text-[#0f766e]">TSURILOGUEとは</Link>
           <Link href="/ja/media" className="hover:text-[#0f766e]">メディア</Link>
-          <Link href="/how-to-use-app" className="hover:text-[#0f766e]">アプリのように使う方法</Link>
-          <Link href="/feedback" className="hover:text-[#0f766e]">ご意見・ご感想</Link>
-          <Link href="/terms" className="hover:text-[#0f766e]">利用規約</Link>
-          <Link href="/privacy" className="hover:text-[#0f766e]">プライバシーポリシー</Link>
+          <Link href="/ja/features" className="hover:text-[#0f766e]">機能</Link>
+          <Link href="/ja/pricing" className="hover:text-[#0f766e]">料金プラン</Link>
+          <Link href="/ja/install" className="hover:text-[#0f766e]">アプリのように使う方法</Link>
+          <Link href="/ja/feedback" className="hover:text-[#0f766e]">ご意見・ご感想</Link>
+          <Link href="/ja/terms" className="hover:text-[#0f766e]">利用規約</Link>
+          <Link href="/ja/privacy" className="hover:text-[#0f766e]">プライバシーポリシー</Link>
           <Link href="/login" className="hover:text-[#0f766e]">お問い合わせ</Link>
         </div>
       </div>

@@ -270,7 +270,7 @@ function looksTruncated(value: string) {
 function toCompleteLead(value: string) {
   const text = value.replace(/\s+/g, " ").trim();
   if (!text || looksTruncated(text)) return "";
-  if (text.length <= 140) return ensureTerminalPunctuation(text);
+  if (text.length <= 140 && /[。！？!?]$/.test(text)) return text;
 
   const sentences = text.match(/[^。！？!?]+[。！？!?]/g) ?? [];
   let lead = "";
