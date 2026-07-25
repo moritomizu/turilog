@@ -5,9 +5,9 @@ import { APP_NAME, APP_NAME_JA } from "@/lib/brand";
 import { createPageMetadata, getSiteUrl } from "@/lib/metadata";
 
 export const metadata = createPageMetadata({
-  title: `${APP_NAME}とは | 釣果記録・釣りデータプラットフォーム`,
+  title: `${APP_NAME}とは | 釣果記録から釣りの未来をつくる`,
   description:
-    "TSURILOGUE（釣りローグ）は、釣果記録、潮位・気象データ、AI分析、グループ共有、オンライン釣り大会、釣果デジタル証明を備えた釣り人向けデータプラットフォームです。",
+    "TSURILOGUE（釣りローグ）は、釣果記録、潮位・気象データ、AI分析、グループ共有、オンライン釣り大会を通じて、釣り人の次の一匹と釣り文化の未来を支えるサービスです。",
   path: "/ja/about",
   image: "/images/lp/IMG_7885.jpg"
 });
@@ -40,14 +40,25 @@ export default function AboutPage() {
       <JsonLd data={[softwareApplicationJsonLd(canonical), aboutPageJsonLd(canonical)]} />
       <PageHeader title={`${APP_NAME}とは`} titleAs="h1" />
       <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
-        <section className="rounded-[2rem] border border-teal-100 bg-white p-6 shadow-sm sm:p-10">
+        <section className="overflow-hidden rounded-[2rem] border border-teal-100 bg-white shadow-sm">
+          <div className="bg-[linear-gradient(135deg,#06131f,#0f766e)] p-6 text-white sm:p-10">
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-orange-200">Personal Fishing Log</p>
+            <h2 className="mt-4 text-3xl font-black leading-tight sm:text-5xl">
+              今日の1匹を、
+              <span className="block text-cyan-200">未来の釣りにつなげる。</span>
+            </h2>
+            <p className="mt-6 max-w-3xl text-base font-bold leading-8 text-slate-100 sm:text-lg">
+              {APP_NAME}（{APP_NAME_JA}）は、釣果をただ残すだけのアプリではありません。釣った魚、時間、潮、天気、タックル、ポイントの記録を積み重ね、次の釣行や仲間との学びにつなげるためのパーソナル釣果ログです。
+            </p>
+          </div>
+          <div className="p-6 sm:p-10">
           <p className="text-sm font-black uppercase tracking-[0.22em] text-[#0f766e]">Personal Fishing Log</p>
           <h2 className="mt-4 text-3xl font-black leading-tight text-slate-950 sm:text-5xl">
             釣果を記録するほど、
             <span className="block text-[#0f766e]">次の1匹に近づく。</span>
           </h2>
           <p className="mt-6 text-base font-bold leading-8 text-slate-600 sm:text-lg">
-            {APP_NAME}（{APP_NAME_JA}）は、釣果写真、魚種、サイズ、ポイント、潮位、気象条件、タックルをかんたんに残し、あとから振り返れる釣り人のための釣果記録・釣りデータプラットフォームです。
+            釣りは、経験と勘と自然の変化を読む遊びです。だからこそ、記憶だけに頼るのではなく、釣果写真、魚種、サイズ、ポイント、潮位、気象条件、タックルを残しておくことで、自分だけの「釣れる条件」が少しずつ見えてきます。
           </p>
           <div className="mt-7 flex flex-wrap gap-2">
             {entities.map((item) => (
@@ -56,23 +67,53 @@ export default function AboutPage() {
               </span>
             ))}
           </div>
+          </div>
         </section>
 
         <section className="mt-8 grid gap-5 md:grid-cols-3">
-          <InfoCard title="個人の釣果を資産にする" text="魚種、サイズ、釣った日時、エリア、潮位、風向き、水温、天気、タックルをまとめて記録し、自分だけの釣れる条件を見つけやすくします。" />
-          <InfoCard title="仲間と学びを共有する" text="グループ機能では、釣り仲間同士の釣果、ランキング、釣果マップ、分析を共有できます。個人の記録が仲間との学びに変わります。" />
-          <InfoCard title="大会を安心して楽しむ" text="オンライン釣り大会では、ランキング、承認管理、釣果デジタル証明、位置情報保護により、楽しく安全な運営を支援します。" />
+          <InfoCard title="釣り人へ" text="釣果をすばやく残し、潮位・気象・タックルと一緒に振り返れます。なんとなく釣れた1匹を、次につながるヒントへ変えていきます。" />
+          <InfoCard title="釣り仲間へ" text="グループで釣果を共有し、仲間内ランキングや釣果マップ、コメントで盛り上がれます。個人の記録が、仲間との学びになります。" />
+          <InfoCard title="釣りを知らない人へ" text="TSURILOGUEは、釣り人が何を考え、どんな自然条件と向き合っているのかをデータで見える化する入り口でもあります。" />
+        </section>
+
+        <section className="mt-8 rounded-[2rem] border border-orange-100 bg-orange-50 p-6 sm:p-10">
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-orange-700">Why we build</p>
+          <h2 className="mt-4 text-2xl font-black leading-tight text-slate-950 sm:text-4xl">なぜ、TSURILOGUEを作ったのか。</h2>
+          <div className="mt-6 grid gap-6 text-sm font-bold leading-8 text-slate-700 md:grid-cols-2">
+            <p>
+              釣りの楽しさは、魚が釣れた瞬間だけでは終わりません。なぜ釣れたのか、次はどうすればもっと良い1匹に出会えるのか。帰ってから写真を見返し、潮や風やタックルを思い出す時間にも、釣りの楽しさがあります。
+            </p>
+            <p>
+              でも、その大切な記録はスマホの写真フォルダや記憶の中に散らばりがちです。TSURILOGUEは、心に残る1匹をきちんと残し、未来の自分や仲間の釣りに活かせる形にしたいという思いから生まれました。
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-[2rem] border border-teal-100 bg-white p-6 sm:p-10">
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-[#0f766e]">How to start</p>
+          <h2 className="mt-4 text-2xl font-black leading-tight text-slate-950 sm:text-4xl">まずは、今日の釣果を残すところから。</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-4">
+            <StepCard number="1" title="写真を残す" text="釣れた魚の写真を投稿します。" />
+            <StepCard number="2" title="条件を記録" text="魚種、サイズ、潮、天気、タックルを残します。" />
+            <StepCard number="3" title="あとで振り返る" text="自分だけの釣れる傾向を見つけます。" />
+            <StepCard number="4" title="仲間と広げる" text="グループや大会で楽しみを広げます。" />
+          </div>
         </section>
 
         <section className="mt-8 rounded-[2rem] bg-[#06131f] p-6 text-white sm:p-10">
           <p className="text-sm font-black uppercase tracking-[0.22em] text-orange-200">Vision</p>
-          <h2 className="mt-4 text-2xl font-black leading-tight sm:text-4xl">日本発の釣り文化を、データで次の世代へ。</h2>
+          <h2 className="mt-4 text-2xl font-black leading-tight sm:text-4xl">釣りが、いつか世界で競われる日を夢見て。</h2>
           <div className="mt-6 grid gap-6 text-sm font-bold leading-8 text-slate-100 md:grid-cols-2">
             <p>
-              釣りは、経験、勘、自然条件、仲間との情報交換によって深まる遊びです。TSURILOGUEは、その大切な感覚を壊さず、記録とデータによって釣りの振り返りを少しだけ賢くすることを目指しています。
+              釣りは、自然を読み、道具を選び、技術を磨き、時には仲間と競い合う奥深い文化です。いつか釣りが、より多くの人に開かれたスポーツとして評価され、世界の舞台やオリンピック競技のような夢につながっていくなら、その土台には信頼できる記録と公平な仕組みが必要だと考えています。
             </p>
             <p>
-              釣果を公開するだけではなく、ポイントを守りながら共有すること。釣果の信頼性を参考スコアとして見える化すること。個人、仲間、大会、メディアがつながる釣りデータ基盤を育てていきます。
+              釣果を公開するだけではなく、ポイントを守りながら共有すること。釣果の信頼性を参考スコアとして見える化すること。個人の釣果ログから、仲間とのコミュニティ、オンライン大会、そして未来の釣り文化へ。TSURILOGUEは、その一歩目をつくっていきます。
+            </p>
+          </div>
+          <div className="mt-7 rounded-2xl bg-white/10 p-5 ring-1 ring-white/10">
+            <p className="text-sm font-black leading-7 text-cyan-50">
+              まだ小さなサービスです。それでも、釣りをもっと記録しやすく、もっと振り返りやすく、もっとフェアに楽しめるものにしたい。その考えに共感してくれる釣り人と一緒に育てていきたいです。
             </p>
           </div>
         </section>
@@ -110,6 +151,16 @@ function InfoCard({ title, text }: { title: string; text: string }) {
   );
 }
 
+function StepCard({ number, title, text }: { number: string; title: string; text: string }) {
+  return (
+    <article className="rounded-[1.25rem] bg-[#f8fafc] p-5">
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0f766e] text-sm font-black text-white">{number}</div>
+      <h3 className="mt-4 text-base font-black text-slate-950">{title}</h3>
+      <p className="mt-2 text-sm font-bold leading-6 text-slate-600">{text}</p>
+    </article>
+  );
+}
+
 function softwareApplicationJsonLd(url: string) {
   return {
     "@context": "https://schema.org",
@@ -120,7 +171,7 @@ function softwareApplicationJsonLd(url: string) {
     operatingSystem: "Web, iOS, Android",
     url,
     description:
-      "釣果記録、潮位・気象データ、AI分析、グループ共有、オンライン釣り大会、釣果デジタル証明を備えた釣り人向けデータプラットフォーム。",
+      "釣果記録、潮位・気象データ、AI分析、グループ共有、オンライン釣り大会、釣果デジタル証明を備え、釣り人の記録と未来の釣り文化を支えるサービス。",
     offers: {
       "@type": "Offer",
       price: "0",
@@ -139,7 +190,7 @@ function aboutPageJsonLd(url: string) {
       "@type": "Thing",
       name: APP_NAME,
       alternateName: [APP_NAME_JA, "釣りローグ"],
-      description: "釣り人の釣果記録、分析、共有、大会運営を支援する釣りデータプラットフォーム。"
+      description: "釣り人の釣果記録、分析、共有、大会運営を支援し、釣り文化の未来をデータで支えるサービス。"
     }
   };
 }

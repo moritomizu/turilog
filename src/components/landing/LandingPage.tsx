@@ -6,6 +6,7 @@ import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 const navItems = [
   { href: "#features", label: "機能" },
   { href: "/ja/media", label: "メディア" },
+  { href: "/ja/about", label: "TSURILOGUEとは" },
   { href: "#tournament", label: "釣り大会" },
   { href: "#group", label: "グループ" },
   { href: "#ai", label: "AI機能" },
