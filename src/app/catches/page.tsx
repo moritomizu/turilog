@@ -6,7 +6,9 @@ import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
 import { FeatureLock } from "@/components/FeatureLock";
 import { PageHeader } from "@/components/PageHeader";
+import { CatchDataOverlay } from "@/components/share/CatchDataOverlay";
 import { deleteCatch, getUserCatches, updateCatchPublicStatus } from "@/lib/catches";
+import { logShareEvent } from "@/lib/shareEvents";
 import type { Catch } from "@/types";
 
 export default function CatchesPage() {
@@ -59,6 +61,7 @@ function CatchList({ userId }: { userId: string }) {
 function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; userId: string; onChange: (item: Catch) => void; onDelete: (catchId: string) => void }) {
   const [open, setOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/embed/catches/${item.id}`;
@@ -116,6 +119,7 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
         onClick={() => {
           setOpen((value) => !value);
           setShareOpen(false);
+          setOverlayOpen(false);
         }}
         className="tap-target absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/80 bg-white/95 text-ink shadow-soft"
       >
@@ -129,6 +133,12 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
         onClick={() => {
           setShareOpen((value) => !value);
           setOpen(false);
+          setOverlayOpen(false);
+          logShareEvent(userId, "share_open", {
+            share_type: "public_embed",
+            catch_proof: Boolean(item.verificationScore),
+            locale: "ja"
+          });
         }}
         className={`tap-target absolute right-16 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border shadow-soft ${
           item.isPublic ? "border-sky-200 bg-sky-600 text-white" : "border-white/80 bg-white/95 text-water"
@@ -165,6 +175,16 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
           <button type="button" disabled={busy} onClick={togglePublic} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-2 text-sm font-black text-water disabled:opacity-60">
             {item.isPublic ? "公開を停止" : "埋め込みを有効化"}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOverlayOpen(true);
+              setShareOpen(false);
+            }}
+            className="tap-target mt-3 w-full rounded bg-coral px-4 py-2 text-sm font-black text-white"
+          >
+            釣果データを重ねる
+          </button>
           {item.isPublic ? (
             <div className="mt-3 space-y-2">
               <button type="button" onClick={copyEmbedCode} className="tap-target w-full rounded bg-water px-4 py-2 text-sm font-black text-white">
@@ -178,6 +198,7 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
           {message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
         </section>
       ) : null}
+      {overlayOpen ? <CatchDataOverlay item={item} userId={userId} shareUrl={shareUrl} onClose={() => setOverlayOpen(false)} /> : null}
     </>
   );
 }

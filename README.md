@@ -2202,3 +2202,27 @@ SEO_AUDIT_BASE_URL=http://localhost:3000 npm run audit:seo
 ### WordPress Headless Mediaの注意
 
 WordPressオリジン `https://tsurilogue.tapiyota.com` はCMSとして使用し、公開SEO URLはNext.js側の `/ja/media` 配下に統一します。WordPress側で記事を更新した場合は `/api/revalidate` へPOSTし、該当記事・一覧・カテゴリ/タグページをオンデマンド再検証します。
+
+## 釣果シェア Data Overlay
+
+釣果一覧の「共有・埋め込み」から、通常の公開カード共有に加えて「釣果データを重ねる」共有形式を選べます。
+
+### 共有形式
+
+- `SIMPLE`: TSURILOGUEロゴ、魚種、サイズ、日時、エリアを控えめに表示
+- `CATCH`: 魚種とサイズを大きく表示する釣果写真向けテンプレート
+- `DATA`: 潮・水温・天候・タックルなど、存在するデータを絞って表示
+
+出力サイズは Story `9:16`、Feed `4:5`、Square `1:1` を選択できます。V1ではブラウザの Canvas API でPNGを生成し、対応端末では Web Share API で画像共有します。非対応端末では画像保存リンクを使います。
+
+### 透明PNG
+
+写真込みの共有画像に加えて、釣果データ部分だけの透明PNGも生成できます。Instagram Storiesなどでユーザー自身の写真・動画へ重ねる用途を想定しています。
+
+### 位置情報プライバシー
+
+シェア画像には正確なGPS座標、詳細ポイント名、地図、詳細な位置情報を表示しません。表示する場合も公開可能な `areaName` のみに限定します。
+
+### 計測
+
+`shareEvents` コレクションに、共有画面表示、テンプレート選択、画像生成、保存、共有完了などのイベントを保存します。正確な位置情報はイベントメタデータに含めません。
