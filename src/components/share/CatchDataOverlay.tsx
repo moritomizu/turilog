@@ -15,6 +15,7 @@ import {
 import type { Catch } from "@/types";
 
 type OutputMode = "photo" | "transparent";
+const SHARE_LOGO_SRC = "/icons/trlg-logo.png";
 
 export function CatchDataOverlay({
   item,
@@ -250,7 +251,14 @@ function OverlayPreview({ item, template, format, outputMode, backgroundUrl }: {
       )}
       {outputMode === "photo" ? <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" /> : null}
       <div className={`absolute inset-x-0 ${template === "catch" ? "bottom-8 px-7" : template === "data" ? "bottom-6 px-5" : "bottom-8 px-6"} text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]`}>
-        <p className="text-xs font-black uppercase tracking-[0.24em]">{data.brand}</p>
+        <Image
+          src={SHARE_LOGO_SRC}
+          alt="TSURILOGUE"
+          width={1000}
+          height={401}
+          className={`h-auto w-32 object-contain ${outputMode === "photo" ? "brightness-0 invert" : ""}`}
+          unoptimized
+        />
         <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
         <p className={`${template === "catch" ? "text-6xl" : "text-5xl"} mt-2 font-black leading-none`}>{data.sizeLabel}</p>
         <div className="mt-4 grid gap-2 text-xs font-black">
@@ -301,7 +309,7 @@ async function renderShareOverlayImage({
     drawGradient(ctx, size.width, size.height);
   }
 
-  drawOverlay(ctx, data, template, size.width, size.height, outputMode);
+  await drawOverlay(ctx, data, template, size.width, size.height, outputMode);
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 0.94));
   if (!blob) throw new Error("画像を書き出せませんでした。");
   return blob;
@@ -334,7 +342,7 @@ function drawGradient(ctx: CanvasRenderingContext2D, width: number, height: numb
   ctx.fillRect(0, 0, width, height);
 }
 
-function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeof getShareOverlayData>, template: ShareOverlayTemplate, width: number, height: number, outputMode: OutputMode) {
+async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeof getShareOverlayData>, template: ShareOverlayTemplate, width: number, height: number, outputMode: OutputMode) {
   const left = template === "data" ? 72 : 86;
   const bottom = template === "catch" ? 136 : 118;
   const baseY = height - bottom;
@@ -346,7 +354,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeof getS
     ctx.fillRect(0, 0, width, height);
   }
 
-  drawText(ctx, data.brand, left, baseY - 330, 38, "900", color, 0.22);
+  await drawLogo(ctx, SHARE_LOGO_SRC, left, baseY - 390, 260, outputMode);
   drawText(ctx, data.fishType, left, baseY - 230, template === "catch" ? 132 : 104, "900", color);
   drawText(ctx, data.sizeLabel, left, baseY - 92, template === "catch" ? 148 : 118, "900", color);
   drawText(ctx, data.dateLabel, left, baseY, 34, "800", subColor);
@@ -360,6 +368,35 @@ function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeof getS
     });
   }
   if (data.hasCatchProof) drawPill(ctx, data.catchProofLabel, left, baseY + (template === "data" ? 420 : 170), outputMode);
+}
+
+async function drawLogo(ctx: CanvasRenderingContext2D, logoUrl: string, x: number, y: number, width: number, outputMode: OutputMode) {
+  const image = await loadImage(logoUrl).catch(() => null);
+  if (!image) {
+    drawText(ctx, "TSURILOGUE", x, y + 52, 38, "900", outputMode === "transparent" ? "#111827" : "#ffffff", 0.2);
+    return;
+  }
+
+  const height = width * (image.height / image.width);
+  const logoCanvas = document.createElement("canvas");
+  logoCanvas.width = Math.ceil(width);
+  logoCanvas.height = Math.ceil(height);
+  const logoCtx = logoCanvas.getContext("2d");
+  if (!logoCtx) return;
+
+  logoCtx.drawImage(image, 0, 0, width, height);
+  logoCtx.globalCompositeOperation = "source-in";
+  logoCtx.fillStyle = outputMode === "transparent" ? "#111827" : "#ffffff";
+  logoCtx.fillRect(0, 0, width, height);
+
+  ctx.save();
+  if (outputMode === "photo") {
+    ctx.shadowColor = "rgba(0,0,0,0.55)";
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 4;
+  }
+  ctx.drawImage(logoCanvas, x, y, width, height);
+  ctx.restore();
 }
 
 function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, weight: string, color: string, letterSpacing = 0) {
