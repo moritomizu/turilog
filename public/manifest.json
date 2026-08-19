@@ -1,7 +1,7 @@
 {
-  "name": "TSURILOGUE - 釣果ログ",
-  "short_name": "TSURILOGUE",
-  "description": "釣果写真、潮位、水温、天候、タックル、グループや大会まで記録して振り返れる釣りログです。",
+  "name": "TSURILOGUE（釣りローグ）",
+  "short_name": "釣りローグ",
+  "description": "釣果写真、潮位、水温、天候、タックル、グループや大会まで記録して振り返れる釣果記録・釣りログアプリです。",
   "start_url": "/ja",
   "scope": "/",
   "display": "standalone",

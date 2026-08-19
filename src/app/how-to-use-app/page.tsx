@@ -3,7 +3,7 @@ import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata = createPageMetadata({
   title: "釣りローグをスマホアプリのように使う方法 | TSURILOGUE",
-  description: "釣りローグをスマホのホーム画面に追加して、App Store不要でアプリのようにすばやく起動する方法を案内します。",
+  description: "TSURILOGUE（釣りローグ）をスマホのホーム画面に追加して、釣り場でも釣果記録・釣りログをアプリのようにすばやく起動する方法を案内します。",
   path: "/install"
 });
 

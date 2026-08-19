@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { AppFooter } from "@/components/AppFooter";
 import { AppTabBar } from "@/components/AppTabBar";
+import { APP_NAME, APP_NAME_JA, APP_SEO_TITLE } from "@/lib/brand";
 import { defaultLocale, isAppLocale } from "@/lib/i18n";
 import { createPageMetadata, getSiteUrl } from "@/lib/metadata";
 import enMessages from "../../messages/en.json";
@@ -11,11 +12,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  applicationName: "TSURILOGUE",
+  applicationName: `${APP_NAME}（${APP_NAME_JA}）`,
   manifest: "/manifest.json",
   title: {
-    default: "TSURILOGUE | 心に残る一枚のための釣果ログ",
-    template: "%s | TSURILOGUE"
+    default: APP_SEO_TITLE,
+    template: `%s | ${APP_NAME}`
   },
   icons: {
     icon: [
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "TSURILOGUE",
+    title: APP_NAME_JA,
     statusBarStyle: "default"
   },
   formatDetection: {
@@ -37,12 +38,12 @@ export const metadata: Metadata = {
   other: {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-title": "TSURILOGUE",
+    "apple-mobile-web-app-title": APP_NAME_JA,
     "apple-mobile-web-app-status-bar-style": "default"
   },
   ...createPageMetadata({
-    title: "TSURILOGUE | 心に残る一枚のための釣果ログ",
-    description: "釣果写真、潮位、水温、天候、タックル、釣り仲間とのグループや大会まで記録して振り返れる個人用釣りログです。",
+    title: APP_SEO_TITLE,
+    description: "TSURILOGUE（釣りローグ）は、釣果写真、潮位、水温、天候、タックル、ポイントをかんたんに記録し、あとから振り返れる釣果記録・釣りログアプリです。",
     path: "/ja"
   })
 };

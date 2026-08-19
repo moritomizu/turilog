@@ -2,8 +2,8 @@ import { LandingPage } from "@/components/landing/LandingPage";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata = createPageMetadata({
-  title: "機能 | TSURILOGUE",
-  description: "TSURILOGUEの釣果記録、AI分析、グループ共有、オンライン釣り大会、釣果デジタル証明、ポイント保護機能を紹介します。",
+  title: "機能 | TSURILOGUE（釣りローグ）",
+  description: "TSURILOGUE（釣りローグ）の釣果記録、釣りログ、AI分析、グループ共有、オンライン釣り大会、釣果デジタル証明、ポイント保護機能を紹介します。",
   path: "/ja/features",
   image: "/images/lp/IMG_7885.jpg"
 });

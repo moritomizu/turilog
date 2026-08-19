@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   const categories = await getMediaCategories().catch(() => []);
   const category = categories.find((item) => item.slug === params.slug);
   const title = category ? `${category.name}の記事 | TSURILOGUE Media` : "カテゴリ記事 | TSURILOGUE Media";
-  const description = `${category?.name ?? "カテゴリ"}に関するTSURILOGUE Mediaの記事一覧です。`;
+  const description = `${category?.name ?? "カテゴリ"}に関するTSURILOGUE（釣りローグ）公式メディアの記事一覧です。釣果記録・釣りログ・釣行データの振り返りに役立つ情報をまとめています。`;
   const canonical = getMediaCanonical(`category/${params.slug}`);
   return {
     title,

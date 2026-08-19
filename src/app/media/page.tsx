@@ -11,22 +11,22 @@ type MediaPageProps = {
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "TSURILOGUE Media | 釣果記録と釣り分析のヒント",
-  description: "釣果記録、潮位、気象、タックル、AI分析を次の一匹につなげるためのTSURILOGUE公式メディアです。",
+  title: "TSURILOGUE Media | 釣果記録・釣りログと釣り分析のヒント",
+  description: "釣果記録、釣りログ、潮位、気象、タックル、AI分析を次の一匹につなげるためのTSURILOGUE（釣りローグ）公式メディアです。",
   alternates: { canonical: MEDIA_PUBLIC_BASE_URL },
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",
     siteName: "TSURILOGUE",
-    title: "TSURILOGUE Media | 釣果記録と釣り分析のヒント",
-    description: "釣果記録、潮位、気象、タックル、AI分析を次の一匹につなげるためのTSURILOGUE公式メディアです。",
+    title: "TSURILOGUE Media | 釣果記録・釣りログと釣り分析のヒント",
+    description: "釣果記録、釣りログ、潮位、気象、タックル、AI分析を次の一匹につなげるためのTSURILOGUE（釣りローグ）公式メディアです。",
     url: MEDIA_PUBLIC_BASE_URL,
     images: [{ url: "https://www.tsurilogue.com/opengraph-image", width: 1200, height: 630, alt: "TSURILOGUE Media" }]
   },
   twitter: {
     card: "summary_large_image",
-    title: "TSURILOGUE Media | 釣果記録と釣り分析のヒント",
-    description: "釣果記録、潮位、気象、タックル、AI分析を次の一匹につなげるためのTSURILOGUE公式メディアです。",
+    title: "TSURILOGUE Media | 釣果記録・釣りログと釣り分析のヒント",
+    description: "釣果記録、釣りログ、潮位、気象、タックル、AI分析を次の一匹につなげるためのTSURILOGUE（釣りローグ）公式メディアです。",
     images: ["https://www.tsurilogue.com/opengraph-image"]
   }
 };

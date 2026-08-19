@@ -88,7 +88,7 @@ function HeroSection() {
             <span className="block text-[#7dd3fc]">理想の1匹に近づく。</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg font-bold leading-9 text-slate-100 sm:text-xl">
-            釣りローグは、釣果・ポイント・潮位・気象条件・タックルをかんたんに記録し、あとから振り返れる釣り人のためのパーソナル釣果ログです。
+            TSURILOGUE（釣りローグ）は、釣果・ポイント・潮位・気象条件・タックルをかんたんに記録し、あとから振り返れる釣り人のための釣果記録・釣りログアプリです。
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-7 text-base font-black text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
@@ -591,7 +591,7 @@ function LandingFooter() {
         <div>
           <TsuriLogLogo className="h-9 w-36 object-contain" />
           <p className="mt-3 max-w-md text-sm font-bold leading-7 text-slate-500">
-            TSURILOGUE（釣りローグ）は、釣果記録・潮位気象データ・AI分析・グループ共有・オンライン釣り大会をつなぐ釣りデータプラットフォームです。
+            TSURILOGUE（釣りローグ）は、釣果記録・釣りログ・潮位気象データ・AI分析・グループ共有・オンライン釣り大会をつなぐ釣りデータプラットフォームです。
           </p>
           <p className="mt-3 text-sm font-bold text-slate-500">Copyright © TSURILOGUE</p>
         </div>

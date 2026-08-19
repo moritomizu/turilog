@@ -5,9 +5,9 @@ import { APP_NAME, APP_NAME_JA } from "@/lib/brand";
 import { createPageMetadata, getSiteUrl } from "@/lib/metadata";
 
 export const metadata = createPageMetadata({
-  title: `${APP_NAME}とは | 釣果記録から釣りの未来をつくる`,
+  title: `${APP_NAME}（${APP_NAME_JA}）とは | 釣果記録・釣りログから釣りの未来をつくる`,
   description:
-    "TSURILOGUE（釣りローグ）は、釣果記録、潮位・気象データ、AI分析、グループ共有、オンライン釣り大会を通じて、釣り人の次の一匹と釣り文化の未来を支えるサービスです。",
+    "TSURILOGUE（釣りローグ）は、釣果記録、釣りログ、潮位・気象データ、AI分析、グループ共有、オンライン釣り大会を通じて、釣り人の次の一匹と釣り文化の未来を支えるサービスです。",
   path: "/ja/about",
   image: "/images/lp/IMG_7885.jpg"
 });

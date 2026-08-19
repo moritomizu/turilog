@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
   const tags = await getMediaTags().catch(() => []);
   const tag = tags.find((item) => item.slug === params.slug);
   const title = tag ? `#${tag.name}の記事 | TSURILOGUE Media` : "タグ記事 | TSURILOGUE Media";
-  const description = `${tag?.name ?? "タグ"}に関するTSURILOGUE Mediaの記事一覧です。`;
+  const description = `${tag?.name ?? "タグ"}に関するTSURILOGUE（釣りローグ）公式メディアの記事一覧です。釣果記録・釣りログ・釣行データの振り返りに役立つ情報をまとめています。`;
   const canonical = getMediaCanonical(`tag/${params.slug}`);
   return {
     title,

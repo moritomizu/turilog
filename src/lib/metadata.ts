@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { APP_NAME, APP_NAME_WITH_JA } from "@/lib/brand";
 
 type MetadataDoc = Record<string, unknown>;
 
-const appName = "TSURILOGUE";
-const defaultDescription = "心に残る一枚のために。釣果を残して、潮位・水温・タックル・釣行データから振り返れる個人用釣りログです。";
+const appName = APP_NAME_WITH_JA;
+const defaultDescription = "TSURILOGUE（釣りローグ）は、釣果写真、潮位、水温、天候、タックル、ポイントを記録して振り返れる釣果記録・釣りログアプリです。";
 const productionSiteUrl = "https://www.tsurilogue.com";
 
 const firebaseConfig = {
@@ -38,12 +39,14 @@ export function createPageMetadata({
   title,
   description = defaultDescription,
   path = "/",
-  image
+  image,
+  keywords
 }: {
   title: string;
   description?: string;
   path?: string;
   image?: string | null;
+  keywords?: string[];
 }): Metadata {
   const siteUrl = getSiteUrl();
   const url = `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
@@ -51,6 +54,7 @@ export function createPageMetadata({
   return {
     title,
     description,
+    keywords: keywords ?? ["TSURILOGUE", "釣りローグ", "釣果記録", "釣りログ", "釣果ログ", "釣りアプリ", "釣果分析"],
     alternates: { canonical: url },
     openGraph: {
       type: "website",
@@ -77,7 +81,7 @@ export async function getPublicCatchMetadata(catchId: string) {
   const tide = text(data.tidePhaseLabel, "潮情報も記録");
   const area = text(data.areaName, "釣果エリア");
   return {
-    title: `${fishType}${sizeCm ? ` ${sizeCm}` : ""} | TSURILOGUE釣果`,
+    title: `${fishType}${sizeCm ? ` ${sizeCm}` : ""} | ${APP_NAME}釣果`,
     description: `${area}で記録された${fishType}${sizeCm ? ` ${sizeCm}` : ""}の釣果。${tide}、天候、水温、タックルも一緒に振り返れる釣りログです。`,
     image: typeof data.imageUrl === "string" ? data.imageUrl : null
   };
@@ -87,9 +91,9 @@ export async function getGroupMetadata(groupId: string) {
   const data = await getDocData("groups", groupId);
   if (!data) return null;
   const name = text(data.name, "釣り仲間グループ");
-  const description = text(data.description, "仲間同士で釣果・ランキング・釣果マップ・分析を共有できるTSURILOGUEグループです。");
+  const description = text(data.description, `仲間同士で釣果・ランキング・釣果マップ・分析を共有できる${APP_NAME_WITH_JA}グループです。`);
   return {
-    title: `${name} | TSURILOGUEグループ`,
+    title: `${name} | ${APP_NAME}グループ`,
     description: `${description} 釣り仲間の投稿を見ながら、日々の釣果をもっと楽しく振り返れます。`
   };
 }
@@ -124,10 +128,10 @@ export async function getTournamentMetadata(tournamentId: string) {
   const data = await getDocData("tournaments", tournamentId);
   if (!data) return null;
   const name = text(data.name, "釣り大会");
-  const description = text(data.description, "期間中の釣果でランキングを競えるTSURILOGUEの釣り大会です。");
+  const description = text(data.description, `期間中の釣果でランキングを競える${APP_NAME_WITH_JA}の釣り大会です。`);
   const target = Array.isArray(data.targetFishTypes) ? data.targetFishTypes.filter((item): item is string => typeof item === "string").join("、") : "";
   return {
-    title: `${name} | TSURILOGUE釣り大会`,
+    title: `${name} | ${APP_NAME}釣り大会`,
     description: `${description}${target ? ` 対象魚種: ${target}。` : ""}写真投稿からランキングまで、仲間と釣果を競えます。`
   };
 }
