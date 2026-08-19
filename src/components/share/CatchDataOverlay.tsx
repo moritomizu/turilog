@@ -262,8 +262,8 @@ function OverlayPreview({ item, template, format, outputMode, backgroundUrl }: {
         />
         <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
         <p
-          className={`${template === "catch" ? "text-7xl" : "text-6xl"} mt-2 origin-left scale-x-[0.82] font-black leading-none tracking-wide`}
-          style={{ fontFamily: '"Bebas Neue", Impact, "Arial Narrow", sans-serif' }}
+          className={`${template === "catch" ? "text-7xl" : "text-6xl"} mt-2 origin-left scale-x-[0.88] font-extrabold leading-none tracking-normal`}
+          style={{ fontFamily: 'Futura, "Avenir Next Condensed", "Arial Narrow", system-ui, sans-serif' }}
         >
           {data.sizeLabel}
         </p>
@@ -440,11 +440,11 @@ function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
 function drawSizeText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, maxWidth: number) {
   ctx.save();
   let fontSize = size;
-  const horizontalScale = 0.82;
-  ctx.font = `900 ${fontSize}px "Bebas Neue", Impact, "Arial Narrow", sans-serif`;
+  const horizontalScale = 0.88;
+  ctx.font = `800 ${fontSize}px Futura, "Avenir Next Condensed", "Arial Narrow", system-ui, sans-serif`;
   while (ctx.measureText(text).width * horizontalScale > maxWidth && fontSize > 42) {
     fontSize -= 4;
-    ctx.font = `900 ${fontSize}px "Bebas Neue", Impact, "Arial Narrow", sans-serif`;
+    ctx.font = `800 ${fontSize}px Futura, "Avenir Next Condensed", "Arial Narrow", system-ui, sans-serif`;
   }
   ctx.fillStyle = color;
   ctx.shadowColor = color === "#ffffff" ? "rgba(0,0,0,0.66)" : "rgba(255,255,255,0)";
