@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { toBlob } from "html-to-image";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { logShareEvent } from "@/lib/shareEvents";
 import {
   getFormatSize,
@@ -37,6 +38,7 @@ export function CatchDataOverlay({
   const [message, setMessage] = useState("プレビューを確認して生成してください。");
   const [busy, setBusy] = useState(false);
   const generatedBlobRef = useRef<Blob | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
   const overlayData = useMemo(() => getShareOverlayData(item), [item]);
   const selectedFormat = getFormatSize(format);
 
@@ -70,9 +72,7 @@ export function CatchDataOverlay({
     setMessage("画像を生成しています。");
     try {
       const blob = await renderShareOverlayImage({
-        item,
-        backgroundUrl,
-        template,
+        previewNode: previewRef.current,
         format,
         outputMode
       });
@@ -148,7 +148,7 @@ export function CatchDataOverlay({
 
         <div className="grid gap-5 p-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:p-5">
           <div className="space-y-4">
-            <OverlayPreview item={item} template={template} format={format} outputMode={outputMode} backgroundUrl={backgroundUrl} />
+            <OverlayPreview ref={previewRef} item={item} template={template} format={format} outputMode={outputMode} backgroundUrl={backgroundUrl} />
             <p className="rounded bg-foam p-3 text-xs font-bold leading-5 text-slate-600">
               正確なGPS座標や詳細ポイント名はシェア画像に表示しません。エリア情報のみを使用します。
             </p>
@@ -240,19 +240,23 @@ export function CatchDataOverlay({
   );
 }
 
-function OverlayPreview({ item, template, format, outputMode, backgroundUrl }: { item: Catch; template: ShareOverlayTemplate; format: ShareOverlayFormat; outputMode: OutputMode; backgroundUrl: string }) {
+const OverlayPreview = forwardRef<HTMLDivElement, { item: Catch; template: ShareOverlayTemplate; format: ShareOverlayFormat; outputMode: OutputMode; backgroundUrl: string }>(function OverlayPreview(
+  { item, template, format, outputMode, backgroundUrl },
+  ref
+) {
   const data = getShareOverlayData(item);
   const sizeParts = splitSizeLabel(data.sizeLabel);
   const aspectClass = format === "story" ? "aspect-[9/16]" : format === "feed" ? "aspect-[4/5]" : "aspect-square";
+  const overlayToneClass = outputMode === "transparent" ? "text-ink drop-shadow-none" : "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]";
   return (
-    <div className={`relative mx-auto w-full max-w-[360px] overflow-hidden rounded bg-slate-900 shadow-soft ${aspectClass}`}>
+    <div ref={ref} className={`relative mx-auto w-full max-w-[360px] overflow-hidden rounded bg-slate-900 shadow-soft ${aspectClass}`}>
       {outputMode === "photo" && backgroundUrl ? (
-        <Image src={backgroundUrl} alt="" fill className="object-cover" sizes="360px" unoptimized />
+        <img src={getCanvasSafeImageUrl(backgroundUrl)} alt="" className="absolute inset-0 h-full w-full object-cover" crossOrigin="anonymous" />
       ) : (
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,118,110,0.14),rgba(255,255,255,0.04)),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%)] bg-[length:100%_100%,24px_24px,24px_24px] bg-[position:0_0,0_0,12px_12px]" />
+        <div data-export-hidden="true" className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,118,110,0.14),rgba(255,255,255,0.04)),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%)] bg-[length:100%_100%,24px_24px,24px_24px] bg-[position:0_0,0_0,12px_12px]" />
       )}
       {outputMode === "photo" ? <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" /> : null}
-      <div className={`absolute inset-x-0 ${template === "catch" ? "bottom-8 px-7" : template === "data" ? "bottom-6 px-5" : "bottom-8 px-6"} text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]`}>
+      <div className={`absolute inset-x-0 ${template === "catch" ? "bottom-8 px-7" : template === "data" ? "bottom-6 px-5" : "bottom-8 px-6"} ${overlayToneClass}`}>
         <Image
           src={SHARE_LOGO_SRC}
           alt="TSURILOGUE"
@@ -276,7 +280,7 @@ function OverlayPreview({ item, template, format, outputMode, backgroundUrl }: {
       </div>
     </div>
   );
-}
+});
 
 function ControlSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -287,35 +291,21 @@ function ControlSection({ title, children }: { title: string; children: React.Re
   );
 }
 
-async function renderShareOverlayImage({
-  item,
-  backgroundUrl,
-  template,
-  format,
-  outputMode
-}: {
-  item: Catch;
-  backgroundUrl: string;
-  template: ShareOverlayTemplate;
-  format: ShareOverlayFormat;
-  outputMode: OutputMode;
-}) {
+async function renderShareOverlayImage({ previewNode, format, outputMode }: { previewNode: HTMLDivElement | null; format: ShareOverlayFormat; outputMode: OutputMode }) {
+  if (!previewNode) throw new Error("プレビューを取得できませんでした。");
   const size = getFormatSize(format);
-  const canvas = document.createElement("canvas");
-  canvas.width = size.width;
-  canvas.height = size.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("画像生成に失敗しました。");
-  const data = getShareOverlayData(item);
-
-  ctx.clearRect(0, 0, size.width, size.height);
-  if (outputMode === "photo") {
-    await drawBackground(ctx, backgroundUrl, size.width, size.height);
-    drawGradient(ctx, size.width, size.height);
-  }
-
-  await drawOverlay(ctx, data, template, size.width, size.height, outputMode);
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 0.94));
+  const rect = previewNode.getBoundingClientRect();
+  const blob = await toBlob(previewNode, {
+    cacheBust: true,
+    canvasWidth: size.width,
+    canvasHeight: size.height,
+    width: rect.width,
+    height: rect.height,
+    pixelRatio: 1,
+    backgroundColor: outputMode === "transparent" ? undefined : "#0f172a",
+    filter: (node) => !(node instanceof HTMLElement && node.dataset.exportHidden === "true"),
+    fetchRequestInit: { cache: "no-store" }
+  });
   if (!blob) throw new Error("画像を書き出せませんでした。");
   return blob;
 }
