@@ -348,24 +348,27 @@ function drawGradient(ctx: CanvasRenderingContext2D, width: number, height: numb
 }
 
 async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeof getShareOverlayData>, template: ShareOverlayTemplate, width: number, height: number, outputMode: OutputMode) {
-  const left = template === "data" ? 72 : 86;
-  const safeBottom = height - 110;
+  const scale = width / 360;
+  const left = template === "catch" ? 28 * scale : template === "data" ? 20 * scale : 24 * scale;
+  const bottom = template === "data" ? 24 * scale : 32 * scale;
+  const safeBottom = height - bottom;
   const color = outputMode === "transparent" ? "#111827" : "#ffffff";
   const subColor = outputMode === "transparent" ? "#334155" : "rgba(255,255,255,0.88)";
-  const metaRows =
-    template === "data"
-      ? [data.methodLabel, data.tideLabel, data.waterTempLabel, data.weatherLabel, data.lureLabel || data.tackleLabel].filter(Boolean).slice(0, 5)
-      : template === "catch"
-        ? [data.methodLabel].filter(Boolean)
-        : [];
-  const pillRows = data.hasCatchProof ? [...metaRows, data.catchProofLabel] : metaRows;
-  const firstPillY = pillRows.length ? safeBottom - (pillRows.length - 1) * 62 : safeBottom;
-  const areaY = pillRows.length ? firstPillY - 82 : safeBottom;
-  const dateY = areaY - 56;
-  const sizeY = dateY - (template === "catch" ? 118 : 100);
-  const fishY = sizeY - (template === "catch" ? 148 : 126);
-  const logoWidth = template === "data" ? 220 : 238;
-  const logoY = fishY - (template === "catch" ? 214 : 184);
+  const rows = [
+    data.dateLabel,
+    data.areaLabel,
+    template !== "simple" ? data.methodLabel : "",
+    template === "data" ? [data.tideLabel, data.waterTempLabel, data.weatherLabel].filter(Boolean).join(" / ") || "Data logging" : ""
+  ].filter(Boolean);
+  const proofPillHeight = data.hasCatchProof ? 34 * scale : 0;
+  const rowHeight = 18 * scale;
+  const rowGap = 8 * scale;
+  const rowsHeight = rows.length * rowHeight + Math.max(rows.length - 1, 0) * rowGap + (data.hasCatchProof ? rowGap + proofPillHeight : 0);
+  const rowsTopY = safeBottom - rowsHeight + rowHeight * 0.78;
+  const sizeY = rowsTopY - 28 * scale;
+  const fishY = sizeY - 64 * scale;
+  const logoWidth = 128 * scale;
+  const logoY = fishY - 84 * scale;
 
   if (outputMode === "transparent") {
     ctx.fillStyle = "rgba(255,255,255,0)";
@@ -373,14 +376,16 @@ async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeo
   }
 
   await drawLogo(ctx, SHARE_LOGO_SRC, left, logoY, logoWidth, outputMode);
-  drawText(ctx, data.fishType, left, fishY, template === "catch" ? 126 : 96, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
-  drawSizeText(ctx, data.sizeLabel, left, sizeY, 180, color, MAX_OVERLAY_TEXT_WIDTH);
-  drawText(ctx, data.dateLabel, left, dateY, 34, "800", subColor, 0, MAX_OVERLAY_TEXT_WIDTH);
-  drawText(ctx, data.areaLabel, left, areaY, 40, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
+  drawText(ctx, data.fishType, left, fishY, template === "catch" ? 48 * scale : 36 * scale, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
+  drawSizeText(ctx, data.sizeLabel, left, sizeY, 60 * scale, color, MAX_OVERLAY_TEXT_WIDTH);
 
-  pillRows.forEach((row, index) => {
-    drawPill(ctx, row, left, firstPillY + index * 62, outputMode);
+  rows.forEach((row, index) => {
+    drawText(ctx, row, left, rowsTopY + index * (rowHeight + rowGap), 12 * scale, "900", index === 1 ? color : subColor, 0, MAX_OVERLAY_TEXT_WIDTH);
   });
+
+  if (data.hasCatchProof) {
+    drawPill(ctx, data.catchProofLabel, left, rowsTopY + rows.length * (rowHeight + rowGap) + 2 * scale, outputMode, scale);
+  }
 }
 
 async function drawLogo(ctx: CanvasRenderingContext2D, logoUrl: string, x: number, y: number, width: number, outputMode: OutputMode) {
@@ -466,16 +471,16 @@ function splitSizeLabel(label: string) {
   return { value: match[1], unit: match[2] };
 }
 
-function drawPill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, outputMode: OutputMode) {
+function drawPill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, outputMode: OutputMode, scale = 1) {
   ctx.save();
-  ctx.font = "900 32px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.font = `900 ${12 * scale}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
   const metrics = ctx.measureText(text);
-  const width = Math.min(metrics.width + 44, 760);
+  const width = Math.min(metrics.width + 24 * scale, 760);
   ctx.fillStyle = outputMode === "transparent" ? "rgba(15,118,110,0.12)" : "rgba(255,255,255,0.18)";
-  roundRect(ctx, x, y - 38, width, 54, 27);
+  roundRect(ctx, x, y - 22 * scale, width, 28 * scale, 14 * scale);
   ctx.fill();
   ctx.fillStyle = outputMode === "transparent" ? "#0f766e" : "#ffffff";
-  ctx.fillText(text, x + 22, y);
+  ctx.fillText(text, x + 12 * scale, y);
   ctx.restore();
 }
 
