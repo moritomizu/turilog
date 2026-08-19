@@ -261,7 +261,12 @@ function OverlayPreview({ item, template, format, outputMode, backgroundUrl }: {
           unoptimized
         />
         <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
-        <p className={`${template === "catch" ? "text-6xl" : "text-5xl"} mt-2 font-black leading-none`}>{data.sizeLabel}</p>
+        <p
+          className={`${template === "catch" ? "text-7xl" : "text-6xl"} mt-2 origin-left scale-x-[0.82] font-black leading-none tracking-wide`}
+          style={{ fontFamily: '"Bebas Neue", Impact, "Arial Narrow", sans-serif' }}
+        >
+          {data.sizeLabel}
+        </p>
         <div className="mt-4 grid gap-2 text-xs font-black">
           <span>{data.dateLabel}</span>
           <span>{data.areaLabel}</span>
@@ -370,7 +375,7 @@ async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeo
 
   await drawLogo(ctx, SHARE_LOGO_SRC, left, logoY, logoWidth, outputMode);
   drawText(ctx, data.fishType, left, fishY, template === "catch" ? 126 : 96, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
-  drawText(ctx, data.sizeLabel, left, sizeY, template === "catch" ? 144 : 116, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
+  drawSizeText(ctx, data.sizeLabel, left, sizeY, template === "catch" ? 164 : 136, color, MAX_OVERLAY_TEXT_WIDTH);
   drawText(ctx, data.dateLabel, left, dateY, 34, "800", subColor, 0, MAX_OVERLAY_TEXT_WIDTH);
   drawText(ctx, data.areaLabel, left, areaY, 40, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
 
@@ -429,6 +434,24 @@ function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
       currentX += ctx.measureText(char).width + fontSize * letterSpacing;
     }
   }
+  ctx.restore();
+}
+
+function drawSizeText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, maxWidth: number) {
+  ctx.save();
+  let fontSize = size;
+  const horizontalScale = 0.82;
+  ctx.font = `900 ${fontSize}px "Bebas Neue", Impact, "Arial Narrow", sans-serif`;
+  while (ctx.measureText(text).width * horizontalScale > maxWidth && fontSize > 42) {
+    fontSize -= 4;
+    ctx.font = `900 ${fontSize}px "Bebas Neue", Impact, "Arial Narrow", sans-serif`;
+  }
+  ctx.fillStyle = color;
+  ctx.shadowColor = color === "#ffffff" ? "rgba(0,0,0,0.66)" : "rgba(255,255,255,0)";
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 3;
+  ctx.scale(horizontalScale, 1);
+  ctx.fillText(text, x / horizontalScale, y);
   ctx.restore();
 }
 
