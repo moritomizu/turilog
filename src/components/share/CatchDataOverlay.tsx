@@ -57,6 +57,12 @@ export function CatchDataOverlay({
     };
   }, [downloadUrl]);
 
+  useEffect(() => {
+    generatedBlobRef.current = null;
+    setDownloadUrl("");
+    setMessage("プレビューを確認して生成してください。");
+  }, [backgroundUrl, format, outputMode, template]);
+
   function handleBackgroundFile(file: File | null) {
     if (!file) return;
     const objectUrl = URL.createObjectURL(file);
@@ -249,9 +255,13 @@ const OverlayPreview = forwardRef<HTMLDivElement, { item: Catch; template: Share
   const aspectClass = format === "story" ? "aspect-[9/16]" : format === "feed" ? "aspect-[4/5]" : "aspect-square";
   const overlayToneClass = outputMode === "transparent" ? "text-ink drop-shadow-none" : "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]";
   return (
-    <div ref={ref} className={`relative mx-auto w-full max-w-[360px] overflow-hidden rounded bg-slate-900 shadow-soft ${aspectClass}`}>
+    <div ref={ref} className={`relative mx-auto w-full max-w-[360px] overflow-hidden rounded shadow-soft ${outputMode === "transparent" ? "bg-transparent" : "bg-slate-900"} ${aspectClass}`}>
       {outputMode === "photo" && backgroundUrl ? (
-        <img src={getCanvasSafeImageUrl(backgroundUrl)} alt="" className="absolute inset-0 h-full w-full object-cover" crossOrigin="anonymous" />
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url("${escapeCssUrl(getCanvasSafeImageUrl(backgroundUrl))}")` }}
+          aria-hidden="true"
+        />
       ) : (
         <div data-export-hidden="true" className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,118,110,0.14),rgba(255,255,255,0.04)),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%)] bg-[length:100%_100%,24px_24px,24px_24px] bg-[position:0_0,0_0,12px_12px]" />
       )}
@@ -295,19 +305,41 @@ async function renderShareOverlayImage({ previewNode, format, outputMode }: { pr
   if (!previewNode) throw new Error("プレビューを取得できませんでした。");
   const size = getFormatSize(format);
   const rect = previewNode.getBoundingClientRect();
+  const scale = size.width / Math.max(rect.width, 1);
   const blob = await toBlob(previewNode, {
     cacheBust: true,
-    canvasWidth: size.width,
-    canvasHeight: size.height,
-    width: rect.width,
-    height: rect.height,
-    pixelRatio: 1,
+    pixelRatio: scale,
     backgroundColor: outputMode === "transparent" ? undefined : "#0f172a",
     filter: (node) => !(node instanceof HTMLElement && node.dataset.exportHidden === "true"),
-    fetchRequestInit: { cache: "no-store" }
+    fetchRequestInit: { cache: "no-store" },
+    skipAutoScale: true
   });
   if (!blob) throw new Error("画像を書き出せませんでした。");
-  return blob;
+  return resizeImageBlob(blob, size.width, size.height);
+}
+
+async function resizeImageBlob(blob: Blob, width: number, height: number) {
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const image = new window.Image();
+    image.decoding = "async";
+    image.src = objectUrl;
+    await image.decode();
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("画像を書き出せませんでした。");
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const resizedBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!resizedBlob) throw new Error("画像を書き出せませんでした。");
+    return resizedBlob;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 async function drawBackground(ctx: CanvasRenderingContext2D, imageUrl: string, width: number, height: number) {
@@ -509,4 +541,8 @@ function getCanvasSafeImageUrl(url: string) {
   } catch {
     return url;
   }
+}
+
+function escapeCssUrl(url: string) {
+  return url.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
