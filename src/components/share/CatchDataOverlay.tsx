@@ -262,9 +262,9 @@ function OverlayPreview({ item, template, format, outputMode, backgroundUrl }: {
           unoptimized
         />
         <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
-        <p className="mt-2 flex origin-left scale-x-[0.9] items-baseline gap-1 leading-none" style={{ fontFamily: '"Helvetica Neue Condensed Bold", "Arial Narrow", "Avenir Next Condensed", Helvetica, system-ui, sans-serif' }}>
-          <span className={`${template === "catch" ? "text-7xl" : "text-6xl"} font-bold tracking-tight`}>{sizeParts.value}</span>
-          <span className={`${template === "catch" ? "text-5xl" : "text-4xl"} font-bold tracking-tight`}>{sizeParts.unit}</span>
+        <p className="mt-2 flex items-baseline gap-1.5 leading-none">
+          <span className={`${template === "catch" ? "text-7xl" : "text-6xl"} font-black tracking-normal`}>{sizeParts.value}</span>
+          <span className="text-xl font-black tracking-normal">{sizeParts.unit}</span>
         </p>
         <div className="mt-4 grid gap-2 text-xs font-black">
           <span>{data.dateLabel}</span>
@@ -439,26 +439,24 @@ function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
 function drawSizeText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, maxWidth: number) {
   ctx.save();
   let fontSize = size;
-  const horizontalScale = 0.9;
   const sizeParts = splitSizeLabel(text);
-  const fontStack = '"Helvetica Neue Condensed Bold", "Arial Narrow", "Avenir Next Condensed", Helvetica, system-ui, sans-serif';
-  const unitScale = 0.48;
-  const unitGap = 10;
-  ctx.font = `700 ${fontSize}px ${fontStack}`;
-  while ((ctx.measureText(sizeParts.value).width + unitGap + ctx.measureText(sizeParts.unit).width * unitScale) * horizontalScale > maxWidth && fontSize > 42) {
+  const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
+  const unitSize = 36;
+  const unitGap = 14;
+  ctx.font = `900 ${fontSize}px ${fontStack}`;
+  while (ctx.measureText(sizeParts.value).width + unitGap + ctx.measureText(sizeParts.unit).width > maxWidth && fontSize > 42) {
     fontSize -= 4;
-    ctx.font = `700 ${fontSize}px ${fontStack}`;
+    ctx.font = `900 ${fontSize}px ${fontStack}`;
   }
   ctx.fillStyle = color;
   ctx.shadowColor = color === "#ffffff" ? "rgba(0,0,0,0.66)" : "rgba(255,255,255,0)";
   ctx.shadowBlur = 14;
   ctx.shadowOffsetY = 3;
-  ctx.scale(horizontalScale, 1);
-  const scaledX = x / horizontalScale;
+  const scaledX = x;
   ctx.fillText(sizeParts.value, scaledX, y);
   const numberWidth = ctx.measureText(sizeParts.value).width;
-  ctx.font = `700 ${Math.round(fontSize * unitScale)}px ${fontStack}`;
-  ctx.fillText(sizeParts.unit, scaledX + numberWidth + unitGap, y - Math.round(fontSize * 0.04));
+  ctx.font = `900 ${unitSize}px ${fontStack}`;
+  ctx.fillText(sizeParts.unit, scaledX + numberWidth + unitGap, y - Math.round(fontSize * 0.06));
   ctx.restore();
 }
 
