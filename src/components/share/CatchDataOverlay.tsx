@@ -255,37 +255,39 @@ const OverlayPreview = forwardRef<HTMLDivElement, { item: Catch; template: Share
   const aspectClass = format === "story" ? "aspect-[9/16]" : format === "feed" ? "aspect-[4/5]" : "aspect-square";
   const overlayToneClass = outputMode === "transparent" ? "text-ink drop-shadow-none" : "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]";
   return (
-    <div ref={ref} className={`relative mx-auto w-full max-w-[360px] overflow-hidden rounded shadow-soft ${outputMode === "transparent" ? "bg-transparent" : "bg-slate-900"} ${aspectClass}`}>
-      {outputMode === "photo" && backgroundUrl ? (
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url("${escapeCssUrl(getCanvasSafeImageUrl(backgroundUrl))}")` }}
-          aria-hidden="true"
-        />
-      ) : (
-        <div data-export-hidden="true" className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,118,110,0.14),rgba(255,255,255,0.04)),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%)] bg-[length:100%_100%,24px_24px,24px_24px] bg-[position:0_0,0_0,12px_12px]" />
-      )}
-      {outputMode === "photo" ? <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" /> : null}
-      <div className={`absolute inset-x-0 ${template === "catch" ? "bottom-8 px-7" : template === "data" ? "bottom-6 px-5" : "bottom-8 px-6"} ${overlayToneClass}`}>
-        <Image
-          src={SHARE_LOGO_SRC}
-          alt="TSURILOGUE"
-          width={1000}
-          height={401}
-          className={`h-auto w-32 object-contain ${outputMode === "photo" ? "brightness-0 invert" : ""}`}
-          unoptimized
-        />
-        <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
-        <p className="mt-2 flex items-baseline gap-2 leading-none" style={{ fontFamily: '"Helvetica Neue Condensed Bold", "HelveticaNeue-CondensedBold", "Arial Narrow", "Bebas Neue", sans-serif' }}>
-          <span className="text-[3.75rem] font-bold tracking-normal">{sizeParts.value}</span>
-          <span className="text-xl font-bold tracking-normal">{sizeParts.unit}</span>
-        </p>
-        <div className="mt-4 grid gap-2 text-xs font-black">
-          <span>{data.dateLabel}</span>
-          <span>{data.areaLabel}</span>
-          {template !== "simple" ? <span>{data.methodLabel}</span> : null}
-          {template === "data" ? <span>{[data.tideLabel, data.waterTempLabel, data.weatherLabel].filter(Boolean).join(" / ") || "Data logging"}</span> : null}
-          {data.hasCatchProof ? <span className="w-fit rounded-full bg-white/20 px-3 py-1 ring-1 ring-white/30">{data.catchProofLabel}</span> : null}
+    <div className="mx-auto w-full max-w-[360px]">
+      <div ref={ref} className={`relative w-full overflow-hidden rounded shadow-soft ${outputMode === "transparent" ? "bg-transparent" : "bg-slate-900"} ${aspectClass}`}>
+        {outputMode === "photo" && backgroundUrl ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url("${escapeCssUrl(getCanvasSafeImageUrl(backgroundUrl))}")` }}
+            aria-hidden="true"
+          />
+        ) : (
+          <div data-export-hidden="true" className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,118,110,0.14),rgba(255,255,255,0.04)),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%)] bg-[length:100%_100%,24px_24px,24px_24px] bg-[position:0_0,0_0,12px_12px]" />
+        )}
+        {outputMode === "photo" ? <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" /> : null}
+        <div className={`absolute inset-x-0 ${template === "catch" ? "bottom-8 px-7" : template === "data" ? "bottom-6 px-5" : "bottom-8 px-6"} ${overlayToneClass}`}>
+          <Image
+            src={SHARE_LOGO_SRC}
+            alt="TSURILOGUE"
+            width={1000}
+            height={401}
+            className={`h-auto w-32 object-contain ${outputMode === "photo" ? "brightness-0 invert" : ""}`}
+            unoptimized
+          />
+          <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
+          <p className="mt-2 flex items-baseline gap-2 leading-none" style={{ fontFamily: '"Helvetica Neue Condensed Bold", "HelveticaNeue-CondensedBold", "Arial Narrow", "Bebas Neue", sans-serif' }}>
+            <span className="text-[3.75rem] font-bold tracking-normal">{sizeParts.value}</span>
+            <span className="text-xl font-bold tracking-normal">{sizeParts.unit}</span>
+          </p>
+          <div className="mt-4 grid gap-2 text-xs font-black">
+            <span>{data.dateLabel}</span>
+            <span>{data.areaLabel}</span>
+            {template !== "simple" ? <span>{data.methodLabel}</span> : null}
+            {template === "data" ? <span>{[data.tideLabel, data.waterTempLabel, data.weatherLabel].filter(Boolean).join(" / ") || "Data logging"}</span> : null}
+            {data.hasCatchProof ? <span className="w-fit rounded-full bg-white/20 px-3 py-1 ring-1 ring-white/30">{data.catchProofLabel}</span> : null}
+          </div>
         </div>
       </div>
     </div>
@@ -309,6 +311,12 @@ async function renderShareOverlayImage({ previewNode, format, outputMode }: { pr
   const blob = await toBlob(previewNode, {
     cacheBust: true,
     pixelRatio: scale,
+    style: {
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      margin: "0",
+      maxWidth: "none"
+    },
     backgroundColor: outputMode === "transparent" ? undefined : "#0f172a",
     filter: (node) => !(node instanceof HTMLElement && node.dataset.exportHidden === "true"),
     fetchRequestInit: { cache: "no-store" },
