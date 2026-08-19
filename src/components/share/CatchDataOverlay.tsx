@@ -242,6 +242,7 @@ export function CatchDataOverlay({
 
 function OverlayPreview({ item, template, format, outputMode, backgroundUrl }: { item: Catch; template: ShareOverlayTemplate; format: ShareOverlayFormat; outputMode: OutputMode; backgroundUrl: string }) {
   const data = getShareOverlayData(item);
+  const sizeParts = splitSizeLabel(data.sizeLabel);
   const aspectClass = format === "story" ? "aspect-[9/16]" : format === "feed" ? "aspect-[4/5]" : "aspect-square";
   return (
     <div className={`relative mx-auto w-full max-w-[360px] overflow-hidden rounded bg-slate-900 shadow-soft ${aspectClass}`}>
@@ -261,11 +262,9 @@ function OverlayPreview({ item, template, format, outputMode, backgroundUrl }: {
           unoptimized
         />
         <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
-        <p
-          className={`${template === "catch" ? "text-7xl" : "text-6xl"} mt-2 origin-left scale-x-[0.88] font-extrabold leading-none tracking-normal`}
-          style={{ fontFamily: 'Futura, "Avenir Next Condensed", "Arial Narrow", system-ui, sans-serif' }}
-        >
-          {data.sizeLabel}
+        <p className="mt-2 flex origin-left scale-x-[0.9] items-baseline gap-1 leading-none" style={{ fontFamily: '"Helvetica Neue Condensed Bold", "Arial Narrow", "Avenir Next Condensed", Helvetica, system-ui, sans-serif' }}>
+          <span className={`${template === "catch" ? "text-7xl" : "text-6xl"} font-bold tracking-tight`}>{sizeParts.value}</span>
+          <span className={`${template === "catch" ? "text-5xl" : "text-4xl"} font-bold tracking-tight`}>{sizeParts.unit}</span>
         </p>
         <div className="mt-4 grid gap-2 text-xs font-black">
           <span>{data.dateLabel}</span>
@@ -440,19 +439,33 @@ function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
 function drawSizeText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, maxWidth: number) {
   ctx.save();
   let fontSize = size;
-  const horizontalScale = 0.88;
-  ctx.font = `800 ${fontSize}px Futura, "Avenir Next Condensed", "Arial Narrow", system-ui, sans-serif`;
-  while (ctx.measureText(text).width * horizontalScale > maxWidth && fontSize > 42) {
+  const horizontalScale = 0.9;
+  const sizeParts = splitSizeLabel(text);
+  const fontStack = '"Helvetica Neue Condensed Bold", "Arial Narrow", "Avenir Next Condensed", Helvetica, system-ui, sans-serif';
+  const unitScale = 0.48;
+  const unitGap = 10;
+  ctx.font = `700 ${fontSize}px ${fontStack}`;
+  while ((ctx.measureText(sizeParts.value).width + unitGap + ctx.measureText(sizeParts.unit).width * unitScale) * horizontalScale > maxWidth && fontSize > 42) {
     fontSize -= 4;
-    ctx.font = `800 ${fontSize}px Futura, "Avenir Next Condensed", "Arial Narrow", system-ui, sans-serif`;
+    ctx.font = `700 ${fontSize}px ${fontStack}`;
   }
   ctx.fillStyle = color;
   ctx.shadowColor = color === "#ffffff" ? "rgba(0,0,0,0.66)" : "rgba(255,255,255,0)";
   ctx.shadowBlur = 14;
   ctx.shadowOffsetY = 3;
   ctx.scale(horizontalScale, 1);
-  ctx.fillText(text, x / horizontalScale, y);
+  const scaledX = x / horizontalScale;
+  ctx.fillText(sizeParts.value, scaledX, y);
+  const numberWidth = ctx.measureText(sizeParts.value).width;
+  ctx.font = `700 ${Math.round(fontSize * unitScale)}px ${fontStack}`;
+  ctx.fillText(sizeParts.unit, scaledX + numberWidth + unitGap, y - Math.round(fontSize * 0.04));
   ctx.restore();
+}
+
+function splitSizeLabel(label: string) {
+  const match = label.trim().match(/^(.+?)\s*(cm|mm|kg|g)$/i);
+  if (!match) return { value: label, unit: "" };
+  return { value: match[1], unit: match[2] };
 }
 
 function drawPill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, outputMode: OutputMode) {
