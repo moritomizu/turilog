@@ -263,7 +263,7 @@ function OverlayPreview({ item, template, format, outputMode, backgroundUrl }: {
         />
         <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
         <p className="mt-2 flex items-baseline gap-2 leading-none" style={{ fontFamily: '"Helvetica Neue Condensed Bold", "HelveticaNeue-CondensedBold", "Arial Narrow", "Bebas Neue", sans-serif' }}>
-          <span className="text-[2.75rem] font-bold tracking-normal">{sizeParts.value}</span>
+          <span className="text-[3.75rem] font-bold tracking-normal">{sizeParts.value}</span>
           <span className="text-xl font-bold tracking-normal">{sizeParts.unit}</span>
         </p>
         <div className="mt-4 grid gap-2 text-xs font-black">
@@ -374,7 +374,7 @@ async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeo
 
   await drawLogo(ctx, SHARE_LOGO_SRC, left, logoY, logoWidth, outputMode);
   drawText(ctx, data.fishType, left, fishY, template === "catch" ? 126 : 96, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
-  drawSizeText(ctx, data.sizeLabel, left, sizeY, 132, color, MAX_OVERLAY_TEXT_WIDTH);
+  drawSizeText(ctx, data.sizeLabel, left, sizeY, 180, color, MAX_OVERLAY_TEXT_WIDTH);
   drawText(ctx, data.dateLabel, left, dateY, 34, "800", subColor, 0, MAX_OVERLAY_TEXT_WIDTH);
   drawText(ctx, data.areaLabel, left, areaY, 40, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
 
