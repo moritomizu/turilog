@@ -16,6 +16,7 @@ import type { Catch } from "@/types";
 
 type OutputMode = "photo" | "transparent";
 const SHARE_LOGO_SRC = "/icons/trlg-logo.png";
+const MAX_OVERLAY_TEXT_WIDTH = 900;
 
 export function CatchDataOverlay({
   item,
@@ -344,30 +345,38 @@ function drawGradient(ctx: CanvasRenderingContext2D, width: number, height: numb
 
 async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeof getShareOverlayData>, template: ShareOverlayTemplate, width: number, height: number, outputMode: OutputMode) {
   const left = template === "data" ? 72 : 86;
-  const bottom = template === "catch" ? 136 : 118;
-  const baseY = height - bottom;
+  const safeBottom = height - 110;
   const color = outputMode === "transparent" ? "#111827" : "#ffffff";
   const subColor = outputMode === "transparent" ? "#334155" : "rgba(255,255,255,0.88)";
+  const metaRows =
+    template === "data"
+      ? [data.methodLabel, data.tideLabel, data.waterTempLabel, data.weatherLabel, data.lureLabel || data.tackleLabel].filter(Boolean).slice(0, 5)
+      : template === "catch"
+        ? [data.methodLabel].filter(Boolean)
+        : [];
+  const pillRows = data.hasCatchProof ? [...metaRows, data.catchProofLabel] : metaRows;
+  const firstPillY = pillRows.length ? safeBottom - (pillRows.length - 1) * 62 : safeBottom;
+  const areaY = pillRows.length ? firstPillY - 82 : safeBottom;
+  const dateY = areaY - 56;
+  const sizeY = dateY - (template === "catch" ? 118 : 100);
+  const fishY = sizeY - (template === "catch" ? 148 : 126);
+  const logoWidth = template === "data" ? 220 : 238;
+  const logoY = fishY - (template === "catch" ? 214 : 184);
 
   if (outputMode === "transparent") {
     ctx.fillStyle = "rgba(255,255,255,0)";
     ctx.fillRect(0, 0, width, height);
   }
 
-  await drawLogo(ctx, SHARE_LOGO_SRC, left, baseY - 390, 260, outputMode);
-  drawText(ctx, data.fishType, left, baseY - 230, template === "catch" ? 132 : 104, "900", color);
-  drawText(ctx, data.sizeLabel, left, baseY - 92, template === "catch" ? 148 : 118, "900", color);
-  drawText(ctx, data.dateLabel, left, baseY, 34, "800", subColor);
-  drawText(ctx, data.areaLabel, left, baseY + 52, 42, "900", color);
+  await drawLogo(ctx, SHARE_LOGO_SRC, left, logoY, logoWidth, outputMode);
+  drawText(ctx, data.fishType, left, fishY, template === "catch" ? 126 : 96, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
+  drawText(ctx, data.sizeLabel, left, sizeY, template === "catch" ? 144 : 116, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
+  drawText(ctx, data.dateLabel, left, dateY, 34, "800", subColor, 0, MAX_OVERLAY_TEXT_WIDTH);
+  drawText(ctx, data.areaLabel, left, areaY, 40, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
 
-  if (template !== "simple") drawText(ctx, data.methodLabel, left, baseY + 108, 34, "900", subColor);
-  if (template === "data") {
-    const rows = [data.tideLabel, data.waterTempLabel, data.weatherLabel, data.lureLabel || data.tackleLabel].filter(Boolean).slice(0, 4);
-    rows.forEach((row, index) => {
-      drawPill(ctx, row, left, baseY + 170 + index * 58, outputMode);
-    });
-  }
-  if (data.hasCatchProof) drawPill(ctx, data.catchProofLabel, left, baseY + (template === "data" ? 420 : 170), outputMode);
+  pillRows.forEach((row, index) => {
+    drawPill(ctx, row, left, firstPillY + index * 62, outputMode);
+  });
 }
 
 async function drawLogo(ctx: CanvasRenderingContext2D, logoUrl: string, x: number, y: number, width: number, outputMode: OutputMode) {
@@ -399,9 +408,14 @@ async function drawLogo(ctx: CanvasRenderingContext2D, logoUrl: string, x: numbe
   ctx.restore();
 }
 
-function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, weight: string, color: string, letterSpacing = 0) {
+function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, weight: string, color: string, letterSpacing = 0, maxWidth?: number) {
   ctx.save();
-  ctx.font = `${weight} ${size}px system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif`;
+  let fontSize = size;
+  ctx.font = `${weight} ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif`;
+  while (maxWidth && ctx.measureText(text).width > maxWidth && fontSize > 28) {
+    fontSize -= 4;
+    ctx.font = `${weight} ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif`;
+  }
   ctx.fillStyle = color;
   ctx.shadowColor = color === "#ffffff" ? "rgba(0,0,0,0.66)" : "rgba(255,255,255,0)";
   ctx.shadowBlur = 14;
@@ -412,7 +426,7 @@ function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
     let currentX = x;
     for (const char of text) {
       ctx.fillText(char, currentX, y);
-      currentX += ctx.measureText(char).width + size * letterSpacing;
+      currentX += ctx.measureText(char).width + fontSize * letterSpacing;
     }
   }
   ctx.restore();
@@ -442,7 +456,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: n
 }
 
 async function loadImage(url: string) {
-  const response = await fetch(url, { mode: "cors" });
+  const response = await fetch(getCanvasSafeImageUrl(url), { mode: "cors" });
   if (!response.ok) throw new Error("背景写真を読み込めませんでした。");
   const blob = await response.blob();
   const objectUrl = URL.createObjectURL(blob);
@@ -454,5 +468,16 @@ async function loadImage(url: string) {
     return image;
   } finally {
     URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function getCanvasSafeImageUrl(url: string) {
+  if (!url || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return url;
+  try {
+    const parsedUrl = new URL(url);
+    if (typeof window !== "undefined" && parsedUrl.origin === window.location.origin) return url;
+    return `/api/share-image?url=${encodeURIComponent(url)}`;
+  } catch {
+    return url;
   }
 }

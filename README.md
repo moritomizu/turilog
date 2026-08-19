@@ -2213,7 +2213,7 @@ WordPressオリジン `https://tsurilogue.tapiyota.com` はCMSとして使用し
 - `CATCH`: 魚種とサイズを大きく表示する釣果写真向けテンプレート
 - `DATA`: 潮・水温・天候・タックルなど、存在するデータを絞って表示
 
-出力サイズは Story `9:16`、Feed `4:5`、Square `1:1` を選択できます。V1ではブラウザの Canvas API でPNGを生成し、対応端末では Web Share API で画像共有します。非対応端末では画像保存リンクを使います。
+出力サイズは Story `9:16`、Feed `4:5`、Square `1:1` を選択できます。V1ではブラウザの Canvas API でPNGを生成し、対応端末では Web Share API で画像共有します。非対応端末では画像保存リンクを使います。Firebase Storageなどの外部画像は、Canvas保存時のCORS差を避けるため `/api/share-image` 経由で読み込みます。
 
 ### 透明PNG
 
