@@ -75,6 +75,8 @@ export function CatchDataOverlay({
   async function generateImage() {
     setBusy(true);
     setMessage("画像を生成しています。");
+    generatedBlobRef.current = null;
+    setDownloadUrl("");
     try {
       const blob = await renderShareOverlayImage({
         item,
@@ -96,6 +98,8 @@ export function CatchDataOverlay({
         locale: "ja"
       });
     } catch (error) {
+      generatedBlobRef.current = null;
+      setDownloadUrl("");
       setMessage(error instanceof Error ? error.message : "画像を生成できませんでした。");
     } finally {
       setBusy(false);
@@ -274,7 +278,7 @@ const OverlayPreview = forwardRef<HTMLDivElement, { item: Catch; template: Share
             alt="TSURILOGUE"
             width={1000}
             height={401}
-            className={`h-auto w-32 object-contain ${outputMode === "photo" ? "brightness-0 invert" : ""}`}
+            className="h-auto w-32 object-contain brightness-0 invert"
             unoptimized
           />
           <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
@@ -507,19 +511,26 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: n
 }
 
 async function loadImage(url: string) {
-  const response = await fetch(getCanvasSafeImageUrl(url), { mode: "cors" });
-  if (!response.ok) throw new Error("背景写真を読み込めませんでした。");
-  const blob = await response.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  try {
+  const safeUrl = getCanvasSafeImageUrl(url);
+  return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new window.Image();
-    image.decoding = "async";
-    image.src = objectUrl;
-    await image.decode();
-    return image;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error("背景写真の読み込みに時間がかかっています。通信状況を確認するか、端末内の写真を背景に選び直してください。"));
+    }, 20000);
+    if (!safeUrl.startsWith("blob:") && !safeUrl.startsWith("data:")) {
+      image.crossOrigin = "anonymous";
+      image.referrerPolicy = "no-referrer";
+    }
+    image.onload = () => {
+      window.clearTimeout(timeoutId);
+      resolve(image);
+    };
+    image.onerror = () => {
+      window.clearTimeout(timeoutId);
+      reject(new Error("背景写真を読み込めませんでした。通信状況を確認するか、端末内の写真を背景に選び直してください。"));
+    };
+    image.src = safeUrl;
+  });
 }
 
 function getCanvasSafeImageUrl(url: string) {
