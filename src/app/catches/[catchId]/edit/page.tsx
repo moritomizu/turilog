@@ -29,6 +29,7 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
   const [selectedAreaId, setSelectedAreaId] = useState("");
   const [areaName, setAreaName] = useState("");
   const [pointName, setPointName] = useState("");
+  const [boatName, setBoatName] = useState("");
   const [measurementPhotoUrl, setMeasurementPhotoUrl] = useState<string | null>(null);
   const [measurementFile, setMeasurementFile] = useState<File | null>(null);
   const [removeMeasurementPhoto, setRemoveMeasurementPhoto] = useState(false);
@@ -54,6 +55,7 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
         setTackle(result.tackle ?? emptyTackleInfo());
         setAreaName(result.areaName);
         setPointName(result.pointName);
+        setBoatName(result.boatName ?? "");
         setMeasurementPhotoUrl(result.measurementPhotoUrl ?? null);
         if (result.latitude != null && result.longitude != null) {
           const point = { latitude: result.latitude, longitude: result.longitude };
@@ -142,6 +144,7 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
         areaName: savedAreaName,
         areaCode: inferredArea.areaCode,
         pointName: pointName.trim(),
+        boatName: boatName.trim(),
         blurRadiusMeters,
         locationUpdatedAt: location ? new Date().toISOString() : null,
         measurementPhotoUrl: nextMeasurementPhotoUrl,
@@ -247,6 +250,10 @@ function CatchEdit({ catchId, userId }: { catchId: string; userId: string }) {
               </label>
               <MapPicker location={location} onPick={(point) => applyLocation(point, "", "", { inferArea: true, message: "ピンの場所を釣果ポイントに設定しました。" })} />
               <p className="mt-3 text-sm text-slate-600">現在位置: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}</p>
+              <label className="mt-3 block">
+                <span className="text-sm font-bold">船名（任意）</span>
+                <input value={boatName} onChange={(event) => setBoatName(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold" placeholder="例: 〇〇丸 / 〇〇艇" />
+              </label>
               <label className="mt-3 block">
                 <span className="text-sm font-bold">ポイント名（任意）</span>
                 <input value={pointName} onChange={(event) => setPointName(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold" placeholder="例: いつもの堤防先端" />

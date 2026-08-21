@@ -48,6 +48,7 @@ type PostDraft = {
   selectedAreaId: string;
   areaName: string;
   pointName: string;
+  boatName: string;
   selectedTournamentId: string;
   selectedGroupId: string;
   showDetails: boolean;
@@ -80,6 +81,7 @@ function PostForm({ userId }: { userId: string }) {
   const [selectedAreaId, setSelectedAreaId] = useState("");
   const [areaName, setAreaName] = useState("");
   const [pointName, setPointName] = useState("");
+  const [boatName, setBoatName] = useState("");
   const [tournamentOptions, setTournamentOptions] = useState<Tournament[]>([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState("");
   const [groupOptions, setGroupOptions] = useState<Group[]>([]);
@@ -129,6 +131,7 @@ function PostForm({ userId }: { userId: string }) {
         setSelectedAreaId(draft.selectedAreaId);
         setAreaName(draft.areaName);
         setPointName(draft.pointName);
+        setBoatName(draft.boatName);
         setSelectedTournamentId(draft.selectedTournamentId);
         setSelectedGroupId(draft.selectedGroupId);
         setShowDetails(draft.showDetails);
@@ -164,6 +167,7 @@ function PostForm({ userId }: { userId: string }) {
         selectedAreaId,
         areaName,
         pointName,
+        boatName,
         selectedTournamentId,
         selectedGroupId,
         showDetails,
@@ -192,6 +196,7 @@ function PostForm({ userId }: { userId: string }) {
     selectedAreaId,
     areaName,
     pointName,
+    boatName,
     selectedTournamentId,
     selectedGroupId,
     showDetails,
@@ -386,6 +391,7 @@ function PostForm({ userId }: { userId: string }) {
         areaName: savedAreaName,
         areaCode: inferredArea.areaCode,
         pointName: pointName.trim(),
+        boatName: boatName.trim(),
         blurRadiusMeters,
         locationCreatedAt: location ? new Date().toISOString() : null,
         locationUpdatedAt: location ? new Date().toISOString() : null,
@@ -479,6 +485,7 @@ function PostForm({ userId }: { userId: string }) {
           selectedAreaId,
           areaName,
           pointName,
+          boatName,
           selectedTournamentId,
           selectedGroupId,
           showDetails,
@@ -695,6 +702,8 @@ function PostForm({ userId }: { userId: string }) {
             {showDetails ? (
               <div className="mt-4 space-y-4">
                 <Field label="釣った日時" type="datetime-local" value={caughtAt} onChange={setCaughtAt} required compact />
+
+                <Field label="船名（任意）" value={boatName} onChange={setBoatName} placeholder="例: 〇〇丸 / 〇〇艇" compact />
 
                 <MeasurementPhotoInput
                   file={measurementFile}
@@ -1294,6 +1303,7 @@ function hasDraftContent(draft: PostDraft) {
       draft.sizeCm.trim() ||
       draft.comment.trim() ||
       draft.pointName.trim() ||
+      draft.boatName.trim() ||
       Object.values(draft.tackle).some((value) => String(value ?? "").trim())
   );
 }
@@ -1321,6 +1331,7 @@ function readPostDraft(userId: string): PostDraft | null {
       selectedAreaId: data.selectedAreaId ?? "",
       areaName: data.areaName ?? "",
       pointName: data.pointName ?? "",
+      boatName: data.boatName ?? "",
       selectedTournamentId: data.selectedTournamentId ?? "",
       selectedGroupId: data.selectedGroupId ?? "",
       showDetails: Boolean(data.showDetails),

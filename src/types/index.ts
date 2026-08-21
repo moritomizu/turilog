@@ -518,6 +518,7 @@ export type Catch = TideInfo &
   areaName: string;
   areaCode: string;
   pointName: string;
+  boatName?: string;
   blurRadiusMeters: number | null;
   locationCreatedAt: string | null;
   locationUpdatedAt: string | null;

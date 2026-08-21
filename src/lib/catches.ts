@@ -103,6 +103,7 @@ export async function updateCatch(
       | "areaName"
       | "areaCode"
       | "pointName"
+      | "boatName"
       | "blurRadiusMeters"
       | "locationUpdatedAt"
       | "measurementPhotoUrl"
@@ -184,6 +185,7 @@ function normalizeCatchDoc(id: string, data: Record<string, unknown>): Catch {
     areaName: typeof data.areaName === "string" ? data.areaName : "",
     areaCode: typeof data.areaCode === "string" ? data.areaCode : "",
     pointName: typeof data.pointName === "string" ? data.pointName : "",
+    boatName: typeof data.boatName === "string" ? data.boatName : "",
     blurRadiusMeters: typeof data.blurRadiusMeters === "number" ? data.blurRadiusMeters : null,
     locationCreatedAt: typeof data.locationCreatedAt === "string" ? data.locationCreatedAt : null,
     locationUpdatedAt: typeof data.locationUpdatedAt === "string" ? data.locationUpdatedAt : null,
