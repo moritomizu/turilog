@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { toBlob } from "html-to-image";
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { logShareEvent } from "@/lib/shareEvents";
 import {
@@ -78,9 +77,11 @@ export function CatchDataOverlay({
     setMessage("画像を生成しています。");
     try {
       const blob = await renderShareOverlayImage({
-        previewNode: previewRef.current,
+        item,
+        template,
         format,
-        outputMode
+        outputMode,
+        backgroundUrl
       });
       generatedBlobRef.current = blob;
       setDownloadUrl((current) => {
@@ -253,7 +254,7 @@ const OverlayPreview = forwardRef<HTMLDivElement, { item: Catch; template: Share
   const data = getShareOverlayData(item);
   const sizeParts = splitSizeLabel(data.sizeLabel);
   const aspectClass = format === "story" ? "aspect-[9/16]" : format === "feed" ? "aspect-[4/5]" : "aspect-square";
-  const overlayToneClass = outputMode === "transparent" ? "text-ink drop-shadow-none" : "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]";
+  const overlayToneClass = "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]";
   return (
     <div className="mx-auto w-full max-w-[360px]">
       <div ref={ref} className={`relative w-full overflow-hidden rounded shadow-soft ${outputMode === "transparent" ? "bg-transparent" : "bg-slate-900"} ${aspectClass}`}>
@@ -303,55 +304,41 @@ function ControlSection({ title, children }: { title: string; children: React.Re
   );
 }
 
-async function renderShareOverlayImage({ previewNode, format, outputMode }: { previewNode: HTMLDivElement | null; format: ShareOverlayFormat; outputMode: OutputMode }) {
-  if (!previewNode) throw new Error("プレビューを取得できませんでした。");
+async function renderShareOverlayImage({
+  item,
+  template,
+  format,
+  outputMode,
+  backgroundUrl
+}: {
+  item: Catch;
+  template: ShareOverlayTemplate;
+  format: ShareOverlayFormat;
+  outputMode: OutputMode;
+  backgroundUrl: string;
+}) {
   const size = getFormatSize(format);
-  const rect = previewNode.getBoundingClientRect();
-  const scale = size.width / Math.max(rect.width, 1);
-  const blob = await toBlob(previewNode, {
-    cacheBust: true,
-    pixelRatio: scale,
-    style: {
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-      margin: "0",
-      maxWidth: "none"
-    },
-    backgroundColor: outputMode === "transparent" ? undefined : "#0f172a",
-    filter: (node) => !(node instanceof HTMLElement && node.dataset.exportHidden === "true"),
-    fetchRequestInit: { cache: "no-store" },
-    skipAutoScale: true
-  });
-  if (!blob) throw new Error("画像を書き出せませんでした。");
-  return resizeImageBlob(blob, size.width, size.height);
-}
+  const canvas = document.createElement("canvas");
+  canvas.width = size.width;
+  canvas.height = size.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("画像を書き出せませんでした。");
 
-async function resizeImageBlob(blob: Blob, width: number, height: number) {
-  const objectUrl = URL.createObjectURL(blob);
-  try {
-    const image = new window.Image();
-    image.decoding = "async";
-    image.src = objectUrl;
-    await image.decode();
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("画像を書き出せませんでした。");
-    ctx.clearRect(0, 0, width, height);
-    ctx.drawImage(image, 0, 0, width, height);
-
-    const resizedBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-    if (!resizedBlob) throw new Error("画像を書き出せませんでした。");
-    return resizedBlob;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
+  if (outputMode === "photo") {
+    await drawBackground(ctx, backgroundUrl, size.width, size.height);
+    drawGradient(ctx, size.width, size.height);
+  } else {
+    ctx.clearRect(0, 0, size.width, size.height);
   }
+
+  await drawOverlay(ctx, getShareOverlayData(item), template, size.width, size.height, outputMode);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!blob) throw new Error("画像を書き出せませんでした。");
+  return blob;
 }
 
 async function drawBackground(ctx: CanvasRenderingContext2D, imageUrl: string, width: number, height: number) {
-  const image = imageUrl ? await loadImage(imageUrl).catch(() => null) : null;
+  const image = imageUrl ? await loadImage(imageUrl) : null;
   if (!image) {
     const gradient = ctx.createLinearGradient(0, 0, width, height);
     gradient.addColorStop(0, "#082f49");
@@ -382,8 +369,8 @@ async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeo
   const left = template === "catch" ? 28 * scale : template === "data" ? 20 * scale : 24 * scale;
   const bottom = template === "data" ? 24 * scale : 32 * scale;
   const safeBottom = height - bottom;
-  const color = outputMode === "transparent" ? "#111827" : "#ffffff";
-  const subColor = outputMode === "transparent" ? "#334155" : "rgba(255,255,255,0.88)";
+  const color = "#ffffff";
+  const subColor = "rgba(255,255,255,0.88)";
   const rows = [
     data.dateLabel,
     data.areaLabel,
@@ -399,11 +386,6 @@ async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeo
   const fishY = sizeY - 64 * scale;
   const logoWidth = 128 * scale;
   const logoY = fishY - 84 * scale;
-
-  if (outputMode === "transparent") {
-    ctx.fillStyle = "rgba(255,255,255,0)";
-    ctx.fillRect(0, 0, width, height);
-  }
 
   await drawLogo(ctx, SHARE_LOGO_SRC, left, logoY, logoWidth, outputMode);
   drawText(ctx, data.fishType, left, fishY, template === "catch" ? 48 * scale : 36 * scale, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);
@@ -421,7 +403,7 @@ async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeo
 async function drawLogo(ctx: CanvasRenderingContext2D, logoUrl: string, x: number, y: number, width: number, outputMode: OutputMode) {
   const image = await loadImage(logoUrl).catch(() => null);
   if (!image) {
-    drawText(ctx, "TSURILOGUE", x, y + 52, 38, "900", outputMode === "transparent" ? "#111827" : "#ffffff", 0.2);
+    drawText(ctx, "TSURILOGUE", x, y + 52, 38, "900", "#ffffff", 0.2);
     return;
   }
 
@@ -434,7 +416,7 @@ async function drawLogo(ctx: CanvasRenderingContext2D, logoUrl: string, x: numbe
 
   logoCtx.drawImage(image, 0, 0, width, height);
   logoCtx.globalCompositeOperation = "source-in";
-  logoCtx.fillStyle = outputMode === "transparent" ? "#111827" : "#ffffff";
+  logoCtx.fillStyle = "#ffffff";
   logoCtx.fillRect(0, 0, width, height);
 
   ctx.save();
@@ -506,10 +488,10 @@ function drawPill(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   ctx.font = `900 ${12 * scale}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
   const metrics = ctx.measureText(text);
   const width = Math.min(metrics.width + 24 * scale, 760);
-  ctx.fillStyle = outputMode === "transparent" ? "rgba(15,118,110,0.12)" : "rgba(255,255,255,0.18)";
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
   roundRect(ctx, x, y - 22 * scale, width, 28 * scale, 14 * scale);
   ctx.fill();
-  ctx.fillStyle = outputMode === "transparent" ? "#0f766e" : "#ffffff";
+  ctx.fillStyle = "#ffffff";
   ctx.fillText(text, x + 12 * scale, y);
   ctx.restore();
 }

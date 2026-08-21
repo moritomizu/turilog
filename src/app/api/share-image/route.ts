@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 30 * 1024 * 1024;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
