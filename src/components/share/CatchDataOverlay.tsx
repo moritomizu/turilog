@@ -116,12 +116,13 @@ export function CatchDataOverlay({
     const file = new File([blob], `tsurilogue-${item.id}-${template}.png`, { type: "image/png" });
     const canShareFile = typeof navigator !== "undefined" && "canShare" in navigator && navigator.canShare?.({ files: [file] });
     if (canShareFile && navigator.share) {
-      await navigator.share({
+      const sharePayload: ShareData = {
         title: `${overlayData.fishType} ${overlayData.sizeLabel}`,
         text: "TSURILOGUEで釣果を記録しました。",
-        url: shareUrl,
         files: [file]
-      });
+      };
+      if (item.isPublic) sharePayload.url = shareUrl;
+      await navigator.share(sharePayload);
       setMessage("共有を開始しました。");
       await logShareEvent(userId, "share_completed", {
         template,

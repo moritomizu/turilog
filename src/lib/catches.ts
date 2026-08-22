@@ -118,9 +118,14 @@ export async function updateCatch(
   const db = getFirebaseDb();
   await updateDoc(doc(db, "catches", catchId), data);
   const publicRef = doc(db, "publicCatches", catchId);
-  const publicSnapshot = await getDoc(publicRef);
-  if (publicSnapshot.exists()) {
-    await updateDoc(publicRef, removeUndefinedDeep(data));
+  const publicSnapshot = await getDoc(publicRef).catch((error) => {
+    console.warn("public catch sync lookup failed", error);
+    return null;
+  });
+  if (publicSnapshot?.exists()) {
+    await updateDoc(publicRef, removeUndefinedDeep(data)).catch((error) => {
+      console.warn("public catch sync update failed", error);
+    });
   }
 }
 

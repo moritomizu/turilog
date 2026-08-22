@@ -33,7 +33,7 @@ export const shareOverlayFormats: Array<{ key: ShareOverlayFormat; label: string
 
 export function getShareOverlayData(item: Catch): ShareOverlayData {
   const locationParts = [item.boatName, item.areaName].filter(Boolean);
-  const areaLabel = locationParts.length ? locationParts.join(" ・ ") : "Area private";
+  const areaLabel = locationParts.length ? locationParts.join("　") : "Area private";
   return {
     brand: "TSURILOGUE",
     fishType: item.fishType || "釣果",
