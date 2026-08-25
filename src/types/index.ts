@@ -29,6 +29,7 @@ export type FishingMotivation = "casual" | "improve" | "serious" | "competitive"
 export type AiReportPeriod = "all" | "last7" | "last30" | "last90" | "last180" | "thisYear" | "sameSeason";
 export type AiReportPlannedTimeBand = "allDay" | "morning" | "daytime" | "evening" | "night" | "custom";
 export type AiReportSourceScope = "personal" | "group";
+export type UnitSystem = "metric" | "imperial";
 export type SubscriptionPlan = "free" | "premium" | "organizer" | "groupPro" | "tester";
 export type SubscriptionStatus = "none" | "active" | "trialing" | "past_due" | "canceled" | "incomplete" | "incomplete_expired" | "unpaid" | "paused";
 export type NotificationCategory =
@@ -269,6 +270,15 @@ export type User = {
   avatarUrl?: string | null;
   selfIntroduction?: string;
   preferredLocale?: "ja" | "en";
+  unitSystem?: UnitSystem;
+  acquisition?: {
+    ref?: string;
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    firstLandingPath?: string;
+    capturedAt?: string;
+  };
   createdAt: Date;
   termsAccepted?: boolean;
   privacyAccepted?: boolean;
@@ -300,6 +310,15 @@ export type UserProfile = {
   avatarUrl?: string | null;
   selfIntroduction?: string;
   preferredLocale?: "ja" | "en";
+  unitSystem?: UnitSystem;
+  acquisition?: {
+    ref?: string;
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    firstLandingPath?: string;
+    capturedAt?: string;
+  };
   ageRange?: AgeRange;
   residenceArea?: string;
   fishingAreas?: string[];

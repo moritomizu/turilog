@@ -1,7 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { getLocaleFromPathname } from "@/lib/i18n";
 import { logShareEvent } from "@/lib/shareEvents";
 import {
   getFormatSize,
@@ -10,9 +13,12 @@ import {
   shareOverlayFormats,
   shareOverlayTemplates,
   type ShareOverlayFormat,
+  type ShareOverlayData,
   type ShareOverlayTemplate
 } from "@/lib/shareOverlay";
-import type { Catch } from "@/types";
+import { getDefaultUnitSystem } from "@/lib/units";
+import { getUserProfile } from "@/lib/userProfiles";
+import type { Catch, UnitSystem } from "@/types";
 
 type OutputMode = "photo" | "transparent";
 const SHARE_LOGO_SRC = "/icons/trlg-logo.png";
@@ -29,26 +35,43 @@ export function CatchDataOverlay({
   shareUrl: string;
   onClose: () => void;
 }) {
+  const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname);
+  const t = useTranslations("shareOverlay");
   const [template, setTemplate] = useState<ShareOverlayTemplate>("simple");
   const [format, setFormat] = useState<ShareOverlayFormat>("story");
   const [outputMode, setOutputMode] = useState<OutputMode>("photo");
   const [backgroundUrl, setBackgroundUrl] = useState(item.imageUrl ?? "");
   const [downloadUrl, setDownloadUrl] = useState("");
-  const [message, setMessage] = useState("プレビューを確認して生成してください。");
+  const [message, setMessage] = useState(t("previewReady"));
   const [busy, setBusy] = useState(false);
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>(getDefaultUnitSystem(locale));
   const generatedBlobRef = useRef<Blob | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
-  const overlayData = useMemo(() => getShareOverlayData(item), [item]);
+  const overlayData = useMemo(() => getShareOverlayData(item, { locale, unitSystem }), [item, locale, unitSystem]);
   const selectedFormat = getFormatSize(format);
+
+  useEffect(() => {
+    let mounted = true;
+    getUserProfile(userId)
+      .then((profile) => {
+        if (!mounted) return;
+        setUnitSystem(profile?.unitSystem ?? getDefaultUnitSystem(locale));
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, [locale, userId]);
 
   useEffect(() => {
     logShareEvent(userId, "share_overlay_selected", {
       template,
       share_type: outputMode,
       catch_proof: overlayData.hasCatchProof,
-      locale: "ja"
+      locale
     });
-  }, [outputMode, overlayData.hasCatchProof, template, userId]);
+  }, [locale, outputMode, overlayData.hasCatchProof, template, userId]);
 
   useEffect(() => {
     return () => {
@@ -59,8 +82,8 @@ export function CatchDataOverlay({
   useEffect(() => {
     generatedBlobRef.current = null;
     setDownloadUrl("");
-    setMessage("プレビューを確認して生成してください。");
-  }, [backgroundUrl, format, outputMode, template]);
+    setMessage(t("previewReady"));
+  }, [backgroundUrl, format, outputMode, template, t]);
 
   function handleBackgroundFile(file: File | null) {
     if (!file) return;
@@ -69,12 +92,12 @@ export function CatchDataOverlay({
       if (current.startsWith("blob:")) URL.revokeObjectURL(current);
       return objectUrl;
     });
-    setMessage("端末の写真を背景に設定しました。");
+    setMessage(locale === "en" ? "Selected a photo from this device." : "端末の写真を背景に設定しました。");
   }
 
   async function generateImage() {
     setBusy(true);
-    setMessage("画像を生成しています。");
+    setMessage(locale === "en" ? "Generating image." : "画像を生成しています。");
     generatedBlobRef.current = null;
     setDownloadUrl("");
     try {
@@ -83,24 +106,26 @@ export function CatchDataOverlay({
         template,
         format,
         outputMode,
-        backgroundUrl
+        backgroundUrl,
+        locale,
+        unitSystem
       });
       generatedBlobRef.current = blob;
       setDownloadUrl((current) => {
         if (current) URL.revokeObjectURL(current);
         return URL.createObjectURL(blob);
       });
-      setMessage(outputMode === "transparent" ? "透明PNGを生成しました。" : "シェア画像を生成しました。");
+      setMessage(outputMode === "transparent" ? (locale === "en" ? "Transparent PNG generated." : "透明PNGを生成しました。") : locale === "en" ? "Share image generated." : "シェア画像を生成しました。");
       await logShareEvent(userId, "share_image_generated", {
         template,
         share_type: outputMode,
         catch_proof: overlayData.hasCatchProof,
-        locale: "ja"
+        locale
       });
     } catch (error) {
       generatedBlobRef.current = null;
       setDownloadUrl("");
-      setMessage(error instanceof Error ? error.message : "画像を生成できませんでした。");
+      setMessage(error instanceof Error ? error.message : locale === "en" ? "Could not generate the image." : "画像を生成できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -118,22 +143,22 @@ export function CatchDataOverlay({
     if (canShareFile && navigator.share) {
       const sharePayload: ShareData = {
         title: `${overlayData.fishType} ${overlayData.sizeLabel}`,
-        text: "TSURILOGUEで釣果を記録しました。",
+        text: t("loggedText"),
         files: [file]
       };
       if (item.isPublic) sharePayload.url = shareUrl;
       await navigator.share(sharePayload);
-      setMessage("共有を開始しました。");
+      setMessage(locale === "en" ? "Share sheet opened." : "共有を開始しました。");
       await logShareEvent(userId, "share_completed", {
         template,
         share_type: outputMode,
         catch_proof: overlayData.hasCatchProof,
-        locale: "ja"
+        locale
       });
       return;
     }
 
-    setMessage("この端末では画像共有に対応していないため、画像を保存してSNSへ投稿してください。");
+    setMessage(locale === "en" ? "This device cannot share the image directly. Save it and post it to your SNS app." : "この端末では画像共有に対応していないため、画像を保存してSNSへ投稿してください。");
   }
 
   async function handleSaveClick() {
@@ -141,7 +166,7 @@ export function CatchDataOverlay({
       template,
       share_type: outputMode,
       catch_proof: overlayData.hasCatchProof,
-      locale: "ja"
+      locale
     });
   }
 
@@ -150,24 +175,24 @@ export function CatchDataOverlay({
       <section className="max-h-[92svh] w-full max-w-5xl overflow-y-auto rounded border border-teal-100 bg-white shadow-soft">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-teal-50 bg-white/95 px-4 py-3 backdrop-blur">
           <div>
-            <p className="text-xs font-black text-water">DATA OVERLAY</p>
-            <h2 id="share-overlay-title" className="text-xl font-black text-ink">釣果データを重ねる</h2>
+            <p className="text-xs font-black text-water">{t("eyebrow")}</p>
+            <h2 id="share-overlay-title" className="text-xl font-black text-ink">{t("title")}</h2>
           </div>
-          <button type="button" onClick={onClose} className="tap-target rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-600" aria-label="閉じる">
+          <button type="button" onClick={onClose} className="tap-target rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-600" aria-label={locale === "en" ? "Close" : "閉じる"}>
             ×
           </button>
         </div>
 
         <div className="grid gap-5 p-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:p-5">
           <div className="space-y-4">
-            <OverlayPreview ref={previewRef} item={item} template={template} format={format} outputMode={outputMode} backgroundUrl={backgroundUrl} />
+            <OverlayPreview ref={previewRef} data={overlayData} template={template} format={format} outputMode={outputMode} backgroundUrl={backgroundUrl} />
             <p className="rounded bg-foam p-3 text-xs font-bold leading-5 text-slate-600">
-              正確なGPS座標や詳細ポイント名はシェア画像に表示しません。エリア情報のみを使用します。
+              {t("privacyNote")}
             </p>
           </div>
 
           <div className="space-y-5">
-            <ControlSection title="テンプレート">
+            <ControlSection title={t("template")}>
               <div className="grid gap-2 sm:grid-cols-3">
                 {shareOverlayTemplates.map((item) => (
                   <button
@@ -175,7 +200,7 @@ export function CatchDataOverlay({
                     type="button"
                     onClick={() => {
                       setTemplate(item.key);
-                      logShareEvent(userId, "share_template_selected", { template: item.key, share_type: outputMode, catch_proof: overlayData.hasCatchProof, locale: "ja" });
+                      logShareEvent(userId, "share_template_selected", { template: item.key, share_type: outputMode, catch_proof: overlayData.hasCatchProof, locale });
                     }}
                     className={`rounded border p-3 text-left transition ${template === item.key ? "border-water bg-teal-50 text-water" : "border-slate-200 bg-white text-slate-700"}`}
                   >
@@ -186,7 +211,7 @@ export function CatchDataOverlay({
               </div>
             </ControlSection>
 
-            <ControlSection title="サイズ">
+            <ControlSection title={t("format")}>
               <div className="grid gap-2 sm:grid-cols-3">
                 {shareOverlayFormats.map((item) => (
                   <button
@@ -201,47 +226,47 @@ export function CatchDataOverlay({
               </div>
             </ControlSection>
 
-            <ControlSection title="出力">
+            <ControlSection title={t("output")}>
               <div className="grid gap-2 sm:grid-cols-2">
                 <button type="button" onClick={() => setOutputMode("photo")} className={`rounded border px-3 py-3 text-sm font-black ${outputMode === "photo" ? "border-water bg-water text-white" : "border-slate-200 bg-white text-slate-700"}`}>
-                  写真つき画像
+                  {t("photoOutput")}
                 </button>
                 <button type="button" onClick={() => setOutputMode("transparent")} className={`rounded border px-3 py-3 text-sm font-black ${outputMode === "transparent" ? "border-water bg-water text-white" : "border-slate-200 bg-white text-slate-700"}`}>
-                  透明PNG
+                  {t("transparentOutput")}
                 </button>
               </div>
             </ControlSection>
 
-            <ControlSection title="背景写真">
+            <ControlSection title={t("backgroundPhoto")}>
               <div className="rounded border border-slate-200 bg-foam p-3">
-                <p className="text-xs font-bold leading-5 text-slate-600">標準ではこの釣果に登録された写真を使います。端末内の別写真も背景にできます。</p>
+                <p className="text-xs font-bold leading-5 text-slate-600">{locale === "en" ? "The catch photo is used by default. You can choose another photo from this device." : "標準ではこの釣果に登録された写真を使います。端末内の別写真も背景にできます。"}</p>
                 <label className="tap-target mt-3 inline-flex cursor-pointer rounded bg-white px-4 py-2 text-sm font-black text-water ring-1 ring-teal-100">
-                  写真を選ぶ
+                  {t("choosePhoto")}
                   <input type="file" accept="image/*" className="sr-only" onChange={(event) => handleBackgroundFile(event.target.files?.[0] ?? null)} />
                 </label>
               </div>
             </ControlSection>
 
             <div className="rounded border border-teal-100 bg-white p-3">
-              <p className="text-sm font-black text-ink">生成サイズ</p>
+              <p className="text-sm font-black text-ink">{locale === "en" ? "Export size" : "生成サイズ"}</p>
               <p className="mt-1 text-xs font-bold text-slate-600">{selectedFormat.width} × {selectedFormat.height}px / {getTemplateLabel(template)}</p>
               <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-3">
               <button type="button" disabled={busy} onClick={generateImage} className="tap-target rounded bg-water px-4 py-3 text-sm font-black text-white disabled:opacity-60">
-                {busy ? "生成中..." : "画像生成"}
+                {busy ? t("generating") : t("generate")}
               </button>
               <button type="button" disabled={busy} onClick={shareImage} className="tap-target rounded bg-coral px-4 py-3 text-sm font-black text-white disabled:opacity-60">
-                共有する
+                {t("share")}
               </button>
               {downloadUrl ? (
                 <a href={downloadUrl} download={`tsurilogue-${item.id}-${template}.png`} onClick={handleSaveClick} className="tap-target rounded border border-slate-300 px-4 py-3 text-center text-sm font-black text-ink">
-                  保存
+                  {t("save")}
                 </a>
               ) : (
                 <button type="button" disabled className="tap-target rounded border border-slate-200 px-4 py-3 text-sm font-black text-slate-400">
-                  保存
+                  {t("save")}
                 </button>
               )}
             </div>
@@ -252,11 +277,10 @@ export function CatchDataOverlay({
   );
 }
 
-const OverlayPreview = forwardRef<HTMLDivElement, { item: Catch; template: ShareOverlayTemplate; format: ShareOverlayFormat; outputMode: OutputMode; backgroundUrl: string }>(function OverlayPreview(
-  { item, template, format, outputMode, backgroundUrl },
+const OverlayPreview = forwardRef<HTMLDivElement, { data: ShareOverlayData; template: ShareOverlayTemplate; format: ShareOverlayFormat; outputMode: OutputMode; backgroundUrl: string }>(function OverlayPreview(
+  { data, template, format, outputMode, backgroundUrl },
   ref
 ) {
-  const data = getShareOverlayData(item);
   const sizeParts = splitSizeLabel(data.sizeLabel);
   const aspectClass = format === "story" ? "aspect-[9/16]" : format === "feed" ? "aspect-[4/5]" : "aspect-square";
   const overlayToneClass = "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]";
@@ -314,13 +338,17 @@ async function renderShareOverlayImage({
   template,
   format,
   outputMode,
-  backgroundUrl
+  backgroundUrl,
+  locale,
+  unitSystem
 }: {
   item: Catch;
   template: ShareOverlayTemplate;
   format: ShareOverlayFormat;
   outputMode: OutputMode;
   backgroundUrl: string;
+  locale: ReturnType<typeof getLocaleFromPathname>;
+  unitSystem: UnitSystem;
 }) {
   const size = getFormatSize(format);
   const canvas = document.createElement("canvas");
@@ -336,7 +364,7 @@ async function renderShareOverlayImage({
     ctx.clearRect(0, 0, size.width, size.height);
   }
 
-  await drawOverlay(ctx, getShareOverlayData(item), template, size.width, size.height, outputMode);
+  await drawOverlay(ctx, getShareOverlayData(item, { locale, unitSystem }), template, size.width, size.height, outputMode);
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("画像を書き出せませんでした。");
   return blob;
@@ -483,7 +511,7 @@ function drawSizeText(ctx: CanvasRenderingContext2D, text: string, x: number, y:
 }
 
 function splitSizeLabel(label: string) {
-  const match = label.trim().match(/^(.+?)\s*(cm|mm|kg|g)$/i);
+  const match = label.trim().match(/^(.+?)\s*(cm|mm|in|kg|g)$/i);
   if (!match) return { value: label, unit: "" };
   return { value: match[1], unit: match[2] };
 }

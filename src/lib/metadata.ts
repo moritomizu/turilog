@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { APP_NAME, APP_NAME_WITH_JA } from "@/lib/brand";
+import { localizePath, stripLocaleFromPathname } from "@/lib/i18n";
 
 type MetadataDoc = Record<string, unknown>;
 
@@ -49,13 +50,22 @@ export function createPageMetadata({
   keywords?: string[];
 }): Metadata {
   const siteUrl = getSiteUrl();
-  const url = `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = `${siteUrl}${normalizedPath}`;
   const imageUrl = image ? (image.startsWith("http") ? image : `${siteUrl}${image.startsWith("/") ? image : `/${image}`}`) : `${siteUrl}/opengraph-image`;
+  const localeFreePath = stripLocaleFromPathname(normalizedPath);
   return {
     title,
     description,
     keywords: keywords ?? ["TSURILOGUE", "釣りローグ", "釣果記録", "釣りログ", "釣果ログ", "釣りアプリ", "釣果分析"],
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      languages: {
+        ja: `${siteUrl}${localizePath(localeFreePath, "ja")}`,
+        en: `${siteUrl}${localizePath(localeFreePath, "en")}`,
+        "x-default": `${siteUrl}${localizePath(localeFreePath, "ja")}`
+      }
+    },
     openGraph: {
       type: "website",
       siteName: appName,

@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
-import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
 import { TsuriLogLogo } from "@/components/TsuriLogLogo";
+import { getLocaleFromPathname } from "@/lib/i18n";
+import { captureAcquisitionFromUrl } from "@/lib/referralTracking";
 
 const navItems = [
   { href: "#features", label: "機能" },
@@ -30,6 +35,12 @@ const locationRules = ["本人：正確位置", "仲間：ぼかし表示", "一
 const locationCards = ["個人ログでは正確に記録", "グループでは共有範囲に応じて表示", "大会では主催者・参加者で表示を切替", "公開時はポイント流出を防止"];
 
 export function LandingPage() {
+  const locale = getLocaleFromPathname(usePathname());
+  useEffect(() => {
+    if (typeof window !== "undefined") captureAcquisitionFromUrl(window.location.href);
+  }, []);
+  if (locale === "en") return <EnglishLandingPage />;
+
   return (
     <main data-landing-page="true" className="min-h-screen overflow-hidden bg-[#f6fbfb] text-slate-950">
       <LandingHeader />
@@ -43,9 +54,218 @@ export function LandingPage() {
       <PricingSection />
       <UseCaseSection />
       <VisionSection />
+      <EnglishFinalCTA />
+      <EnglishLandingFooter />
+    </main>
+  );
+}
+
+function EnglishLandingPage() {
+  return (
+    <main data-landing-page="true" className="min-h-screen overflow-hidden bg-[#f6fbfb] text-slate-950">
+      <header className="fixed left-0 right-0 top-0 z-40 border-b border-white/50 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-4 lg:px-8">
+          <Link href="/en/lp" aria-label="TSURILOGUE landing page" className="flex items-center">
+            <TsuriLogLogo className="h-10 w-28 sm:h-12 sm:w-32" />
+          </Link>
+          <nav className="hidden items-center gap-8 text-sm font-black text-slate-700 md:flex">
+            <a href="#features" className="transition hover:text-[#0f766e]">Features</a>
+            <a href="#group" className="transition hover:text-[#0f766e]">Groups</a>
+            <a href="#tournament" className="transition hover:text-[#0f766e]">Tournaments</a>
+            <a href="#ai" className="transition hover:text-[#0f766e]">AI</a>
+            <a href="#premium" className="transition hover:text-[#0f766e]">Premium</a>
+          </nav>
+          <div className="flex items-center gap-2">
+            <Link href="/en/login" className="hidden rounded-full px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100 sm:inline-flex">
+              Log in
+            </Link>
+            <Link href="/en/login" className="rounded-full bg-[#f97316] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
+              Start for free
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <section className="relative isolate min-h-[760px] overflow-hidden bg-[#06131f] pt-24 text-white">
+        <HeroBackground imageUrl="/images/lp/IMG_7885.jpg" overlayOpacity={0.72} objectPosition="center right" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 lg:grid-cols-[1fr_0.88fr] lg:px-8 lg:py-28">
+          <div className="max-w-2xl">
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-orange-200">PERSONAL FISHING LOG</p>
+            <h1 className="mt-5 text-4xl font-black leading-[1.08] tracking-normal sm:text-5xl lg:text-6xl">
+              Every catch brings you
+              <span className="block text-[#7dd3fc]">closer to the next one.</span>
+            </h1>
+            <p className="mt-7 max-w-2xl text-lg font-bold leading-9 text-slate-100 sm:text-xl">
+              TSURILOGUE is a personal fishing log for recording catches, spots, tides, weather, tackle, and share-ready catch memories without slowing you down on the water.
+            </p>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link href="/en/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-7 text-base font-black text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
+                Start for free
+              </Link>
+              <a href="#features" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-7 text-base font-black text-white backdrop-blur transition hover:bg-white/20">
+                See features
+              </a>
+            </div>
+          </div>
+          <EnglishHeroMockup />
+        </div>
+      </section>
+
+      <EnglishFeatureBlock
+        id="features"
+        eyebrow="Catch log"
+        title="Turn every trip into a hint for your next catch."
+        description="Record species, size, time, area, tide, wind, water temperature, weather, and tackle. The more you log, the easier it becomes to look back and notice your own patterns."
+        tags={["Species", "Size", "Time", "Area", "Tide", "Wind", "Water temp", "Weather", "Tackle"]}
+        visual={<CatchLogMockup />}
+      />
+      <EnglishFeatureBlock
+        id="ai"
+        eyebrow="AI Report β"
+        title="Find useful patterns in your own fishing history."
+        description="AI reports summarize tendencies from your catch log and conditions. They are shown as helpful hypotheses, not catch guarantees."
+        tags={["Tide trends", "Time of day", "Area trends", "Tackle notes", "Next-trip hints"]}
+        visual={<AIReportMockup />}
+        reverse
+      />
+      <EnglishFeatureBlock
+        id="group"
+        eyebrow="Groups"
+        title="Share catches with friends and learn together."
+        description="Private groups help fishing friends compare catches, review monthly trends, and enjoy friendly rankings while respecting spot privacy."
+        tags={["Private groups", "Shared catch log", "Group map", "Monthly review", "Member ranking"]}
+        visual={<GroupMockup />}
+      />
+      <EnglishFeatureBlock
+        id="tournament"
+        eyebrow="Tournaments"
+        title="Run small online fishing challenges with your crew."
+        description="Create a tournament, set the target species and period, and let TSURILOGUE organize entries into rankings. Start with a small friendly challenge."
+        tags={["Friendly events", "Auto ranking", "Entry approval", "Catch Proof β", "Share results"]}
+        visual={<TournamentMockup />}
+        reverse
+      />
+      <EnglishFeatureBlock
+        eyebrow="Location privacy"
+        title="Share the catch. Protect the spot."
+        description="Exact points stay protected. Shared views can use blurred locations or broad area names based on group, tournament, and permission settings."
+        tags={["Exact for you", "Blurred for sharing", "Area only", "Hidden when needed"]}
+        visual={<MapBlurMockup />}
+      />
+      <section id="premium" className="px-5 py-24 lg:px-8">
+        <div className="mx-auto max-w-5xl rounded-[2rem] bg-[#06131f] p-8 text-white shadow-2xl shadow-slate-900/20 lg:p-12">
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-orange-200">Premium</p>
+          <h2 className="mt-4 text-3xl font-black leading-tight sm:text-4xl">For anglers who want to understand their fishing more deeply.</h2>
+          <p className="mt-5 max-w-3xl text-lg font-bold leading-8 text-slate-200">
+            Premium unlocks deeper analysis such as AI catch reports, detailed tide review, tackle analysis, and advanced search. Start free, then go deeper when you need it.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link href="/en/plans" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#f97316] px-6 font-black text-white">View plans</Link>
+            <Link href="/en/login" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/30 px-6 font-black text-white">Start free</Link>
+          </div>
+        </div>
+      </section>
       <FinalCTA />
       <LandingFooter />
     </main>
+  );
+}
+
+function EnglishHeroMockup() {
+  return (
+    <div className="relative mx-auto w-full max-w-[430px] animate-[float_6s_ease-in-out_infinite]">
+      <div className="absolute -inset-8 rounded-[3rem] bg-cyan-300/15 blur-3xl" aria-hidden="true" />
+      <MockupPhone>
+        <div className="relative h-64 overflow-hidden rounded-[1.7rem] bg-slate-900">
+          <div className="absolute inset-0 bg-[url('/icons/tsurilog-icon.png')] bg-cover bg-center" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">Catch log</p>
+            <div className="mt-2 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-2xl font-black text-white">Red sea bream</p>
+                <p className="text-sm font-bold text-white/85">24.4 in / outgoing tide</p>
+              </div>
+              <span className="rounded-full bg-emerald-400 px-3 py-1 text-sm font-black text-slate-950">82/100</span>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <MetricPill label="Tide" value="Outgoing" />
+          <MetricPill label="Temp" value="65.7℉" />
+          <MetricPill label="Wind" value="NW 7mph" />
+        </div>
+      </MockupPhone>
+    </div>
+  );
+}
+
+function EnglishFeatureBlock({
+  id,
+  eyebrow,
+  title,
+  description,
+  tags,
+  visual,
+  reverse
+}: {
+  id?: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  tags: string[];
+  visual: ReactNode;
+  reverse?: boolean;
+}) {
+  return (
+    <section id={id} className="px-5 py-24 lg:px-8">
+      <div className={`mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 ${reverse ? "lg:[&>*:first-child]:order-2" : ""}`}>
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-[#0f766e]">{eyebrow}</p>
+          <h2 className="mt-4 max-w-3xl text-3xl font-black leading-[1.15] text-slate-950 sm:text-4xl lg:text-[2.65rem]">{title}</h2>
+          <p className="mt-5 text-lg font-bold leading-9 text-slate-600">{description}</p>
+          <TagRow items={tags} />
+        </div>
+        {visual}
+      </div>
+    </section>
+  );
+}
+
+function EnglishFinalCTA() {
+  return (
+    <section className="px-5 py-24 lg:px-8">
+      <div className="mx-auto max-w-5xl rounded-[2rem] bg-gradient-to-br from-[#0f766e] to-[#06131f] p-8 text-center text-white shadow-2xl shadow-slate-900/20 lg:p-12">
+        <h2 className="text-3xl font-black leading-tight sm:text-4xl">Start with today&apos;s catch.</h2>
+        <p className="mx-auto mt-4 max-w-2xl text-base font-bold leading-8 text-white/85">
+          TSURILOGUE starts as a simple personal log, then grows with your fishing history, friends, and future trips.
+        </p>
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link href="/en/login" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#f97316] px-6 font-black text-white">Start for free</Link>
+          <Link href="/en/login" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/30 px-6 font-black text-white">Log in</Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EnglishLandingFooter() {
+  return (
+    <footer className="border-t border-teal-100 bg-white px-5 py-10 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-5 text-sm font-bold text-slate-600 md:flex-row md:items-center md:justify-between">
+        <div>
+          <TsuriLogLogo className="h-12 w-32" />
+          <p className="mt-2">Personal fishing log for anglers.</p>
+        </div>
+        <nav className="flex flex-wrap gap-4">
+          <Link href="/en/about">About</Link>
+          <Link href="/en/how-to-use-app">Use like an app</Link>
+          <Link href="/en/terms">Terms</Link>
+          <Link href="/en/privacy">Privacy</Link>
+        </nav>
+        <p>Copyright TSURILOGUE</p>
+      </div>
+    </footer>
   );
 }
 

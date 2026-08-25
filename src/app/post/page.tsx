@@ -2,6 +2,8 @@
 
 import { Loader } from "@googlemaps/js-api-loader";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { usePathname } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { FeedbackPrompt } from "@/components/FeedbackPrompt";
@@ -10,6 +12,7 @@ import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibi
 import { createCatch, emptyTackleInfo, getUserCatches, updateCatchEnrichment, uploadCatchImage, uploadMeasurementPhoto } from "@/lib/catches";
 import { markAfterCatchFeedbackShown, shouldShowAfterCatchCreatedFeedback } from "@/lib/feedback";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
+import { getLocaleFromPathname, localizePath } from "@/lib/i18n";
 import { getPostableGroupsForUser } from "@/lib/groups";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
 import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
@@ -66,6 +69,9 @@ export default function PostPage() {
 }
 
 function PostForm({ userId }: { userId: string }) {
+  const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname);
+  const t = useTranslations("post");
   const [fishType, setFishType] = useState("");
   const [sizeCm, setSizeCm] = useState("");
   const [caughtAt, setCaughtAt] = useState(toLocalInputValue(new Date()));
@@ -503,7 +509,7 @@ function PostForm({ userId }: { userId: string }) {
 
   return (
     <>
-      <PageHeader title="釣果投稿" actionHref="/catches" actionLabel="一覧" />
+      <PageHeader title={t("title")} actionHref={localizePath("/catches", locale)} actionLabel={t("list")} />
       <main className="mx-auto max-w-xl px-4 pb-28 pt-5">
         <form onSubmit={handleSubmit} className="space-y-5">
           {draftNotice ? (
@@ -530,14 +536,14 @@ function PostForm({ userId }: { userId: string }) {
             </section>
           ) : null}
           <label className="block rounded border border-teal-100 bg-white p-4 shadow-soft">
-            <span className="text-sm font-black">写真</span>
+            <span className="text-sm font-black">{t("photo")}</span>
             <input className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(e) => handleCatchPhotoChange(e.target.files?.[0] ?? null)} />
-            <p className="mt-2 text-xs font-bold text-slate-500">カメラ撮影または写真ライブラリから選択できます。</p>
+            <p className="mt-2 text-xs font-bold text-slate-500">{t("photoHelp")}</p>
           </label>
           {preview ? <SizeEstimator imageUrl={preview} onApply={(value) => setSizeCm(value)} /> : null}
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
-            <Field label="魚種" value={fishType} onChange={setFishType} placeholder="例: シーバス" required listId="fish-suggestions" autoFocus />
+            <Field label={t("fishType")} value={fishType} onChange={setFishType} placeholder={t("fishPlaceholder")} required listId="fish-suggestions" autoFocus />
             <datalist id="fish-suggestions">
               {fishSuggestions.map((value) => (
                 <option key={value} value={value} />
@@ -547,7 +553,7 @@ function PostForm({ userId }: { userId: string }) {
           </section>
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
-            <Field label="サイズ cm" type="number" inputMode="decimal" value={sizeCm} onChange={setSizeCm} placeholder="例: 62" required />
+            <Field label={t("size")} type="number" inputMode="decimal" value={sizeCm} onChange={setSizeCm} placeholder={t("sizePlaceholder")} required />
             <SizeStepper value={sizeCm} onChange={setSizeCm} />
           </section>
 
@@ -641,27 +647,27 @@ function PostForm({ userId }: { userId: string }) {
 
           <section className="grid grid-cols-2 gap-3">
             <button type="button" onClick={handleLocation} className="tap-target rounded border border-water bg-white px-4 py-3 text-sm font-black text-water shadow-soft">
-              {location ? "位置取得済み" : "現在地を取得"}
+              {location ? t("locationReady") : t("getLocation")}
             </button>
             <button type="button" onClick={() => setCaughtAt(toLocalInputValue(new Date()))} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 text-sm font-black text-ink shadow-soft">
-              時刻を今にする
+              {t("setTimeNow")}
             </button>
           </section>
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
-            <h2 className="text-sm font-black">釣りエリアから場所指定</h2>
+            <h2 className="text-sm font-black">{t("areaTitle")}</h2>
             <p className="mt-1 text-sm leading-6 text-slate-600">
-              大まかな釣りエリアを選び、必要なら地図でピンを微調整できます。
+              {t("areaDescription")}
             </p>
             <div className="mt-3">
               <label className="block">
-                <span className="text-sm font-bold">エリア</span>
+                <span className="text-sm font-bold">{t("area")}</span>
                 <select
                   value={selectedAreaId}
                   onChange={(event) => handleAreaChange(event.target.value)}
                   className="mt-2 w-full rounded border border-slate-300 bg-white p-4 text-base font-bold"
                 >
-                  <option value="">選択してください</option>
+                  <option value="">{t("selectArea")}</option>
                   {Object.entries(groupedFishingAreas()).map(([prefecture, areas]) => (
                     <optgroup key={prefecture} label={prefecture}>
                       {areas.map((area) => (
@@ -675,14 +681,14 @@ function PostForm({ userId }: { userId: string }) {
               </label>
             </div>
             <button type="button" onClick={() => setShowMapPicker((value) => !value)} className="tap-target mt-3 w-full rounded bg-water px-4 py-3 text-sm font-black text-white">
-              {showMapPicker ? "地図を閉じる" : "地図でピン指定"}
+              {showMapPicker ? t("closeMap") : t("openMap")}
             </button>
             {showMapPicker ? <MapPicker location={location} onPick={(point) => applyLocation(point, "", "", { inferArea: true, message: "ピンの場所を投稿位置に設定しました。" })} /> : null}
             <p className="mt-3 text-sm text-slate-600">
-              現在位置: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
+              {t("currentLocation")}: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
             </p>
             <label className="mt-3 block">
-              <span className="text-sm font-bold">ポイント名（任意）</span>
+              <span className="text-sm font-bold">{t("pointName")}</span>
               <input
                 className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
                 value={pointName}
@@ -695,15 +701,15 @@ function PostForm({ userId }: { userId: string }) {
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
             <button type="button" onClick={() => setShowDetails((value) => !value)} className="tap-target flex w-full items-center justify-between rounded bg-foam px-4 py-3 text-left font-black">
-              <span>詳細入力</span>
-              <span>{showDetails ? "閉じる" : "開く"}</span>
+              <span>{t("details")}</span>
+              <span>{showDetails ? t("close") : t("open")}</span>
             </button>
 
             {showDetails ? (
               <div className="mt-4 space-y-4">
-                <Field label="釣った日時" type="datetime-local" value={caughtAt} onChange={setCaughtAt} required compact />
+                <Field label={t("caughtAt")} type="datetime-local" value={caughtAt} onChange={setCaughtAt} required compact />
 
-                <Field label="船名（任意）" value={boatName} onChange={setBoatName} placeholder="例: 〇〇丸 / 〇〇艇" compact />
+                <Field label={t("boatName")} value={boatName} onChange={setBoatName} placeholder={t("boatPlaceholder")} compact />
 
                 <MeasurementPhotoInput
                   file={measurementFile}
@@ -740,8 +746,8 @@ function PostForm({ userId }: { userId: string }) {
                 </section>
 
                 <label className="block">
-                  <span className="text-sm font-bold">コメント</span>
-                  <textarea className="mt-2 min-h-24 w-full rounded border border-slate-300 bg-white p-3 text-base" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="ルアー、状況、メモなど" />
+                  <span className="text-sm font-bold">{t("comment")}</span>
+                  <textarea className="mt-2 min-h-24 w-full rounded border border-slate-300 bg-white p-3 text-base" value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t("commentPlaceholder")} />
                 </label>
                 <SuggestionChips values={commentSuggestions} onPick={setComment} />
               </div>
@@ -803,7 +809,7 @@ function PostForm({ userId }: { userId: string }) {
               {busy && submitStage ? <SubmitProgress label={submitStage} /> : null}
               <button disabled={busy || !canQuickPost} className="tap-target flex w-full items-center justify-center gap-3 rounded bg-water px-5 py-4 text-lg font-black text-white shadow-soft disabled:opacity-60">
                 {busy ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" /> : null}
-                {busy ? submitStage || "保存中..." : "すぐ投稿する"}
+                {busy ? submitStage || t("saving") : t("submit")}
               </button>
             </div>
           </div>

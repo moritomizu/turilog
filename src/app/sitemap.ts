@@ -4,13 +4,21 @@ import { MEDIA_PUBLIC_BASE_URL, getMediaCanonical, getMediaCategories, getMediaP
 
 const staticRoutes = [
   { path: "/ja", priority: 1 },
+  { path: "/en", priority: 0.8 },
   { path: "/ja/about", priority: 0.9 },
+  { path: "/en/about", priority: 0.7 },
   { path: "/ja/features", priority: 0.9 },
+  { path: "/en/features", priority: 0.7 },
   { path: "/ja/pricing", priority: 0.8 },
+  { path: "/en/pricing", priority: 0.6 },
   { path: "/ja/install", priority: 0.7 },
+  { path: "/en/install", priority: 0.5 },
   { path: "/ja/feedback", priority: 0.5 },
+  { path: "/en/feedback", priority: 0.4 },
   { path: "/ja/terms", priority: 0.3 },
-  { path: "/ja/privacy", priority: 0.3 }
+  { path: "/en/terms", priority: 0.2 },
+  { path: "/ja/privacy", priority: 0.3 },
+  { path: "/en/privacy", priority: 0.2 }
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

@@ -5,11 +5,13 @@ import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getFirebaseAuth, isFirebaseConfigured, missingFirebaseEnv } from "@/lib/firebase";
+import { getLocaleFromPathname, localizePath } from "@/lib/i18n";
 import { getUserProfile, shouldShowOnboarding } from "@/lib/userProfiles";
 
 export function AuthGate({ children, skipOnboardingCheck = false }: { children: (user: FirebaseUser) => React.ReactNode; skipOnboardingCheck?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingOnboarding, setCheckingOnboarding] = useState(false);
@@ -29,14 +31,14 @@ export function AuthGate({ children, skipOnboardingCheck = false }: { children: 
   }, []);
 
   useEffect(() => {
-    if (!user || skipOnboardingCheck || pathname === "/onboarding") return;
+    if (!user || skipOnboardingCheck || pathname === "/onboarding" || pathname === `/${locale}/onboarding`) return;
     setCheckingOnboarding(true);
     getUserProfile(user.uid)
       .then((profile) => {
-        if (shouldShowOnboarding(profile)) router.push("/onboarding");
+        if (shouldShowOnboarding(profile)) router.push(localizePath("/onboarding", locale));
       })
       .finally(() => setCheckingOnboarding(false));
-  }, [pathname, router, skipOnboardingCheck, user]);
+  }, [locale, pathname, router, skipOnboardingCheck, user]);
 
   if (!isFirebaseConfigured) {
     return <Notice title="Firebase設定が必要です" message={`${missingFirebaseEnv.join(", ")} を .env.local に設定してください。`} />;
@@ -47,8 +49,8 @@ export function AuthGate({ children, skipOnboardingCheck = false }: { children: 
   if (!user) {
     return (
       <Notice title="ログインしてください" message="釣果ログはログイン済みユーザーだけが利用できます。">
-        <Link className="tap-target mt-4 inline-flex w-full items-center justify-center rounded bg-water px-5 py-3 font-bold text-white" href="/login">
-          Googleでログインへ
+        <Link className="tap-target mt-4 inline-flex w-full items-center justify-center rounded bg-water px-5 py-3 font-bold text-white" href={localizePath("/login", locale)}>
+          {locale === "en" ? "Go to login" : "Googleでログインへ"}
         </Link>
       </Notice>
     );

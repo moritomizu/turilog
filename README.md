@@ -2226,3 +2226,35 @@ WordPressオリジン `https://tsurilogue.tapiyota.com` はCMSとして使用し
 ### 計測
 
 `shareEvents` コレクションに、共有画面表示、テンプレート選択、画像生成、保存、共有完了などのイベントを保存します。正確な位置情報はイベントメタデータに含めません。
+
+## Global Localization Phase 1
+
+TSURILOGUEの海外展開に向けて、日本語・英語の2言語基盤を段階導入しています。
+
+### ルーティング
+
+- `/ja/*`: 日本語表示
+- `/en/*`: 英語表示
+- 既存の内部App Routerは維持し、`middleware.ts` でlocale付きURLを既存ルートへrewriteします。
+- 強制的なIPリダイレクトは行わず、ユーザー選択と保存済み `preferredLocale` を尊重します。
+
+### ユーザー設定
+
+`users` に以下の将来拡張用フィールドを保存できます。
+
+- `preferredLocale`: `"ja" | "en"`
+- `unitSystem`: `"metric" | "imperial"`
+- `acquisition`: `ref` / `utmSource` / `utmMedium` / `utmCampaign` / `firstLandingPath`
+
+Firestore上の釣果データは引き続き `cm`、`kg`、`℃` などの標準単位で保存し、表示時にlocaleと `unitSystem` に応じて変換します。
+
+### Phase1対応範囲
+
+- 英語LPの初期導線
+- ログイン/新規登録の主要文言
+- 釣果投稿フォームの主要ラベル
+- 釣果シェア Data Overlay の英語表示、inch/華氏表示
+- sitemapの英語ページ追加
+- canonical / hreflang相当の `alternates.languages` 追加
+
+AIレポート、Headless Media本文、大会/グループ管理画面の完全翻訳は後続Phaseで対応します。

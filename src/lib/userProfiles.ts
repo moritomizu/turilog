@@ -60,6 +60,8 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : null,
     selfIntroduction: typeof data.selfIntroduction === "string" ? data.selfIntroduction : "",
     preferredLocale: data.preferredLocale === "en" ? "en" : data.preferredLocale === "ja" ? "ja" : undefined,
+    unitSystem: data.unitSystem === "imperial" ? "imperial" : "metric",
+    acquisition: normalizeAcquisition(data.acquisition),
     ageRange: typeof data.ageRange === "string" ? (data.ageRange as UserProfile["ageRange"]) : undefined,
     residenceArea: typeof data.residenceArea === "string" ? data.residenceArea : "",
     fishingAreas: Array.isArray(data.fishingAreas) ? data.fishingAreas.filter((item): item is string => typeof item === "string") : [],
@@ -92,6 +94,19 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     feedbackState: normalizeFeedbackState(data.feedbackState),
     updatedAt: normalizeDateString(data.updatedAt)
   };
+}
+
+function normalizeAcquisition(value: unknown) {
+  const data = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const result = {
+    ref: typeof data.ref === "string" ? data.ref : undefined,
+    utmSource: typeof data.utmSource === "string" ? data.utmSource : undefined,
+    utmMedium: typeof data.utmMedium === "string" ? data.utmMedium : undefined,
+    utmCampaign: typeof data.utmCampaign === "string" ? data.utmCampaign : undefined,
+    firstLandingPath: typeof data.firstLandingPath === "string" ? data.firstLandingPath : undefined,
+    capturedAt: normalizeDateString(data.capturedAt) ?? undefined
+  };
+  return Object.values(result).some(Boolean) ? result : undefined;
 }
 
 function normalizeNotificationPreferences(value: unknown) {
