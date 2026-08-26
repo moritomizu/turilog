@@ -54,8 +54,8 @@ export function LandingPage() {
       <PricingSection />
       <UseCaseSection />
       <VisionSection />
-      <EnglishFinalCTA />
-      <EnglishLandingFooter />
+      <FinalCTA />
+      <LandingFooter />
     </main>
   );
 }
@@ -165,8 +165,8 @@ function EnglishLandingPage() {
           </div>
         </div>
       </section>
-      <FinalCTA />
-      <LandingFooter />
+      <EnglishFinalCTA />
+      <EnglishLandingFooter />
     </main>
   );
 }
