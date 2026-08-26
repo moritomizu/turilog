@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 import { getLocaleFromPathname, localizePath } from "@/lib/i18n";
 
@@ -31,7 +32,7 @@ export function PageHeader({
             {actionLabel}
           </Link>
         ) : (
-          <span className="w-14 justify-self-end" />
+          <LocaleSwitcher compact className="justify-self-end" />
         )}
       </div>
     </header>

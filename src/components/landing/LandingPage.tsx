@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 import { getLocaleFromPathname } from "@/lib/i18n";
 import { captureAcquisitionFromUrl } from "@/lib/referralTracking";
@@ -76,6 +77,7 @@ function EnglishLandingPage() {
             <a href="#premium" className="transition hover:text-[#0f766e]">Premium</a>
           </nav>
           <div className="flex items-center gap-2">
+            <LocaleSwitcher compact className="hidden sm:flex" />
             <Link href="/en/login" className="hidden rounded-full px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100 sm:inline-flex">
               Log in
             </Link>
@@ -262,6 +264,7 @@ function EnglishLandingFooter() {
           <Link href="/en/how-to-use-app">Use like an app</Link>
           <Link href="/en/terms">Terms</Link>
           <Link href="/en/privacy">Privacy</Link>
+          <LocaleSwitcher compact />
         </nav>
         <p>Copyright TSURILOGUE</p>
       </div>
@@ -284,6 +287,7 @@ function LandingHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <LocaleSwitcher compact className="hidden sm:flex" />
           <Link href="/login" className="hidden rounded-full px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100 sm:inline-flex">
             ログイン
           </Link>
@@ -825,6 +829,7 @@ function LandingFooter() {
           <Link href="/ja/terms" className="hover:text-[#0f766e]">利用規約</Link>
           <Link href="/ja/privacy" className="hover:text-[#0f766e]">プライバシーポリシー</Link>
           <Link href="/login" className="hover:text-[#0f766e]">お問い合わせ</Link>
+          <LocaleSwitcher compact />
         </div>
       </div>
     </footer>

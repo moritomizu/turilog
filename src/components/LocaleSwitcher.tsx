@@ -13,7 +13,7 @@ const labels: Record<AppLocale, string> = {
   en: "English"
 };
 
-export function LocaleSwitcher() {
+export function LocaleSwitcher({ compact = false, className = "" }: { compact?: boolean; className?: string } = {}) {
   const pathname = usePathname();
   const currentLocale = getLocaleFromPathname(pathname);
   const [userId, setUserId] = useState<string | null>(null);
@@ -29,16 +29,16 @@ export function LocaleSwitcher() {
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-soft" aria-label="言語切替">
+    <div className={`flex items-center gap-1 rounded-full bg-white p-1 shadow-soft ring-1 ring-teal-100 ${className}`} aria-label="言語切替">
       {(["ja", "en"] as const).map((locale) => (
         <Link
           key={locale}
           href={localizePath(pathname, locale)}
           onClick={() => rememberLocale(locale)}
-          className={`rounded-full px-3 py-1.5 text-xs font-black ${currentLocale === locale ? "bg-water text-white" : "text-slate-600"}`}
+          className={`rounded-full ${compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"} font-black ${currentLocale === locale ? "bg-water text-white" : "text-slate-600"}`}
           aria-current={currentLocale === locale ? "true" : undefined}
         >
-          {labels[locale]}
+          {compact ? locale.toUpperCase() : labels[locale]}
         </Link>
       ))}
     </div>
