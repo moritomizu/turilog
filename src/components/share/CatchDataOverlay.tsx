@@ -306,7 +306,7 @@ const OverlayPreview = forwardRef<HTMLDivElement, { data: ShareOverlayData; temp
             className="h-auto w-32 object-contain brightness-0 invert"
             unoptimized
           />
-          <h3 className={`${template === "catch" ? "mt-3 text-5xl" : "mt-2 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
+          <h3 className={`${template === "catch" ? "mt-5 text-5xl" : "mt-4 text-4xl"} font-black leading-none`}>{data.fishType}</h3>
           <p className="mt-2 flex items-baseline gap-2 leading-none" style={{ fontFamily: '"Helvetica Neue Condensed Bold", "HelveticaNeue-CondensedBold", "Arial Narrow", "Bebas Neue", sans-serif' }}>
             <span className="text-[3.75rem] font-bold tracking-normal">{sizeParts.value}</span>
             <span className="text-xl font-bold tracking-normal">{sizeParts.unit}</span>
@@ -418,7 +418,7 @@ async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeo
   const sizeY = rowsTopY - 28 * scale;
   const fishY = sizeY - 64 * scale;
   const logoWidth = 128 * scale;
-  const logoY = fishY - 84 * scale;
+  const logoY = fishY - 106 * scale;
 
   await drawLogo(ctx, SHARE_LOGO_SRC, left, logoY, logoWidth, outputMode);
   drawText(ctx, data.fishType, left, fishY, template === "catch" ? 48 * scale : 36 * scale, "900", color, 0, MAX_OVERLAY_TEXT_WIDTH);

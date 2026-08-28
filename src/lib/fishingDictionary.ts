@@ -1,7 +1,7 @@
 import type { AppLocale } from "@/lib/i18n";
 
 export const fishSpeciesDictionary = {
-  red_sea_bream: { ja: "真鯛", en: "Red sea bream" },
+  red_sea_bream: { ja: "マダイ", en: "Red sea bream" },
   yellowtail: { ja: "ブリ", en: "Yellowtail" },
   spanish_mackerel: { ja: "サワラ", en: "Spanish mackerel" },
   sea_bass: { ja: "シーバス", en: "Sea bass" },
