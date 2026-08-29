@@ -127,7 +127,7 @@ function PostForm({ userId }: { userId: string }) {
       if (draft) {
         setFishType(draft.fishType);
         setSizeCm(draft.sizeCm);
-        setCaughtAt(draft.caughtAt || toLocalInputValue(new Date()));
+        setCaughtAt(shouldPreserveDraftCaughtAt(draft) ? draft.caughtAt : toLocalInputValue(new Date()));
         setComment(draft.comment);
         setTackle(draft.tackle ?? emptyTackleInfo());
         setSelectedTackleId(draft.selectedTackleId);
@@ -287,6 +287,13 @@ function PostForm({ userId }: { userId: string }) {
   async function handleCatchPhotoChange(nextFile: File | null) {
     setFile(nextFile);
     setDraftNotice("");
+    if (nextFile) {
+      const photoDate = await readPhotoTakenAt(nextFile).catch(() => null);
+      setCaughtAt(toLocalInputValue(photoDate ?? new Date()));
+      setMessage(photoDate ? "写真の撮影日時を釣った日時に反映しました。" : "写真の撮影日時を読み取れなかったため、現在時刻を設定しました。");
+    } else {
+      setCaughtAt(toLocalInputValue(new Date()));
+    }
     await saveDraftFile(userId, "catchPhoto", nextFile).catch(() => undefined);
   }
 
@@ -526,6 +533,7 @@ function PostForm({ userId }: { userId: string }) {
                   setComment("");
                   setFile(null);
                   setMeasurementFile(null);
+                  setCaughtAt(toLocalInputValue(new Date()));
                   setDraftNotice("");
                   setMessage("下書きを破棄しました。");
                 }}
@@ -1350,6 +1358,10 @@ function readPostDraft(userId: string): PostDraft | null {
   }
 }
 
+function shouldPreserveDraftCaughtAt(draft: PostDraft) {
+  return draft.unsent && Boolean(draft.caughtAt);
+}
+
 function savePostDraft(userId: string, draft: PostDraft) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(postDraftKey(userId), JSON.stringify(draft));
@@ -1439,4 +1451,85 @@ function formatLocalDateTime(value: string) {
 function toLocalInputValue(date: Date) {
   const offset = date.getTimezoneOffset();
   return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
+}
+
+async function readPhotoTakenAt(file: File): Promise<Date | null> {
+  if (!file.type.includes("jpeg") && !file.type.includes("jpg")) return null;
+  const buffer = await file.arrayBuffer();
+  const view = new DataView(buffer);
+  if (view.byteLength < 4 || view.getUint16(0) !== 0xffd8) return null;
+
+  let offset = 2;
+  while (offset + 4 < view.byteLength) {
+    const marker = view.getUint16(offset);
+    offset += 2;
+    if ((marker & 0xff00) !== 0xff00) return null;
+    const segmentLength = view.getUint16(offset);
+    if (segmentLength < 2 || offset + segmentLength > view.byteLength) return null;
+    if (marker === 0xffe1) {
+      const exifDate = readExifDate(view, offset + 2, segmentLength - 2);
+      if (exifDate) return exifDate;
+    }
+    offset += segmentLength;
+  }
+  return null;
+}
+
+function readExifDate(view: DataView, start: number, length: number): Date | null {
+  if (length < 14 || readAscii(view, start, 6) !== "Exif\0\0") return null;
+  const tiffStart = start + 6;
+  const byteOrder = readAscii(view, tiffStart, 2);
+  const littleEndian = byteOrder === "II";
+  if (!littleEndian && byteOrder !== "MM") return null;
+  if (view.getUint16(tiffStart + 2, littleEndian) !== 42) return null;
+  const firstIfdOffset = view.getUint32(tiffStart + 4, littleEndian);
+  const firstIfdStart = tiffStart + firstIfdOffset;
+  const exifIfdOffset = readIfdValue(view, firstIfdStart, tiffStart, littleEndian, 0x8769);
+  const dateTimeOriginal = exifIfdOffset ? readIfdAsciiValue(view, tiffStart + exifIfdOffset, tiffStart, littleEndian, 0x9003) : "";
+  const dateTimeDigitized = exifIfdOffset ? readIfdAsciiValue(view, tiffStart + exifIfdOffset, tiffStart, littleEndian, 0x9004) : "";
+  const dateTime = readIfdAsciiValue(view, firstIfdStart, tiffStart, littleEndian, 0x0132);
+  return parseExifDate(dateTimeOriginal || dateTimeDigitized || dateTime);
+}
+
+function readIfdValue(view: DataView, ifdStart: number, tiffStart: number, littleEndian: boolean, tag: number) {
+  if (ifdStart <= 0 || ifdStart + 2 > view.byteLength) return 0;
+  const count = view.getUint16(ifdStart, littleEndian);
+  for (let index = 0; index < count; index += 1) {
+    const entry = ifdStart + 2 + index * 12;
+    if (entry + 12 > view.byteLength) return 0;
+    if (view.getUint16(entry, littleEndian) !== tag) continue;
+    const componentCount = view.getUint32(entry + 4, littleEndian);
+    const rawValue = view.getUint32(entry + 8, littleEndian);
+    return componentCount <= 4 ? entry + 8 - tiffStart : rawValue;
+  }
+  return 0;
+}
+
+function readIfdAsciiValue(view: DataView, ifdStart: number, tiffStart: number, littleEndian: boolean, tag: number) {
+  if (ifdStart <= 0 || ifdStart + 2 > view.byteLength) return "";
+  const count = view.getUint16(ifdStart, littleEndian);
+  for (let index = 0; index < count; index += 1) {
+    const entry = ifdStart + 2 + index * 12;
+    if (entry + 12 > view.byteLength) return "";
+    if (view.getUint16(entry, littleEndian) !== tag) continue;
+    const valueLength = view.getUint32(entry + 4, littleEndian);
+    const valueOffset = valueLength <= 4 ? entry + 8 : tiffStart + view.getUint32(entry + 8, littleEndian);
+    return readAscii(view, valueOffset, valueLength).replace(/\0+$/, "").trim();
+  }
+  return "";
+}
+
+function readAscii(view: DataView, start: number, length: number) {
+  if (start < 0 || length <= 0 || start + length > view.byteLength) return "";
+  let value = "";
+  for (let index = 0; index < length; index += 1) value += String.fromCharCode(view.getUint8(start + index));
+  return value;
+}
+
+function parseExifDate(value: string) {
+  const match = value.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return null;
+  const [, year, month, day, hour, minute, second = "0"] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+  return Number.isNaN(date.getTime()) ? null : date;
 }
