@@ -18,6 +18,7 @@ export type ShareOverlayData = {
   tackleLabel: string;
   tideLabel: string;
   weatherLabel: string;
+  windLabel: string;
   waterTempLabel: string;
   catchProofLabel: string;
   hasCatchProof: boolean;
@@ -56,10 +57,22 @@ export function getShareOverlayData(item: Catch, options: ShareOverlayOptions = 
     tackleLabel: item.tackleName || item.rod || item.tackle.rodName || "",
     tideLabel: item.tidePhaseLabel && item.tidePhaseLabel !== "潮位未取得" ? item.tidePhaseLabel : "",
     weatherLabel: item.weather.weatherLabel && item.weather.weatherLabel !== "天候未取得" ? item.weather.weatherLabel : "",
+    windLabel: formatWindLabel(item, locale),
     waterTempLabel: item.seaTemperature.seaTemperatureC == null ? "" : formatTemperatureFromCelsius(item.seaTemperature.seaTemperatureC, locale, unitSystem),
     catchProofLabel: getCatchProofLabel(item),
     hasCatchProof: hasCatchProof(item)
   };
+}
+
+function formatWindLabel(item: Catch, locale: AppLocale) {
+  if (item.weather.windSpeedMs == null) return "";
+  const speed = `${roundOneDecimal(item.weather.windSpeedMs)}m/s`;
+  if (!item.weather.windDirectionLabel) return locale === "en" ? `Wind ${speed}` : `風 ${speed}`;
+  return locale === "en" ? `Wind ${item.weather.windDirectionLabel} ${speed}` : `${item.weather.windDirectionLabel} ${speed}`;
+}
+
+function roundOneDecimal(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 export function getFormatSize(format: ShareOverlayFormat) {

@@ -315,7 +315,7 @@ const OverlayPreview = forwardRef<HTMLDivElement, { data: ShareOverlayData; temp
             <span>{data.dateLabel}</span>
             <span>{data.areaLabel}</span>
             {template !== "simple" ? <span>{data.methodLabel}</span> : null}
-            {template === "data" ? <span>{[data.tideLabel, data.waterTempLabel, data.weatherLabel].filter(Boolean).join(" / ") || "Data logging"}</span> : null}
+            {template === "data" ? <span>{[data.tideLabel, data.windLabel, data.waterTempLabel, data.weatherLabel].filter(Boolean).join(" / ") || "Data logging"}</span> : null}
             {data.hasCatchProof ? <span className="w-fit rounded-full bg-white/20 px-3 py-1 ring-1 ring-white/30">{data.catchProofLabel}</span> : null}
           </div>
         </div>
@@ -408,7 +408,7 @@ async function drawOverlay(ctx: CanvasRenderingContext2D, data: ReturnType<typeo
     data.dateLabel,
     data.areaLabel,
     template !== "simple" ? data.methodLabel : "",
-    template === "data" ? [data.tideLabel, data.waterTempLabel, data.weatherLabel].filter(Boolean).join(" / ") || "Data logging" : ""
+    template === "data" ? [data.tideLabel, data.windLabel, data.waterTempLabel, data.weatherLabel].filter(Boolean).join(" / ") || "Data logging" : ""
   ].filter(Boolean);
   const proofPillHeight = data.hasCatchProof ? 34 * scale : 0;
   const rowHeight = 18 * scale;
