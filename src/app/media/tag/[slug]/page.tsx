@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL } from "@/lib/wordpress";
+import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL } from "@/lib/wordpress";
 
 type TagPageProps = {
   params: { slug: string };
@@ -23,8 +23,8 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
   return {
     title,
     description,
-    alternates: { canonical },
-    robots: { index: true, follow: true },
+    alternates: getMediaAlternates(`tag/${params.slug}`),
+    robots: { index: false, follow: true },
     openGraph: {
       type: "website",
       siteName: "TSURILOGUE",

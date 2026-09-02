@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api", "/app", "/admin", "/login", "/signup"]
+      disallow: ["/api/", "/app/", "/admin/", "/login"]
     },
     sitemap: "https://www.tsurilogue.com/sitemap.xml"
   };

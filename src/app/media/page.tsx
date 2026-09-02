@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL, type WpPostListResponse } from "@/lib/wordpress";
+import { getMediaAlternates, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL, type WpPostListResponse } from "@/lib/wordpress";
 
 type MediaPageProps = {
   searchParams?: { page?: string };
@@ -13,7 +13,7 @@ export const revalidate = 0;
 export const metadata: Metadata = {
   title: "TSURILOGUE Media | 釣果記録・釣りログと釣り分析のヒント",
   description: "釣果記録、釣りログ、潮位、気象、タックル、AI分析を次の一匹につなげるためのTSURILOGUE（釣りローグ）公式メディアです。",
-  alternates: { canonical: MEDIA_PUBLIC_BASE_URL },
+  alternates: getMediaAlternates(),
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",

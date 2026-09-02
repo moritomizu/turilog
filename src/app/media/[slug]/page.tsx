@@ -11,6 +11,7 @@ import {
   MEDIA_PUBLIC_BASE_URL,
   enhanceArticleHtml,
   formatMediaDate,
+  getMediaAlternates,
   getMediaCanonical,
   getMediaPath,
   getMediaPost,
@@ -51,7 +52,7 @@ export async function generateMetadata({ params }: MediaArticlePageProps): Promi
     keywords,
     authors: [{ name: "TSURILOGUE編集部", url: "https://www.tsurilogue.com" }],
     category: post.categories?.[0]?.name,
-    alternates: { canonical },
+    alternates: getMediaAlternates(post.slug),
     robots: { index: true, follow: true },
     openGraph: {
       type: "article",

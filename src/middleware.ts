@@ -34,7 +34,7 @@ export function middleware(request: NextRequest) {
   if (!isAppLocale(firstSegment)) {
     const url = request.nextUrl.clone();
     url.pathname = localizePath(pathname, defaultLocale);
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(url, 301);
   }
 
   const locale = firstSegment;
@@ -51,7 +51,7 @@ export function middleware(request: NextRequest) {
 }
 
 function shouldRedirectMediaTrailingSlash(pathname: string) {
-  return /^\/(ja|en)\/media\/.+\/$/.test(pathname);
+  return /^\/(ja|en)\/media\/$/.test(pathname) || /^\/(ja|en)\/media\/.+\/$/.test(pathname);
 }
 
 function shouldSkip(pathname: string) {

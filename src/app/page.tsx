@@ -99,11 +99,42 @@ export default function Home() {
 
   if (!authReady) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-foam px-6">
-        <div className="text-center">
-          <h1 className="sr-only">TSURILOGUE（釣りローグ） | 釣果記録・釣りログ・釣りデータプラットフォーム</h1>
+      <main className="min-h-screen bg-foam px-6 py-10">
+        <div className="mx-auto max-w-3xl text-center">
           <TsuriLogLogo className="mx-auto h-12 w-44 object-contain" />
           <p className="mt-4 text-sm font-black text-slate-500">読み込み中...</p>
+          <section className="mt-8 rounded-[1.5rem] border border-teal-100 bg-white p-6 text-left shadow-soft">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-water">Personal Fishing Log</p>
+            <h1 className="mt-3 text-2xl font-black leading-tight text-ink sm:text-4xl">TSURILOGUE（釣りローグ）｜釣果記録・釣果共有・釣り大会アプリ</h1>
+            <p className="mt-4 text-sm font-bold leading-7 text-slate-600">
+              TSURILOGUEは、釣果写真、魚種、サイズ、潮位、天候、タックル、ポイントを記録し、次の釣行に活かせる釣果記録・釣りログアプリです。個人の記録から、仲間との釣果共有、オンライン釣り大会まで広げられます。
+            </p>
+            <nav className="mt-5 flex flex-wrap gap-2 text-sm font-black" aria-label="主要ページ">
+              <Link href="/ja/about" className="rounded-full bg-foam px-3 py-2 text-water">TSURILOGUEとは</Link>
+              <Link href="/ja/features" className="rounded-full bg-foam px-3 py-2 text-water">機能</Link>
+              <Link href="/ja/media" className="rounded-full bg-foam px-3 py-2 text-water">メディア</Link>
+              <Link href="/ja/tournaments" className="rounded-full bg-foam px-3 py-2 text-water">釣り大会</Link>
+              <Link href="/ja/groups" className="rounded-full bg-foam px-3 py-2 text-water">グループ</Link>
+            </nav>
+            <section className="mt-6 grid gap-3 sm:grid-cols-3">
+              <SeoMiniCard title="釣果記録" text="写真、潮位、天候、タックルをまとめて残せます。" />
+              <SeoMiniCard title="釣果共有" text="仲間内のグループで釣果を振り返れます。" />
+              <SeoMiniCard title="オンライン釣り大会" text="期間と魚種を決めてランキングを楽しめます。" />
+            </section>
+            <section className="mt-6 rounded bg-foam p-4">
+              <h2 className="text-base font-black text-ink">よくある質問</h2>
+              <dl className="mt-3 space-y-3 text-sm font-bold leading-6 text-slate-600">
+                <div>
+                  <dt className="text-ink">無料で使えますか？</dt>
+                  <dd>基本の釣果記録、釣果一覧、グループ参加、大会参加から始められます。</dd>
+                </div>
+                <div>
+                  <dt className="text-ink">釣った場所は公開されますか？</dt>
+                  <dd>正確な位置は権限や共有設定に応じて制御し、必要に応じてエリア表示やぼかし表示を使います。</dd>
+                </div>
+              </dl>
+            </section>
+          </section>
         </div>
       </main>
     );
@@ -252,6 +283,15 @@ function emptyApprovalSummary(): ApprovalSummary {
 
 function getInitial(value: string | null | undefined) {
   return (value || "T").trim().slice(0, 1).toUpperCase();
+}
+
+function SeoMiniCard({ title, text }: { title: string; text: string }) {
+  return (
+    <article className="rounded border border-teal-100 bg-white p-3">
+      <h2 className="text-sm font-black text-ink">{title}</h2>
+      <p className="mt-1 text-xs font-bold leading-5 text-slate-600">{text}</p>
+    </article>
+  );
 }
 
 async function loadApprovalSummary(userId: string) {

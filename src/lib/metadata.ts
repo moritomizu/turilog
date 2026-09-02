@@ -63,7 +63,7 @@ export function createPageMetadata({
       languages: {
         ja: `${siteUrl}${localizePath(localeFreePath, "ja")}`,
         en: `${siteUrl}${localizePath(localeFreePath, "en")}`,
-        "x-default": `${siteUrl}${localizePath(localeFreePath, "ja")}`
+        "x-default": siteUrl
       }
     },
     openGraph: {

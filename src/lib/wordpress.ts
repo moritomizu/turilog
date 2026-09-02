@@ -208,6 +208,19 @@ export function getMediaCanonical(path = "") {
   return cleanPath ? `${MEDIA_PUBLIC_BASE_URL}/${cleanPath}` : `${MEDIA_PUBLIC_BASE_URL}`;
 }
 
+export function getMediaAlternates(path = "") {
+  const cleanPath = path.replace(/^\/+/, "").replace(/\/$/, "");
+  const suffix = cleanPath ? `/${cleanPath}` : "";
+  return {
+    canonical: getMediaCanonical(cleanPath),
+    languages: {
+      ja: `${MEDIA_PUBLIC_BASE_URL}${suffix}`,
+      en: `https://www.tsurilogue.com/en/media${suffix}`,
+      "x-default": "https://www.tsurilogue.com"
+    }
+  };
+}
+
 export function getMediaPath(path = "") {
   const cleanPath = path.replace(/^\/+/, "").replace(/\/$/, "");
   return cleanPath ? `/ja/media/${cleanPath}` : "/ja/media";

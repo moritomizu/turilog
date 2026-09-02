@@ -2110,12 +2110,15 @@ TSURILOGUE の公開SEOページは、`https://www.tsurilogue.com` を正規ホ�
 ### 正規URL方針
 
 - サイト正規ホスト: `https://www.tsurilogue.com`
+- 日本語SEOの中心URL: `https://www.tsurilogue.com/ja`
 - メディア正規URL: `https://www.tsurilogue.com/ja/media`
 - 記事URL: `https://www.tsurilogue.com/ja/media/{slug}`
 - カテゴリURL: `https://www.tsurilogue.com/ja/media/category/{slug}`
-- タグURL: `https://www.tsurilogue.com/ja/media/tag/{slug}`
+- タグURL: `https://www.tsurilogue.com/ja/media/tag/{slug}` は `noindex,follow` とし、検索評価の分散を避けます。
+- `/` は日本語正規URLの `/ja` へ301リダイレクトします。
 - `/ja/media/.../` のような末尾スラッシュ付きURLは、middlewareで末尾スラッシュなしへ301リダイレクトします。
 - `https://tsurilogue.com` はVercel側で `https://www.tsurilogue.com` へ正規化します。
+- 主要SEOページは自己参照canonicalを出し、対応URLが存在する場合のみ hreflang を設定します。`x-default` は `https://www.tsurilogue.com` を指します。
 
 ### sitemap.xml
 
@@ -2127,28 +2130,31 @@ TSURILOGUE の公開SEOページは、`https://www.tsurilogue.com` を正規ホ�
 - `/ja/about`
 - `/ja/features`
 - `/ja/pricing`
+- `/ja/signup`
 - `/ja/install`
 - `/ja/feedback`
-- `/ja/terms`
-- `/ja/privacy`
 - `/ja/media`
 - `/ja/media/{slug}`
 - `/ja/media/category/{slug}`
-- `/ja/media/tag/{slug}`
 
-WordPress Headless API から投稿・カテゴリ・タグを取得し、`/ja/media` 配下の正規URLとして sitemap に出力します。API取得に失敗した場合でも、静的ページと `/ja/media` は出力される設計です。
+WordPress Headless API から投稿・カテゴリを取得し、`/ja/media` 配下の正規URLとして sitemap に出力します。タグページ、アプリ内部ページ、ログインページ、API、noindexページ、canonicalが別URLを向くページは sitemap から除外します。API取得に失敗した場合でも、静的ページと `/ja/media` は出力される設計です。
 
 ### robots.txt
 
 `src/app/robots.ts` で生成します。
 
 - 全体はクロール許可
-- `/api`, `/app`, `/admin`, `/login`, `/signup` はクロール対象外
+- `/api/`, `/app/`, `/admin/`, `/login` はクロール対象外
+- `/signup` はブロックしません。日本語登録ページ `/ja/signup` はSEO/CV導線として自己参照canonicalを設定します。
 - sitemap は `https://www.tsurilogue.com/sitemap.xml`
 
 ### canonical / OGP
 
-主要ページは `createPageMetadata()` で canonical、OGP、Twitter Card を生成します。メディア記事・カテゴリ・タグは WordPress API のSEO情報を利用しつつ、canonical は必ず `https://www.tsurilogue.com/ja/media...` へ正規化します。
+主要ページは `createPageMetadata()` で canonical、hreflang、OGP、Twitter Card を生成します。メディア記事・カテゴリ・タグは WordPress API のSEO情報を利用しつつ、canonical は必ず `https://www.tsurilogue.com/ja/media...` へ正規化します。タグページは `noindex,follow` です。
+
+### 登録ページ
+
+`/ja/signup` は、単なるフォームではなく、釣果記録・釣果共有・オンライン釣り大会の価値が伝わるSEO/CVページとして用意しています。noindexは付与せず、自己参照canonicalを設定し、`/ja/about`、`/ja/features`、`/ja/media` への内部リンクを含めます。
 
 ### About / Entity SEO
 
@@ -2192,11 +2198,12 @@ SEO_AUDIT_BASE_URL=http://localhost:3000 npm run audit:seo
 1. `https://www.tsurilogue.com` プロパティを登録
 2. `https://www.tsurilogue.com/sitemap.xml` を送信
 3. URL検査で以下を確認
+   - `https://www.tsurilogue.com/ja`
    - `https://www.tsurilogue.com/ja/media`
    - 主要記事URL
    - カテゴリURL
-   - タグURL
-4. 「Googleが選択した正規URL」が `/ja/media...` になっているか確認
+   - `https://www.tsurilogue.com/ja/signup`
+4. 「Googleが選択した正規URL」がユーザー指定canonicalと一致しているか確認
 5. `robots.txt` と `sitemap.xml` が200で取得できるか確認
 
 ### WordPress Headless Mediaの注意
