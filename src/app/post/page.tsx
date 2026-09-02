@@ -1097,12 +1097,16 @@ function Field({
   autoFocus?: boolean;
   compact?: boolean;
 }) {
+  const inputClass = type === "datetime-local"
+    ? "mt-2 block w-full min-w-0 max-w-full appearance-none rounded border border-slate-300 bg-white p-3 text-left text-[16px] font-bold leading-tight"
+    : `mt-2 w-full rounded border border-slate-300 bg-white font-bold ${compact ? "p-3 text-base" : "p-4 text-lg"}`;
+
   return (
     <label className="block">
       <span className="text-sm font-bold">{label}</span>
       <input
         required={required}
-        className={`mt-2 w-full rounded border border-slate-300 bg-white font-bold ${compact || type === "datetime-local" ? "p-3 text-base" : "p-4 text-lg"}`}
+        className={inputClass}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
