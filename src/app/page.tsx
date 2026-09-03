@@ -48,9 +48,12 @@ const bannerSlides = [
 ];
 
 const seoMediaLinks = [
-  { href: "/ja/media/what-is-catch-log", label: "釣果ログとは？記録を次の釣果につなげる考え方" },
-  { href: "/ja/media/review-catch-records-tsurilogue", label: "釣果を見返して釣れる条件を探す方法" },
-  { href: "/ja/media/hello-tsurilogue", label: "TSURILOGUE Mediaからのお知らせ" }
+  { href: "/ja/media/catch-log-app-comparison", label: "釣果ログ・釣果投稿アプリの選び方と比較" },
+  { href: "/ja/media/how-to-choose-catch-record-app", label: "釣果記録アプリは何を基準に選ぶ？" },
+  { href: "/ja/media/catch-sharing-app-line-sns-difference", label: "釣果共有アプリでできること" },
+  { href: "/ja/media/fishing-tournament-app-benefits", label: "釣り大会アプリを使うメリット" },
+  { href: "/ja/media/online-fishing-tournament-rules", label: "オンライン釣り大会で失敗しないルール設計" },
+  { href: "/ja/media/how-to-start-tsurilogue-first-post", label: "TSURILOGUEを始めたら最初にやること" }
 ];
 
 export default function Home() {
@@ -108,7 +111,7 @@ export default function Home() {
       <main className="min-h-screen bg-foam px-6 py-10">
         <div className="mx-auto max-w-3xl text-center">
           <TsuriLogLogo className="mx-auto h-12 w-44 object-contain" />
-          <p className="mt-4 text-sm font-black text-slate-500">読み込み中...</p>
+          <p className="mt-4 text-sm font-black text-slate-500">釣果記録・釣果共有・釣り大会をひとつに。</p>
           <section className="mt-8 rounded-[1.5rem] border border-teal-100 bg-white p-6 text-left shadow-soft">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-water">Personal Fishing Log</p>
             <h1 className="mt-3 text-2xl font-black leading-tight text-ink sm:text-4xl">TSURILOGUE（釣りローグ）｜釣果記録・釣果共有・釣り大会アプリ</h1>

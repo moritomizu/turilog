@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { getMediaAlternates, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL, type WpPostListResponse } from "@/lib/wordpress";
+import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, getPostTitle, MEDIA_PUBLIC_BASE_URL, type WpPost, type WpPostListResponse } from "@/lib/wordpress";
 
 type MediaPageProps = {
   searchParams?: { page?: string };
@@ -38,7 +38,7 @@ export default async function MediaPage({ searchParams }: MediaPageProps) {
   return (
     <>
       <PageHeader title="Media" titleAs="div" />
-      <JsonLd data={[webPageJsonLd(), organizationJsonLd(), breadcrumbJsonLd([{ name: "Media", url: MEDIA_PUBLIC_BASE_URL }])]} />
+      <JsonLd data={[webPageJsonLd(), organizationJsonLd(), breadcrumbJsonLd([{ name: "Media", url: MEDIA_PUBLIC_BASE_URL }]), itemListJsonLd(posts.items)]} />
       <MediaListPage
         title="TSURILOGUE Media｜釣果記録・釣果共有・釣り大会を楽しむメディア"
         description="TSURILOGUE Mediaは、釣果記録・潮位・気象・タックル・AI分析をもっと楽しく活用するための公式メディアです。"
@@ -106,6 +106,22 @@ function breadcrumbJsonLd(items: { name: string; url: string }[]) {
       position: index + 1,
       name: item.name,
       item: item.url
+    }))
+  };
+}
+
+function itemListJsonLd(posts: WpPost[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "@id": `${MEDIA_PUBLIC_BASE_URL}#latest-posts`,
+    url: MEDIA_PUBLIC_BASE_URL,
+    name: "TSURILOGUE Media 最新記事",
+    itemListElement: posts.slice(0, 10).map((post, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: getMediaCanonical(post.slug),
+      name: getPostTitle(post)
     }))
   };
 }
