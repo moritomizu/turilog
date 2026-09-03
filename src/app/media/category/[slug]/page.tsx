@@ -54,11 +54,12 @@ export default async function MediaCategoryPage({ params, searchParams }: Catego
   if (!category && !posts.items.length) notFound();
 
   const title = category ? `${category.name}の記事` : "カテゴリ記事";
+  const canonical = getMediaCanonical(`category/${params.slug}`);
 
   return (
     <>
       <PageHeader title="Media" titleAs="div" />
-      <JsonLd data={breadcrumbJsonLd(title, getMediaCanonical(`category/${params.slug}`))} />
+      <JsonLd data={[webPageJsonLd(title, canonical), breadcrumbJsonLd(title, canonical)]} />
       <MediaListPage
         title={title}
         description="釣果記録、釣行データ、釣りの振り返りに役立つカテゴリ記事をまとめています。"
@@ -85,5 +86,21 @@ function breadcrumbJsonLd(name: string, url: string) {
       { "@type": "ListItem", position: 1, name: "Media", item: MEDIA_PUBLIC_BASE_URL },
       { "@type": "ListItem", position: 2, name, item: url }
     ]
+  };
+}
+
+function webPageJsonLd(name: string, url: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": url,
+    url,
+    name,
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": MEDIA_PUBLIC_BASE_URL,
+      url: MEDIA_PUBLIC_BASE_URL,
+      name: "TSURILOGUE Media"
+    }
   };
 }

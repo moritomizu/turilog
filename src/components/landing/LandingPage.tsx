@@ -276,7 +276,7 @@ function LandingHeader() {
   return (
     <header className="fixed left-0 right-0 top-0 z-40 border-b border-white/50 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-4 lg:px-8">
-        <Link href="/lp" aria-label="釣りローグLPトップ" className="flex items-center">
+        <Link href="/ja/lp" aria-label="釣りローグLPトップ" className="flex items-center">
           <TsuriLogLogo className="h-10 w-28 sm:h-12 sm:w-32" />
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-black text-slate-700 md:flex">
@@ -288,10 +288,10 @@ function LandingHeader() {
         </nav>
         <div className="flex items-center gap-2">
           <LocaleSwitcher compact className="hidden sm:flex" />
-          <Link href="/login" className="hidden rounded-full px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100 sm:inline-flex">
+          <Link href="/ja/login" className="hidden rounded-full px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100 sm:inline-flex">
             ログイン
           </Link>
-          <Link href="/login" className="rounded-full bg-[#f97316] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
+          <Link href="/ja/login" className="rounded-full bg-[#f97316] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
             無料で始める
           </Link>
         </div>
@@ -315,7 +315,7 @@ function HeroSection() {
             TSURILOGUE（釣りローグ）は、釣果・ポイント・潮位・気象条件・タックルをかんたんに記録し、あとから振り返れる釣り人のための釣果記録・釣りログアプリです。
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-7 text-base font-black text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
+            <Link href="/ja/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-7 text-base font-black text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
               無料で始める
             </Link>
             <a href="#features" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-7 text-base font-black text-white backdrop-blur transition hover:bg-white/20">
@@ -707,7 +707,7 @@ function PricingSection() {
             name="Free"
             price="無料"
             items={["釣果記録", "大会参加", "グループ参加", "基本ランキング"]}
-            href="/login"
+            href="/ja/login"
             action="無料で始める"
           />
           <PlanCard
@@ -716,7 +716,7 @@ function PricingSection() {
             caption="現在のPremium設定に合わせた価格です。"
             highlight
             items={["AI釣果レポート", "詳細潮位分析", "気象条件分析", "タックル別分析", "年間/月間レポート", "高度な検索"]}
-            href="/plans"
+            href="/ja/plans"
             action="Premiumを試す"
           />
         </div>
@@ -799,8 +799,8 @@ function FinalCTA() {
           <p className="text-sm font-black uppercase tracking-[0.22em] text-orange-200">Start today</p>
           <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-black leading-tight sm:text-5xl">まずは、今日の1匹を記録しよう。</h2>
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-8 font-black text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">無料で始める</Link>
-            <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-8 font-black text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">ログインする</Link>
+            <Link href="/ja/login" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-8 font-black text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">無料で始める</Link>
+            <Link href="/ja/login" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-8 font-black text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">ログインする</Link>
           </div>
         </div>
       </div>
@@ -828,7 +828,7 @@ function LandingFooter() {
           <Link href="/ja/feedback" className="hover:text-[#0f766e]">ご意見・ご感想</Link>
           <Link href="/ja/terms" className="hover:text-[#0f766e]">利用規約</Link>
           <Link href="/ja/privacy" className="hover:text-[#0f766e]">プライバシーポリシー</Link>
-          <Link href="/login" className="hover:text-[#0f766e]">お問い合わせ</Link>
+          <Link href="/ja/login" className="hover:text-[#0f766e]">お問い合わせ</Link>
           <LocaleSwitcher compact />
         </div>
       </div>

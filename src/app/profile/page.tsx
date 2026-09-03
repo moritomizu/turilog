@@ -133,7 +133,7 @@ function PlanStatusCard({ profile, checking, premiumDetected }: { profile: UserP
           {checking ? "確認中" : isPremium ? "利用中" : "Free"}
         </span>
       </div>
-      <Link href="/plans" className="mt-3 inline-flex rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">
+      <Link href="/ja/plans" className="mt-3 inline-flex rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">
         プランを見る
       </Link>
     </div>

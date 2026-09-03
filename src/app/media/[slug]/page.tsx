@@ -245,6 +245,7 @@ function articleJsonLd(post: WpPost, canonical: string) {
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
+    "@id": canonical,
     headline: getPostTitle(post),
     description: getPostLeadDescription(post),
     inLanguage: "ja-JP",

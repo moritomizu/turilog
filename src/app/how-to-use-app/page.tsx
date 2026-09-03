@@ -4,7 +4,7 @@ import { createPageMetadata } from "@/lib/metadata";
 export const metadata = createPageMetadata({
   title: "釣りローグをスマホアプリのように使う方法 | TSURILOGUE",
   description: "TSURILOGUE（釣りローグ）をスマホのホーム画面に追加して、釣り場でも釣果記録・釣りログをアプリのようにすばやく起動する方法を案内します。",
-  path: "/install"
+  path: "/ja/install"
 });
 
 const benefits = [
@@ -33,7 +33,7 @@ export function HowToUseAppContent() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(14,165,233,0.24),transparent_34%),linear-gradient(135deg,#06131f,#0f766e)]" aria-hidden="true" />
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1fr_0.82fr]">
           <div>
-            <Link href="/" className="inline-flex rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-black text-white backdrop-blur transition hover:bg-white/20">
+            <Link href="/ja" className="inline-flex rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-black text-white backdrop-blur transition hover:bg-white/20">
               トップへ戻る
             </Link>
             <p className="mt-10 text-sm font-black uppercase tracking-[0.22em] text-orange-200">HOME SCREEN</p>
@@ -48,7 +48,7 @@ export function HowToUseAppContent() {
               <a href="#steps" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-7 text-base font-black text-white shadow-xl shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
                 ホーム画面に追加する方法を見る
               </a>
-              <Link href="/" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-7 text-base font-black text-white backdrop-blur transition hover:bg-white/20">
+              <Link href="/ja" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-7 text-base font-black text-white backdrop-blur transition hover:bg-white/20">
                 釣りローグを開く
               </Link>
             </div>
@@ -126,10 +126,10 @@ export function HowToUseAppContent() {
             釣り場ですぐ使えるように、ホーム画面に追加しておきましょう。
           </h2>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href="/" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-8 font-black text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
+            <Link href="/ja" className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#f97316] px-8 font-black text-white shadow-xl shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-[#ea580c]">
               釣りローグを開く
             </Link>
-            <Link href="/login" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-8 font-black text-white backdrop-blur transition hover:bg-white/20">
+            <Link href="/ja/login" className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/35 bg-white/10 px-8 font-black text-white backdrop-blur transition hover:bg-white/20">
               無料で始める
             </Link>
           </div>

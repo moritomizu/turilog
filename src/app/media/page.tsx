@@ -38,9 +38,9 @@ export default async function MediaPage({ searchParams }: MediaPageProps) {
   return (
     <>
       <PageHeader title="Media" titleAs="div" />
-      <JsonLd data={[organizationJsonLd(), breadcrumbJsonLd([{ name: "Media", url: MEDIA_PUBLIC_BASE_URL }])]} />
+      <JsonLd data={[webPageJsonLd(), organizationJsonLd(), breadcrumbJsonLd([{ name: "Media", url: MEDIA_PUBLIC_BASE_URL }])]} />
       <MediaListPage
-        title="釣果を、次の一匹のヒントに。"
+        title="TSURILOGUE Media｜釣果記録・釣果共有・釣り大会を楽しむメディア"
         description="TSURILOGUE Mediaは、釣果記録・潮位・気象・タックル・AI分析をもっと楽しく活用するための公式メディアです。"
         posts={posts.items}
         pagination={posts.pagination}
@@ -66,6 +66,23 @@ function emptyPostList(page: number): WpPostListResponse {
       total: 0,
       totalPages: 0,
       hasNextPage: false
+    }
+  };
+}
+
+function webPageJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": MEDIA_PUBLIC_BASE_URL,
+    url: MEDIA_PUBLIC_BASE_URL,
+    name: "TSURILOGUE Media｜釣果記録・釣果共有・釣り大会を楽しむメディア",
+    description: "釣果記録、釣果共有、オンライン釣り大会、AI分析をもっと楽しく活用するためのTSURILOGUE公式メディアです。",
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": "https://www.tsurilogue.com/ja",
+      url: "https://www.tsurilogue.com/ja",
+      name: "TSURILOGUE（釣りローグ）"
     }
   };
 }

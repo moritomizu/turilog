@@ -167,7 +167,7 @@ export function PlansClient() {
 
   return (
     <>
-      <PageHeader title="プラン" actionHref="/" actionLabel="TOP" />
+      <PageHeader title="プラン" actionHref="/ja" actionLabel="TOP" />
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-5">
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
           <p className="text-xs font-black text-water">COMING SOON</p>
@@ -177,7 +177,7 @@ export function PlansClient() {
           </p>
           {message ? <p className="mt-3 rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
           {!user ? (
-            <Link href="/login" className="tap-target mt-4 inline-flex rounded bg-water px-4 py-3 font-black text-white">
+            <Link href="/ja/login" className="tap-target mt-4 inline-flex rounded bg-water px-4 py-3 font-black text-white">
               ログインして興味を送る
             </Link>
           ) : null}

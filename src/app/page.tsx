@@ -47,6 +47,12 @@ const bannerSlides = [
   }
 ];
 
+const seoMediaLinks = [
+  { href: "/ja/media/what-is-catch-log", label: "釣果ログとは？記録を次の釣果につなげる考え方" },
+  { href: "/ja/media/review-catch-records-tsurilogue", label: "釣果を見返して釣れる条件を探す方法" },
+  { href: "/ja/media/hello-tsurilogue", label: "TSURILOGUE Mediaからのお知らせ" }
+];
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -113,6 +119,7 @@ export default function Home() {
               <Link href="/ja/about" className="rounded-full bg-foam px-3 py-2 text-water">TSURILOGUEとは</Link>
               <Link href="/ja/features" className="rounded-full bg-foam px-3 py-2 text-water">機能</Link>
               <Link href="/ja/media" className="rounded-full bg-foam px-3 py-2 text-water">メディア</Link>
+              <Link href="/ja/signup" className="rounded-full bg-orange-50 px-3 py-2 text-coral">無料登録</Link>
               <Link href="/ja/tournaments" className="rounded-full bg-foam px-3 py-2 text-water">釣り大会</Link>
               <Link href="/ja/groups" className="rounded-full bg-foam px-3 py-2 text-water">グループ</Link>
             </nav>
@@ -120,7 +127,30 @@ export default function Home() {
               <SeoMiniCard title="釣果記録" text="写真、潮位、天候、タックルをまとめて残せます。" />
               <SeoMiniCard title="釣果共有" text="仲間内のグループで釣果を振り返れます。" />
               <SeoMiniCard title="オンライン釣り大会" text="期間と魚種を決めてランキングを楽しめます。" />
+              <SeoMiniCard title="AI釣果分析" text="過去の釣果から、時間帯、潮、エリア、タックルの傾向を参考レポートとして確認できます。" />
+              <SeoMiniCard title="釣果デジタル証明" text="写真、GPS、時刻、潮位などをもとに、釣果の信頼性を参考スコアとして見える化します。" />
+              <SeoMiniCard title="ポイント保護" text="正確な位置を守りながら、共有時はエリア表示やぼかし表示を使い分けられます。" />
             </section>
+            <section className="mt-6 rounded bg-white p-4 ring-1 ring-teal-100">
+              <h2 className="text-base font-black text-ink">主要メディア記事</h2>
+              <ul className="mt-3 grid gap-2 text-sm font-bold leading-6">
+                {seoMediaLinks.map((item) => (
+                  <li key={item.href}>
+                    <Link href={item.href} className="text-water underline underline-offset-4">
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Link href="/ja/signup" className="inline-flex min-h-12 items-center justify-center rounded bg-coral px-5 text-sm font-black text-white">
+                無料登録して釣果ログを始める
+              </Link>
+              <Link href="/ja/media" className="inline-flex min-h-12 items-center justify-center rounded border border-water px-5 text-sm font-black text-water">
+                釣果記録のヒントを読む
+              </Link>
+            </div>
             <section className="mt-6 rounded bg-foam p-4">
               <h2 className="text-base font-black text-ink">よくある質問</h2>
               <dl className="mt-3 space-y-3 text-sm font-bold leading-6 text-slate-600">
@@ -132,8 +162,13 @@ export default function Home() {
                   <dt className="text-ink">釣った場所は公開されますか？</dt>
                   <dd>正確な位置は権限や共有設定に応じて制御し、必要に応じてエリア表示やぼかし表示を使います。</dd>
                 </div>
+                <div>
+                  <dt className="text-ink">AI分析は釣果を保証しますか？</dt>
+                  <dd>釣果を保証するものではなく、過去データをもとに次回釣行の参考傾向として表示します。</dd>
+                </div>
               </dl>
             </section>
+            <SeoJsonLd />
           </section>
         </div>
       </main>
@@ -249,7 +284,7 @@ export default function Home() {
           ))}
         </div>
 
-        <Link href="/login" className="mt-6 inline-flex w-full items-center justify-center rounded border border-water px-5 py-4 font-bold text-water">
+        <Link href="/ja/login" className="mt-6 inline-flex w-full items-center justify-center rounded border border-water px-5 py-4 font-bold text-water">
           ログイン設定
         </Link>
 
@@ -292,6 +327,26 @@ function SeoMiniCard({ title, text }: { title: string; text: string }) {
       <p className="mt-1 text-xs font-bold leading-5 text-slate-600">{text}</p>
     </article>
   );
+}
+
+function SeoJsonLd() {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": "https://www.tsurilogue.com/ja",
+    url: "https://www.tsurilogue.com/ja",
+    name: "TSURILOGUE（釣りローグ）",
+    applicationCategory: "LifestyleApplication",
+    operatingSystem: "Web",
+    description: "釣果写真、魚種、サイズ、潮位、天候、タックル、ポイントを記録し、釣果共有やオンライン釣り大会にも使える釣果記録アプリです。",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "JPY"
+    }
+  };
+
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />;
 }
 
 async function loadApprovalSummary(userId: string) {
