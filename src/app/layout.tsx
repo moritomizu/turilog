@@ -20,9 +20,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icons/search-icon.svg", sizes: "512x512", type: "image/svg+xml" },
       { url: "/icons/tsurilog-icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/tsurilog-icon.png", sizes: "512x512", type: "image/png" }
     ],
+    shortcut: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     apple: [
       { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }
     ]
