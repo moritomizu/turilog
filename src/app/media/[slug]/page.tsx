@@ -19,10 +19,12 @@ import {
   getMediaPath,
   getMediaPost,
   getPostExcerpt,
+  getPostDisplayTitle,
   getPostKeywords,
-  getPostLeadDescription,
   getPostModifiedAt,
   getPostPublishedAt,
+  getPostSeoDescription,
+  getPostSeoTitle,
   getPostTitle,
   getPostWordCount,
   getRelatedMediaPosts,
@@ -45,8 +47,8 @@ export async function generateMetadata({ params }: MediaArticlePageProps): Promi
     };
   }
 
-  const title = post.seo?.title || `${getPostTitle(post)} | TSURILOGUE Media`;
-  const description = getPostLeadDescription(post);
+  const title = post.seo?.title || `${getPostSeoTitle(post)} | TSURILOGUE Media`;
+  const description = getPostSeoDescription(post);
   const canonical = getMediaCanonical(post.slug);
   const image = getOgImage(post);
   const keywords = getPostKeywords(post);
@@ -85,7 +87,7 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
   if (!post) notFound();
 
   const [related, allPosts] = await Promise.all([getRelatedMediaPosts(post).catch(() => []), getAllMediaPosts().catch(() => [])]);
-  const title = getPostTitle(post);
+  const title = getPostDisplayTitle(post);
   const canonical = getMediaCanonical(post.slug);
   const { html, headings } = enhanceArticleHtml(post.content?.rendered || "");
   const cluster = getMediaClusterForPost(post);
@@ -262,8 +264,8 @@ function articleJsonLd(post: WpPost, canonical: string) {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     "@id": canonical,
-    headline: getPostTitle(post),
-    description: getPostLeadDescription(post),
+    headline: getPostSeoTitle(post),
+    description: getPostSeoDescription(post),
     inLanguage: "ja-JP",
     datePublished: publishedAt,
     dateModified: modifiedAt || publishedAt,
@@ -334,7 +336,7 @@ function breadcrumbJsonLd(post: WpPost, canonical: string) {
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Media", item: MEDIA_PUBLIC_BASE_URL },
       ...categoryItem,
-      { "@type": "ListItem", position: category ? 3 : 2, name: getPostTitle(post), item: canonical }
+      { "@type": "ListItem", position: category ? 3 : 2, name: getPostDisplayTitle(post), item: canonical }
     ]
   };
 }
@@ -357,7 +359,7 @@ function relatedItemListJsonLd(posts: WpPost[]) {
       "@type": "ListItem",
       position: index + 1,
       url: getMediaCanonical(post.slug),
-      name: getPostTitle(post)
+      name: getPostSeoTitle(post)
     }))
   };
 }

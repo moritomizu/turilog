@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, getPostTitle, MEDIA_PUBLIC_BASE_URL, type WpPost, type WpPostListResponse } from "@/lib/wordpress";
+import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, getPostSeoTitle, MEDIA_PUBLIC_BASE_URL, type WpPost, type WpPostListResponse } from "@/lib/wordpress";
 
 type MediaPageProps = {
   searchParams?: { page?: string };
@@ -121,7 +121,7 @@ function itemListJsonLd(posts: WpPost[]) {
       "@type": "ListItem",
       position: index + 1,
       url: getMediaCanonical(post.slug),
-      name: getPostTitle(post)
+      name: getPostSeoTitle(post)
     }))
   };
 }

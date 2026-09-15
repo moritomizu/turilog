@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { formatMediaDate, getMediaPath, getPostExcerpt, getPostTitle, type WpPost } from "@/lib/wordpress";
+import { formatMediaDate, getMediaPath, getPostDisplayTitle, getPostExcerpt, type WpPost } from "@/lib/wordpress";
 
 export function MediaPostCard({ post }: { post: WpPost }) {
-  const title = getPostTitle(post);
+  const title = getPostDisplayTitle(post);
   const excerpt = getPostExcerpt(post);
   const image = post.featuredImage;
   const category = post.categories?.[0];

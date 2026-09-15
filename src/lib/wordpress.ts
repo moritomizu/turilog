@@ -89,6 +89,12 @@ export type MediaClusterDefinition = {
   anchorText: string;
 };
 
+export type MediaSeoOverride = {
+  title: string;
+  h1?: string;
+  description: string;
+};
+
 type PostListParams = {
   page?: number;
   perPage?: number;
@@ -281,6 +287,18 @@ export function getMediaParentArticleLinks() {
 
 export function getPostTitle(post: WpPost) {
   return htmlToText(post.title?.raw || post.title?.rendered || "TSURILOGUE Media");
+}
+
+export function getPostSeoTitle(post: WpPost) {
+  return mediaSeoOverridesBySlug[post.slug]?.title || getPostTitle(post);
+}
+
+export function getPostDisplayTitle(post: WpPost) {
+  return mediaSeoOverridesBySlug[post.slug]?.h1 || mediaSeoOverridesBySlug[post.slug]?.title || getPostTitle(post);
+}
+
+export function getPostSeoDescription(post: WpPost) {
+  return mediaSeoOverridesBySlug[post.slug]?.description || getPostLeadDescription(post);
 }
 
 export function getPostExcerpt(post: WpPost, maxLength = 160) {
@@ -531,6 +549,57 @@ const categoryMetadataByName: Record<string, MediaCategoryMetadata> = {
     description: "釣行ログ、釣行メモ、釣りの振り返りに関する記事を紹介。潮位や天候、タックルを含めて釣行を記録する方法を解説します。",
     classification: "MERGE_CANDIDATE",
     notes: "釣りログ・釣り日記と近いため、将来的に統合候補。"
+  }
+};
+
+const mediaSeoOverridesBySlug: Record<string, MediaSeoOverride> = {
+  "fishing-diary-vs-catch-record": {
+    title: "釣り日記と釣果記録の違い｜思い出用・上達用の使い分け",
+    description: "釣り日記と釣果記録の違いを、思い出を残す目的と釣果アップに活かす目的に分けて解説します。"
+  },
+  "fishing-shop-catch-post-event": {
+    title: "釣具店イベントで釣果投稿を活用する方法｜来店促進の実践アイデア",
+    description: "釣具店イベントで釣果投稿を活用し、来店促進や常連化、地域コミュニティづくりにつなげる考え方を紹介します。"
+  },
+  "charter-boat-catch-log": {
+    title: "遊漁船・船長向け釣果ログ活用術｜釣果投稿を集客に活かす",
+    description: "遊漁船や船長が釣果ログを残すメリットを、釣果発信、リピーターづくり、乗船前後の情報提供の視点で解説します。"
+  },
+  "catch-ranking-ideas": {
+    title: "仲間内ランキング企画アイデア集｜釣果投稿を楽しく続ける工夫",
+    description: "仲間内で釣果投稿を続けやすくするランキング企画のアイデアを紹介。月間賞や魚種別チャレンジにも応用できます。"
+  },
+  "fishing-catch-photo-tips": {
+    title: "釣果写真をきれいに残す撮り方｜あとから見返したくなる記録術",
+    description: "釣果写真をきれいに残すための撮り方や構図、サイズ感の伝え方を、釣果ログで見返しやすい記録術として解説します。"
+  },
+  "catch-ranking-tsurilogue": {
+    title: "釣果ランキングで仲間内の釣りを盛り上げる方法",
+    description: "釣果ランキングを作るメリットと、仲間内の釣りを楽しく続けるためのランキング設計の考え方を紹介します。"
+  },
+  "fishing-shop-tournament-tsurilogue": {
+    title: "釣具店がオンライン釣り大会を開催するメリット｜地域コミュニティづくり",
+    description: "釣具店がオンライン釣り大会を開催するメリットを、来店促進、常連化、地域の釣りコミュニティ形成の視点で解説します。"
+  },
+  "charter-boat-catch-report-tsurilogue": {
+    title: "遊漁船の釣果投稿を記録・共有・リピーターづくりに活かす方法",
+    description: "遊漁船の釣果投稿を、単なる釣果報告ではなく記録・共有・リピーターづくりに活かす方法として整理します。"
+  },
+  "fishing-tournament-organizer-tsurilogue": {
+    title: "釣り大会の幹事向け運営ガイド｜告知・投稿・集計をスマホで管理",
+    description: "釣り大会の幹事が告知、釣果投稿、集計、結果発表をスマホで管理しやすくするための運営ポイントをまとめます。"
+  },
+  "organize-fishing-photos": {
+    title: "スマホの釣果写真整理術｜写真を釣行ログとして活かすコツ",
+    description: "スマホにたまった釣果写真を整理し、釣行ログとして見返しやすくする方法を紹介します。"
+  },
+  "how-to-write-fishing-diary": {
+    title: "釣り日記の書き方｜初心者向けテンプレートと続け方",
+    description: "初心者でも続けやすい釣り日記の書き方を、記録項目、テンプレート、振り返り方に分けて紹介します。"
+  },
+  "fishing-diary-app": {
+    title: "釣り日記アプリの選び方｜思い出を残す釣行ログの始め方",
+    description: "釣り日記アプリを選ぶときのポイントを、思い出の保存、写真整理、釣行ログの続けやすさから解説します。"
   }
 };
 

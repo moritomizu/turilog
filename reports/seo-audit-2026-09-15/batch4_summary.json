@@ -1,0 +1,108 @@
+{
+  "total_posts": 61,
+  "classification_counts": {
+    "KEEP": 4,
+    "SUPPORT": 25,
+    "MERGE": 18,
+    "REWRITE": 12,
+    "REDIRECT": 2
+  },
+  "cluster_summary": {
+    "TSURILOGUEの使い方・事業者向け": {
+      "KEEP": 1,
+      "REWRITE": 2
+    },
+    "釣り大会・オンライン釣り大会": {
+      "SUPPORT": 10,
+      "MERGE": 7,
+      "REWRITE": 5,
+      "KEEP": 1
+    },
+    "釣果共有": {
+      "SUPPORT": 9,
+      "KEEP": 1,
+      "MERGE": 8,
+      "REDIRECT": 2,
+      "REWRITE": 2
+    },
+    "釣果ログ・釣果記録": {
+      "KEEP": 1,
+      "REWRITE": 3,
+      "SUPPORT": 6,
+      "MERGE": 3
+    }
+  },
+  "merge_redirect_candidates": 20,
+  "high_risk_pairs": [
+    {
+      "url": "https://www.tsurilogue.com/ja/media/fishing-log-app-items",
+      "similar_to": "catch-log-items",
+      "body_similarity": "0.216",
+      "intent_similarity": "0.800",
+      "classification": "MERGE"
+    },
+    {
+      "url": "https://www.tsurilogue.com/ja/media/fishing-log-app",
+      "similar_to": "what-is-fishing-log",
+      "body_similarity": "0.167",
+      "intent_similarity": "0.800",
+      "classification": "MERGE"
+    },
+    {
+      "url": "https://www.tsurilogue.com/ja/media/how-to-choose-catch-record-app",
+      "similar_to": "free-catch-record-app-tsurilogue",
+      "body_similarity": "0.105",
+      "intent_similarity": "0.650",
+      "classification": "MERGE"
+    },
+    {
+      "url": "https://www.tsurilogue.com/ja/media/fishing-log-checklist",
+      "similar_to": "make-fishing-log-a-habit",
+      "body_similarity": "0.100",
+      "intent_similarity": "0.850",
+      "classification": "MERGE"
+    },
+    {
+      "url": "https://www.tsurilogue.com/ja/media/share-catches-with-fishing-friends-tsurilogue",
+      "similar_to": "fishing-team-circle-tsurilogue",
+      "body_similarity": "0.096",
+      "intent_similarity": "0.500",
+      "classification": "MERGE"
+    },
+    {
+      "url": "https://www.tsurilogue.com/ja/media/what-is-catch-log",
+      "similar_to": "record-caught-fish",
+      "body_similarity": "0.073",
+      "intent_similarity": "1.000",
+      "classification": "MERGE"
+    },
+    {
+      "url": "https://www.tsurilogue.com/ja/media/fishing-tournament-rules-checklist",
+      "similar_to": "online-fishing-tournament-rules",
+      "body_similarity": "0.066",
+      "intent_similarity": "1.000",
+      "classification": "MERGE"
+    },
+    {
+      "url": "https://www.tsurilogue.com/ja/media/online-fishing-tournament-tsurilogue",
+      "similar_to": "online-fishing-tournament-rules",
+      "body_similarity": "0.064",
+      "intent_similarity": "1.000",
+      "classification": "MERGE"
+    },
+    {
+      "url": "https://www.tsurilogue.com/ja/media/line-catch-sharing",
+      "similar_to": "group-catch-management",
+      "body_similarity": "0.064",
+      "intent_similarity": "1.000",
+      "classification": "MERGE"
+    },
+    {
+      "url": "https://www.tsurilogue.com/ja/media/hello-tsurilogue",
+      "similar_to": "fishing-diary-app",
+      "body_similarity": "0.063",
+      "intent_similarity": "0.700",
+      "classification": "MERGE"
+    }
+  ]
+}
