@@ -1,0 +1,23 @@
+{
+  "post_count": 61,
+  "cluster_counts": {
+    "tsurilogue": 3,
+    "tournament": 23,
+    "catch_sharing": 22,
+    "catch_log": 13
+  },
+  "parents_found": {
+    "catch_log": true,
+    "catch_sharing": true,
+    "tournament": true,
+    "tsurilogue": true
+  },
+  "orphan_count": 0,
+  "weak_count": 0,
+  "parent_urls": {
+    "catch_log": "https://www.tsurilogue.com/ja/media/catch-log-app-comparison",
+    "catch_sharing": "https://www.tsurilogue.com/ja/media/catch-sharing-app-line-sns-difference",
+    "tournament": "https://www.tsurilogue.com/ja/media/online-fishing-tournament",
+    "tsurilogue": "https://www.tsurilogue.com/ja/media/how-to-start-tsurilogue-first-post"
+  }
+}

@@ -1,16 +1,9 @@
 import Link from "next/link";
 import { MediaPagination } from "@/components/media/MediaPagination";
 import { MediaPostCard } from "@/components/media/MediaPostCard";
-import { getMediaPath, getPostTitle, type WpPagination, type WpPost, type WpTerm } from "@/lib/wordpress";
+import { getMediaParentArticleLinks, getMediaPath, type WpPagination, type WpPost, type WpTerm } from "@/lib/wordpress";
 
-const pillarArticles = [
-  { href: getMediaPath("catch-log-app-comparison"), title: "釣果ログ・釣果投稿アプリ比較", body: "記録、共有、大会で使える釣果アプリの選び方を整理します。" },
-  { href: getMediaPath("how-to-choose-catch-record-app"), title: "釣果記録アプリの選び方", body: "初心者が失敗しにくい比較ポイントを確認できます。" },
-  { href: getMediaPath("catch-sharing-app-line-sns-difference"), title: "釣果共有アプリでできること", body: "LINEやSNSとの違いと、仲間内共有の使い方を紹介します。" },
-  { href: getMediaPath("fishing-tournament-app-benefits"), title: "釣り大会アプリのメリット", body: "集計、ランキング、結果発表をスマホで運用する考え方です。" },
-  { href: getMediaPath("online-fishing-tournament-rules"), title: "オンライン釣り大会ルール設計", body: "楽しく公平に大会を運営するためのルール作りをまとめます。" },
-  { href: getMediaPath("how-to-start-tsurilogue-first-post"), title: "TSURILOGUEの使い方", body: "初回投稿までの流れと、釣りログ活用術を案内します。" }
-];
+const pillarArticles = getMediaParentArticleLinks();
 
 const priorityCategoryLinks = [
   { href: getMediaPath("category/record"), label: "釣果記録カテゴリ" },
@@ -68,13 +61,14 @@ export function MediaListPage({
             <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0f766e]">Start here</p>
             <h2 className="mt-2 text-xl font-black text-slate-950">主要親記事</h2>
             <p className="mt-2 text-sm font-bold leading-7 text-slate-600">
-              釣果記録アプリの選び方、釣果共有、オンライン釣り大会、TSURILOGUEの使い方を知るための入り口です。
+              釣果ログ、釣果共有、オンライン釣り大会、TSURILOGUEの使い方を知るための代表記事です。
             </p>
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
               {pillarArticles.map((article) => (
                 <Link key={article.href} href={article.href} className="rounded-2xl bg-foam p-4 transition hover:-translate-y-0.5 hover:bg-teal-50">
                   <span className="block text-sm font-black leading-6 text-slate-950">{article.title}</span>
                   <span className="mt-2 block text-xs font-bold leading-5 text-slate-600">{article.body}</span>
+                  <span className="mt-3 block text-xs font-black text-[#0f766e]">{article.anchorText}</span>
                 </Link>
               ))}
             </div>

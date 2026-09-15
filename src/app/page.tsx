@@ -48,12 +48,10 @@ const bannerSlides = [
 ];
 
 const seoMediaLinks = [
-  { href: "/ja/media/catch-log-app-comparison", label: "釣果ログ・釣果投稿アプリの選び方と比較" },
-  { href: "/ja/media/how-to-choose-catch-record-app", label: "釣果記録アプリは何を基準に選ぶ？" },
-  { href: "/ja/media/catch-sharing-app-line-sns-difference", label: "釣果共有アプリでできること" },
-  { href: "/ja/media/fishing-tournament-app-benefits", label: "釣り大会アプリを使うメリット" },
-  { href: "/ja/media/online-fishing-tournament-rules", label: "オンライン釣り大会で失敗しないルール設計" },
-  { href: "/ja/media/how-to-start-tsurilogue-first-post", label: "TSURILOGUEを始めたら最初にやること" }
+  { href: "/ja/media/catch-log-app-comparison", label: "釣果ログ・釣果記録アプリの選び方を詳しく見る" },
+  { href: "/ja/media/catch-sharing-app-line-sns-difference", label: "釣果共有アプリの使い方とLINE・SNSとの違いを見る" },
+  { href: "/ja/media/online-fishing-tournament", label: "オンライン釣り大会の始め方を詳しく見る" },
+  { href: "/ja/media/how-to-start-tsurilogue-first-post", label: "TSURILOGUEの始め方と初回投稿の流れを見る" }
 ];
 
 export default function Home() {

@@ -74,6 +74,21 @@ export type MediaCategoryMetadata = {
   notes: string;
 };
 
+export type MediaClusterKey = "catch_log" | "catch_sharing" | "tournament" | "tsurilogue";
+
+export type MediaClusterDefinition = {
+  key: MediaClusterKey;
+  label: string;
+  title: string;
+  description: string;
+  parentSlug: string;
+  parentTitle: string;
+  primaryKeyword: string;
+  secondaryKeywords: string[];
+  searchIntent: string;
+  anchorText: string;
+};
+
 type PostListParams = {
   page?: number;
   perPage?: number;
@@ -106,6 +121,18 @@ export const getMediaPosts = cache(async ({ page = 1, perPage = 10, category, ta
     tag
   });
   return normalizePostListResponse(response, page, perPage);
+});
+
+export const getAllMediaPosts = cache(async () => {
+  const allPosts: WpPost[] = [];
+  let page = 1;
+  while (page <= 20) {
+    const response = await getMediaPosts({ page, perPage: 20 });
+    allPosts.push(...response.items);
+    if (!response.pagination.hasNextPage) break;
+    page += 1;
+  }
+  return allPosts;
 });
 
 export const getMediaPost = cache(async (slug: string) => {
@@ -142,6 +169,114 @@ export async function getRelatedMediaPosts(post: WpPost, limit = 3) {
   }
 
   return [...related.values()].slice(0, limit);
+}
+
+export const mediaClusterDefinitions: MediaClusterDefinition[] = [
+  {
+    key: "catch_log",
+    label: "釣果ログ・釣果記録",
+    title: "釣果ログ・釣果記録の親記事",
+    description: "釣果ログ、釣果記録アプリ、釣行メモ、釣り日記の考え方をまとめた代表ガイドです。",
+    parentSlug: "catch-log-app-comparison",
+    parentTitle: "釣果ログ・釣果投稿アプリの選び方と比較",
+    primaryKeyword: "釣果ログ",
+    secondaryKeywords: ["釣果記録", "釣果記録アプリ", "釣果投稿アプリ", "釣りログ", "釣行記録", "釣り日記"],
+    searchIntent: "釣果をスマホで記録し、見返して次の釣行に活かす方法を知りたい。",
+    anchorText: "釣果ログ・釣果記録アプリの選び方を詳しく見る"
+  },
+  {
+    key: "catch_sharing",
+    label: "釣果共有",
+    title: "釣果共有の親記事",
+    description: "LINEやSNSとの違い、仲間内共有、グループでの釣果管理をまとめた代表ガイドです。",
+    parentSlug: "catch-sharing-app-line-sns-difference",
+    parentTitle: "釣果共有アプリでできること",
+    primaryKeyword: "釣果共有",
+    secondaryKeywords: ["釣果共有アプリ", "LINE釣果共有", "釣りSNS", "仲間内共有", "グループ管理"],
+    searchIntent: "仲間と釣果を共有し、後から振り返れる形で残す方法を知りたい。",
+    anchorText: "釣果共有アプリの使い方とLINE・SNSとの違いを見る"
+  },
+  {
+    key: "tournament",
+    label: "釣り大会・オンライン釣り大会",
+    title: "釣り大会・オンライン釣り大会の親記事",
+    description: "オンライン釣り大会、ランキング、ルール設計、結果発表をまとめた代表ガイドです。",
+    parentSlug: "online-fishing-tournament",
+    parentTitle: "オンライン釣り大会とは？",
+    primaryKeyword: "オンライン釣り大会",
+    secondaryKeywords: ["釣り大会アプリ", "釣り大会", "大会ルール", "釣果ランキング", "結果発表"],
+    searchIntent: "スマホで釣り大会を開催・参加・運営する方法を知りたい。",
+    anchorText: "オンライン釣り大会の始め方を詳しく見る"
+  },
+  {
+    key: "tsurilogue",
+    label: "TSURILOGUEの使い方・事業者向け",
+    title: "TSURILOGUEの使い方の親記事",
+    description: "初回投稿、基本機能、遊漁船・釣具店・チームでの活用方法をまとめた代表ガイドです。",
+    parentSlug: "how-to-start-tsurilogue-first-post",
+    parentTitle: "TSURILOGUEを始めたら最初にやること",
+    primaryKeyword: "TSURILOGUE 使い方",
+    secondaryKeywords: ["釣りローグ 使い方", "初回投稿", "遊漁船活用", "釣具店活用", "チーム利用"],
+    searchIntent: "TSURILOGUEで何ができるか、最初にどう使えばよいかを知りたい。",
+    anchorText: "TSURILOGUEの始め方と初回投稿の流れを見る"
+  }
+];
+
+export function getMediaClusterByKey(key: MediaClusterKey) {
+  return mediaClusterDefinitions.find((cluster) => cluster.key === key) ?? mediaClusterDefinitions[0];
+}
+
+export function getMediaClusterForPost(post: WpPost) {
+  const parentCluster = mediaClusterDefinitions.find((cluster) => cluster.parentSlug === post.slug);
+  if (parentCluster) return parentCluster;
+
+  const text = [post.slug, getPostTitle(post), ...(post.categories?.map((category) => category.name) ?? []), ...(post.tags?.map((tag) => tag.name) ?? [])].join(" ").toLowerCase();
+  const titleText = [post.slug, getPostTitle(post), ...(post.categories?.map((category) => category.name) ?? [])].join(" ").toLowerCase();
+
+  if (matchesAny(text, ["tournament", "大会", "ランキング", "ルール", "結果発表", "イベント"])) {
+    return getMediaClusterByKey("tournament");
+  }
+
+  if (matchesAny(titleText, ["charter", "boat", "shop", "organizer", "what-you-can-do", "how-to-start-tsurilogue", "使い方", "初回投稿", "遊漁船", "船長", "釣具店", "事業者", "幹事"])) {
+    return getMediaClusterByKey("tsurilogue");
+  }
+
+  if (matchesAny(text, ["sharing", "share", "friends", "team", "circle", "line", "sns", "group", "community", "共有", "仲間", "チーム", "サークル", "グループ", "コミュニティ"])) {
+    return getMediaClusterByKey("catch_sharing");
+  }
+
+  return getMediaClusterByKey("catch_log");
+}
+
+export function getMediaClusterPosts(posts: WpPost[], clusterKey: MediaClusterKey, currentSlug?: string, limit = 5) {
+  const clusterPosts = posts
+    .filter((post) => getMediaClusterForPost(post).key === clusterKey)
+    .filter((post) => post.slug !== currentSlug)
+    .sort((a, b) => new Date(getPostModifiedAt(b) ?? getPostPublishedAt(b) ?? 0).getTime() - new Date(getPostModifiedAt(a) ?? getPostPublishedAt(a) ?? 0).getTime());
+  const parentSlug = getMediaClusterByKey(clusterKey).parentSlug;
+  const parent = clusterPosts.find((post) => post.slug === parentSlug);
+  const withoutParent = clusterPosts.filter((post) => post.slug !== parentSlug);
+
+  if (currentSlug === parentSlug) return withoutParent.slice(0, limit);
+  if (!currentSlug) return [...(parent ? [parent] : []), ...withoutParent].slice(0, limit);
+
+  const fullCluster = posts
+    .filter((post) => getMediaClusterForPost(post).key === clusterKey && post.slug !== parentSlug)
+    .sort((a, b) => new Date(getPostModifiedAt(b) ?? getPostPublishedAt(b) ?? 0).getTime() - new Date(getPostModifiedAt(a) ?? getPostPublishedAt(a) ?? 0).getTime());
+  const currentIndex = Math.max(0, fullCluster.findIndex((post) => post.slug === currentSlug));
+  const windowStart = Math.max(0, currentIndex - 2);
+  const localPosts = fullCluster.filter((post) => post.slug !== currentSlug).slice(windowStart, windowStart + limit);
+
+  return [...(parent ? [parent] : []), ...localPosts].slice(0, limit);
+}
+
+export function getMediaParentArticleLinks() {
+  return mediaClusterDefinitions.map((cluster) => ({
+    href: getMediaPath(cluster.parentSlug),
+    title: cluster.label,
+    body: cluster.description,
+    anchorText: cluster.anchorText
+  }));
 }
 
 export function getPostTitle(post: WpPost) {
@@ -320,6 +455,10 @@ export function htmlToText(value: string) {
     .replace(/&#039;/g, "'")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function matchesAny(value: string, patterns: string[]) {
+  return patterns.some((pattern) => value.includes(pattern.toLowerCase()));
 }
 
 const categoryMetadataByName: Record<string, MediaCategoryMetadata> = {

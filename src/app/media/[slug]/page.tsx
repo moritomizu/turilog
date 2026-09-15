@@ -11,8 +11,11 @@ import {
   MEDIA_PUBLIC_BASE_URL,
   enhanceArticleHtml,
   formatMediaDate,
+  getAllMediaPosts,
   getMediaAlternates,
   getMediaCanonical,
+  getMediaClusterForPost,
+  getMediaClusterPosts,
   getMediaPath,
   getMediaPost,
   getPostExcerpt,
@@ -81,10 +84,14 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
   const post = await getMediaPost(params.slug).catch(() => null);
   if (!post) notFound();
 
-  const related = await getRelatedMediaPosts(post).catch(() => []);
+  const [related, allPosts] = await Promise.all([getRelatedMediaPosts(post).catch(() => []), getAllMediaPosts().catch(() => [])]);
   const title = getPostTitle(post);
   const canonical = getMediaCanonical(post.slug);
   const { html, headings } = enhanceArticleHtml(post.content?.rendered || "");
+  const cluster = getMediaClusterForPost(post);
+  const isClusterParent = post.slug === cluster.parentSlug;
+  const clusterPosts = getMediaClusterPosts(allPosts, cluster.key, post.slug, isClusterParent ? 60 : 4);
+  const parentPost = allPosts.find((item) => item.slug === cluster.parentSlug);
   const publishedAt = getPostPublishedAt(post);
   const modifiedAt = getPostModifiedAt(post);
   const publishedLabel = formatMediaDate(publishedAt);
@@ -114,6 +121,7 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
 
           <h1 className="text-4xl font-black leading-tight text-slate-950 sm:text-5xl">{title}</h1>
           <ArticleDigest post={post} title={title} headings={headings} />
+          <ArticleClusterGuide post={post} parentPost={parentPost} clusterPosts={clusterPosts} />
 
           <dl className="mt-6 grid gap-3 rounded-[1.5rem] border border-teal-100 bg-white/90 p-4 text-sm font-bold text-slate-600 shadow-sm sm:grid-cols-3">
             <div>
@@ -284,13 +292,49 @@ function articleJsonLd(post: WpPost, canonical: string) {
   };
 }
 
+function ArticleClusterGuide({ post, parentPost, clusterPosts }: { post: WpPost; parentPost?: WpPost; clusterPosts: WpPost[] }) {
+  const cluster = getMediaClusterForPost(post);
+  const isParent = post.slug === cluster.parentSlug;
+  const parentHref = getMediaPath(cluster.parentSlug);
+  const parentTitle = parentPost ? getPostTitle(parentPost) : cluster.parentTitle;
+  const links = clusterPosts.filter((item) => item.slug !== cluster.parentSlug || isParent).slice(0, isParent ? 60 : 4);
+
+  return (
+    <section className="mt-6 rounded-[1.5rem] border border-teal-100 bg-white p-5 shadow-sm" aria-label={`${cluster.label}の内部リンク`}>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Related Guide</p>
+      <h2 className="mt-2 text-lg font-black text-slate-950">{isParent ? `${cluster.label}の関連ガイド` : `${cluster.label}の代表ガイド`}</h2>
+      <p className="mt-2 text-sm font-bold leading-7 text-slate-600">{cluster.description}</p>
+      {!isParent ? (
+        <Link href={parentHref} className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-[#0f766e] px-5 text-sm font-black text-white">
+          {cluster.anchorText}
+        </Link>
+      ) : null}
+      {links.length ? (
+        <div className={`mt-5 grid gap-3 ${isParent ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {links.map((item) => (
+            <Link key={item.id} href={getMediaPath(item.slug)} className="rounded-2xl bg-foam p-4 text-sm font-black leading-6 text-slate-950 transition hover:bg-teal-50">
+              <span>{getPostTitle(item)}</span>
+              <span className="mt-2 block text-xs font-bold text-[#0f766e]">{isParent ? "関連小記事を読む" : "同じテーマの記事を読む"}</span>
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function breadcrumbJsonLd(post: WpPost, canonical: string) {
+  const category = post.categories?.[0];
+  const categoryItem = category
+    ? [{ "@type": "ListItem", position: 2, name: category.name, item: getMediaCanonical(`category/${category.slug}`) }]
+    : [];
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Media", item: MEDIA_PUBLIC_BASE_URL },
-      { "@type": "ListItem", position: 2, name: getPostTitle(post), item: canonical }
+      ...categoryItem,
+      { "@type": "ListItem", position: category ? 3 : 2, name: getPostTitle(post), item: canonical }
     ]
   };
 }
