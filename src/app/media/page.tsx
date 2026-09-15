@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, getPostSeoTitle, MEDIA_PUBLIC_BASE_URL, type WpPost, type WpPostListResponse } from "@/lib/wordpress";
+import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, getPostSeoTitle, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS, type WpPost, type WpPostListResponse } from "@/lib/wordpress";
 
 type MediaPageProps = {
   searchParams?: { page?: string };
 };
 
-export const revalidate = 0;
+export const revalidate = MEDIA_REVALIDATE_SECONDS;
+export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "TSURILOGUE Media | 釣果記録・釣りログと釣り分析のヒント",

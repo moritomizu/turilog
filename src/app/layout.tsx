@@ -1,13 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
-import { NextIntlClientProvider } from "next-intl";
 import { AppFooter } from "@/components/AppFooter";
 import { AppTabBar } from "@/components/AppTabBar";
+import { ClientIntlProvider } from "@/components/ClientIntlProvider";
 import { APP_NAME, APP_NAME_JA, APP_SEO_TITLE } from "@/lib/brand";
-import { defaultLocale, isAppLocale } from "@/lib/i18n";
+import { defaultLocale } from "@/lib/i18n";
 import { createPageMetadata, getSiteUrl } from "@/lib/metadata";
-import enMessages from "../../messages/en.json";
-import jaMessages from "../../messages/ja.json";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -63,21 +60,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headerLocale = headers().get("x-tsurilog-locale") ?? undefined;
-  const locale = isAppLocale(headerLocale) ? headerLocale : defaultLocale;
-  const messages = locale === "en" ? enMessages : jaMessages;
-
   return (
-    <html lang={locale}>
+    <html lang={defaultLocale} suppressHydrationWarning>
       <head>
         <script src="https://analytics.ahrefs.com/analytics.js" data-key="cJZ2ML3DPpFOZkZrRe5pyA" async />
       </head>
       <body className="min-h-screen bg-foam text-ink">
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <ClientIntlProvider>
           {children}
           <AppTabBar />
           <AppFooter />
-        </NextIntlClientProvider>
+        </ClientIntlProvider>
       </body>
     </html>
   );

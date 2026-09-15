@@ -6,7 +6,7 @@ const PUBLIC_FILE = /\.(.*)$/;
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  if (shouldSkip(pathname)) return NextResponse.next();
+  const isPublicMediaPath = shouldAvoidLocaleCookie(pathname);
 
   if (shouldRedirectMediaTrailingSlash(pathname)) {
     const url = request.nextUrl.clone();
@@ -15,17 +15,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
 
+  if (shouldSkip(pathname)) return NextResponse.next();
+
   const appLocaleMatch = pathname.match(/^\/app\/(ja|en)\/?$/);
   if (appLocaleMatch) {
     const locale = appLocaleMatch[1];
-    const headers = new Headers(request.headers);
-    headers.set("x-tsurilog-locale", locale);
-
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = search;
 
-    const response = NextResponse.rewrite(url, { request: { headers } });
+    const response = NextResponse.rewrite(url);
     response.cookies.set("NEXT_LOCALE", locale, { path: "/", sameSite: "lax" });
     return response;
   }
@@ -38,20 +37,23 @@ export function middleware(request: NextRequest) {
   }
 
   const locale = firstSegment;
-  const headers = new Headers(request.headers);
-  headers.set("x-tsurilog-locale", locale);
-
   const url = request.nextUrl.clone();
   url.pathname = stripLocaleFromPathname(pathname);
   url.search = search;
 
-  const response = NextResponse.rewrite(url, { request: { headers } });
-  response.cookies.set("NEXT_LOCALE", locale, { path: "/", sameSite: "lax" });
+  const response = NextResponse.rewrite(url);
+  if (!isPublicMediaPath) {
+    response.cookies.set("NEXT_LOCALE", locale, { path: "/", sameSite: "lax" });
+  }
   return response;
 }
 
 function shouldRedirectMediaTrailingSlash(pathname: string) {
   return /^\/(ja|en)\/media\/$/.test(pathname) || /^\/(ja|en)\/media\/.+\/$/.test(pathname);
+}
+
+function shouldAvoidLocaleCookie(pathname: string) {
+  return /^\/(ja|en)\/media(?:\/|$)/.test(pathname);
 }
 
 function shouldSkip(pathname: string) {
@@ -63,6 +65,7 @@ function shouldSkip(pathname: string) {
     pathname.startsWith("/manifest.json") ||
     pathname.startsWith("/robots.txt") ||
     pathname.startsWith("/sitemap.xml") ||
+    shouldAvoidLocaleCookie(pathname) ||
     PUBLIC_FILE.test(pathname)
   );
 }

@@ -37,6 +37,8 @@ type MediaArticlePageProps = {
 };
 
 export const revalidate = 3600;
+export const dynamic = "force-static";
+export const dynamicParams = true;
 
 export async function generateMetadata({ params }: MediaArticlePageProps): Promise<Metadata> {
   const post = await getMediaPost(params.slug).catch(() => null);

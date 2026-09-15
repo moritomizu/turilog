@@ -3,14 +3,16 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL } from "@/lib/wordpress";
+import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS } from "@/lib/wordpress";
 
 type TagPageProps = {
   params: { slug: string };
   searchParams?: { page?: string };
 };
 
-export const revalidate = 0;
+export const revalidate = MEDIA_REVALIDATE_SECONDS;
+export const dynamic = "force-static";
+export const dynamicParams = true;
 
 const MEDIA_OG_IMAGE = "https://www.tsurilogue.com/opengraph-image";
 
