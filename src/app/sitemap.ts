@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/metadata";
-import { MEDIA_PUBLIC_BASE_URL, getLatestPostModifiedAt, getLatestPostModifiedAtByCategory, getMediaCanonical, getMediaCategories, getMediaPosts, getPostSitemapLastModified } from "@/lib/wordpress";
+import { MEDIA_PUBLIC_BASE_URL, getAllMediaPosts, getLatestPostModifiedAt, getLatestPostModifiedAtByCategory, getMediaCanonical, getMediaCategories, getPostSitemapLastModified } from "@/lib/wordpress";
 
 const staticRoutes = [
   { path: "/ja", priority: 1, lastModified: "2026-09-15T00:00:00.000Z" },
@@ -27,10 +27,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
 async function getMediaSitemapRoutes(): Promise<MetadataRoute.Sitemap> {
   const [posts, categories] = await Promise.all([
-    getMediaPosts({ page: 1, perPage: 100 }).catch(() => null),
+    getAllMediaPosts().catch(() => []),
     getMediaCategories().catch(() => [])
   ]);
-  const safePosts = Array.isArray(posts?.items) ? posts.items : [];
+  const safePosts = Array.isArray(posts) ? posts : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
   const latestPostModified = getLatestPostModifiedAt(safePosts);
 

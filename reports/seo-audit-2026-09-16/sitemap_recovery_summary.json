@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-09-15T22:38:45.660294Z",
+  "wp_index_target_articles": 61,
+  "sitemap_article_urls_before": 20,
+  "missing_before": 41,
+  "extra_before": 0,
+  "expected_sitemap_article_urls_after_code_change": 61,
+  "http_200": 61,
+  "indexable": 61,
+  "canonical_self": 61,
+  "date_valid": 61,
+  "A_minus_B_before_sample": [
+    "https://www.tsurilogue.com/ja/media/benefits-of-catch-log",
+    "https://www.tsurilogue.com/ja/media/catch-log-items",
+    "https://www.tsurilogue.com/ja/media/catch-log-template",
+    "https://www.tsurilogue.com/ja/media/catch-ranking-tsurilogue",
+    "https://www.tsurilogue.com/ja/media/catch-record-app-tsurilogue",
+    "https://www.tsurilogue.com/ja/media/catch-sharing-app",
+    "https://www.tsurilogue.com/ja/media/charter-boat-catch-report-tsurilogue",
+    "https://www.tsurilogue.com/ja/media/fishing-blank-day-log-tsurilogue",
+    "https://www.tsurilogue.com/ja/media/fishing-blank-log",
+    "https://www.tsurilogue.com/ja/media/fishing-catch-memo-smartphone"
+  ],
+  "B_minus_A_before": [],
+  "root_cause": "sitemap.ts used getMediaPosts({ page: 1, perPage: 100 }), but the WordPress Headless API caps perPage to 20 and reports hasNextPage=true. The sitemap code did not paginate, so only the first 20 posts were emitted."
+}
