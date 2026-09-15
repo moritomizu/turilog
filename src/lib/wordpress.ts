@@ -66,6 +66,14 @@ export type WpPostListResponse = {
   pagination: WpPagination;
 };
 
+export type MediaCategoryMetadata = {
+  title: string;
+  heading: string;
+  description: string;
+  classification: "KEEP_INDEX" | "NOINDEX_CANDIDATE" | "MERGE_CANDIDATE";
+  notes: string;
+};
+
 type PostListParams = {
   page?: number;
   perPage?: number;
@@ -161,8 +169,7 @@ export function getPostLeadDescription(post: WpPost) {
   const excerptLead = toCompleteLead(excerpt);
   if (excerptLead && !looksTruncated(excerpt)) return excerptLead;
 
-  const firstParagraph = getFirstParagraphText(post.content?.rendered || post.content?.raw || "");
-  const paragraphLead = toCompleteLead(firstParagraph);
+  const paragraphLead = getContentLeadDescription(post.content?.rendered || post.content?.raw || "");
   if (paragraphLead) return paragraphLead;
 
   return category
@@ -204,12 +211,12 @@ export function enhanceArticleHtml(value: string) {
 }
 
 export function getMediaCanonical(path = "") {
-  const cleanPath = path.replace(/^\/+/, "").replace(/\/$/, "");
+  const cleanPath = encodeMediaPath(path);
   return cleanPath ? `${MEDIA_PUBLIC_BASE_URL}/${cleanPath}` : `${MEDIA_PUBLIC_BASE_URL}`;
 }
 
 export function getMediaAlternates(path = "") {
-  const cleanPath = path.replace(/^\/+/, "").replace(/\/$/, "");
+  const cleanPath = encodeMediaPath(path);
   const suffix = cleanPath ? `/${cleanPath}` : "";
   return {
     canonical: getMediaCanonical(cleanPath),
@@ -220,8 +227,46 @@ export function getMediaAlternates(path = "") {
 }
 
 export function getMediaPath(path = "") {
-  const cleanPath = path.replace(/^\/+/, "").replace(/\/$/, "");
+  const cleanPath = encodeMediaPath(path);
   return cleanPath ? `/ja/media/${cleanPath}` : "/ja/media";
+}
+
+export function normalizeMediaSlug(value = "") {
+  const trimmed = value.trim().replace(/^\/+/, "").replace(/\/$/, "");
+  try {
+    return decodeURIComponent(trimmed).normalize("NFC");
+  } catch {
+    return trimmed.normalize("NFC");
+  }
+}
+
+export function encodeMediaPath(value = "") {
+  const cleanPath = value.replace(/^\/+/, "").replace(/\/$/, "");
+  if (!cleanPath) return "";
+  return cleanPath
+    .split("/")
+    .map((segment) => encodeURIComponent(normalizeMediaSlug(segment)))
+    .join("/");
+}
+
+export function findMediaTermBySlug(terms: WpTerm[], slug: string) {
+  const normalizedSlug = normalizeMediaSlug(slug);
+  return terms.find((term) => normalizeMediaSlug(term.slug) === normalizedSlug);
+}
+
+export function getCategoryMetadata(category?: WpTerm): MediaCategoryMetadata {
+  const name = category?.name || "カテゴリ";
+  const normalizedName = name.replace(/\s+/g, "");
+  const custom = category ? categoryMetadataByName[normalizedName] : undefined;
+  if (custom) return custom;
+
+  return {
+    title: `${name}の記事一覧｜TSURILOGUE Media`,
+    heading: `${name}の記事一覧`,
+    description: `${name}に関するTSURILOGUE（釣りローグ）公式メディアの記事一覧です。釣果記録・釣りログ・釣行データの振り返りに役立つ情報をまとめています。`,
+    classification: (category?.count ?? 0) >= 3 ? "KEEP_INDEX" : "NOINDEX_CANDIDATE",
+    notes: category ? "カテゴリ固有メタデータ未定義のため、カテゴリ名ベースで生成。" : "カテゴリ取得に失敗したfallback。"
+  };
 }
 
 export function formatMediaDate(value?: string) {
@@ -257,6 +302,13 @@ export function getLatestPostModifiedAt(posts: WpPost[]) {
   return new Date(Math.max(...timestamps));
 }
 
+export function getLatestPostModifiedAtByCategory(posts: WpPost[], categorySlug: string) {
+  const normalizedSlug = normalizeMediaSlug(categorySlug);
+  return getLatestPostModifiedAt(
+    posts.filter((post) => post.categories?.some((item) => normalizeMediaSlug(item.slug) === normalizedSlug))
+  );
+}
+
 export function htmlToText(value: string) {
   return value
     .replace(/<[^>]*>/g, "")
@@ -269,6 +321,79 @@ export function htmlToText(value: string) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+const categoryMetadataByName: Record<string, MediaCategoryMetadata> = {
+  コミュニティ: {
+    title: "コミュニティの記事一覧｜TSURILOGUE Media",
+    heading: "コミュニティの記事一覧",
+    description: "釣り仲間、グループ、チームでの釣果共有や活動記録に関する記事を紹介。仲間と釣りを楽しむヒントをまとめています。",
+    classification: "KEEP_INDEX",
+    notes: "グループ・釣り仲間文脈のカテゴリとしてindex継続候補。"
+  },
+  "遊漁船・事業者向け": {
+    title: "遊漁船・事業者向けの記事一覧｜TSURILOGUE Media",
+    heading: "遊漁船・事業者向けの記事一覧",
+    description: "遊漁船、釣具店、釣り事業者が釣果投稿やオンラインイベントを活用する方法を紹介。集客や釣果発信のヒントを解説します。",
+    classification: "NOINDEX_CANDIDATE",
+    notes: "記事数が少ないため、将来的に事業者向けカテゴリ統合も検討。"
+  },
+  釣りログ: {
+    title: "釣りログの記事一覧｜TSURILOGUE Media",
+    heading: "釣りログの記事一覧",
+    description: "釣りログ、釣行記録、スマホでの釣果メモの残し方を紹介。釣れた条件を次の釣行に活かすための記事をまとめています。",
+    classification: "KEEP_INDEX",
+    notes: "主要検索意図に近いためindex継続候補。"
+  },
+  釣り仲間: {
+    title: "釣り仲間の記事一覧｜TSURILOGUE Media",
+    heading: "釣り仲間の記事一覧",
+    description: "釣り仲間との釣果共有、グループ活動、仲間内ランキングに関する記事を紹介。釣果記録を仲間と楽しむ方法を解説します。",
+    classification: "KEEP_INDEX",
+    notes: "釣果共有カテゴリと近いため、将来的に役割整理を検討。"
+  },
+  "釣り大会・イベント": {
+    title: "釣り大会・イベントの記事一覧｜TSURILOGUE Media",
+    heading: "釣り大会・イベントの記事一覧",
+    description: "オンライン釣り大会、仲間内ランキング、大会ルールや運営方法を紹介。スマホで楽しめる釣り大会の始め方を解説します。",
+    classification: "KEEP_INDEX",
+    notes: "大会系親カテゴリとしてindex継続候補。"
+  },
+  釣り日記: {
+    title: "釣り日記の記事一覧｜TSURILOGUE Media",
+    heading: "釣り日記の記事一覧",
+    description: "釣り日記、釣行メモ、スマホでの記録習慣に関する記事を紹介。釣行後に振り返りやすい記録方法を解説します。",
+    classification: "MERGE_CANDIDATE",
+    notes: "釣行ログ・釣りログと検索意図が近いため、将来的に統合候補。"
+  },
+  釣果共有: {
+    title: "釣果共有の記事一覧｜TSURILOGUE Media",
+    heading: "釣果共有の記事一覧",
+    description: "釣果共有、釣り仲間との記録共有、グループでの釣果管理に関する記事を紹介。TSURILOGUEを使った共有方法も解説します。",
+    classification: "KEEP_INDEX",
+    notes: "主要検索意図に近いためindex継続候補。"
+  },
+  釣果写真: {
+    title: "釣果写真の記事一覧｜TSURILOGUE Media",
+    heading: "釣果写真の記事一覧",
+    description: "釣果写真の残し方、SNS共有、釣れた魚の見せ方に関する記事を紹介。釣果をきれいに記録して振り返る方法をまとめています。",
+    classification: "NOINDEX_CANDIDATE",
+    notes: "記事数が少ないため、釣果共有カテゴリへの統合も検討。"
+  },
+  釣果記録: {
+    title: "釣果記録の記事一覧｜TSURILOGUE Media",
+    heading: "釣果記録の記事一覧",
+    description: "釣果記録、釣果ログ、釣果記録アプリの使い方や続け方を紹介。釣れた魚をスマホで記録し、次の釣行に活かす方法を解説します。",
+    classification: "KEEP_INDEX",
+    notes: "最重要カテゴリとしてindex継続候補。"
+  },
+  釣行ログ: {
+    title: "釣行ログの記事一覧｜TSURILOGUE Media",
+    heading: "釣行ログの記事一覧",
+    description: "釣行ログ、釣行メモ、釣りの振り返りに関する記事を紹介。潮位や天候、タックルを含めて釣行を記録する方法を解説します。",
+    classification: "MERGE_CANDIDATE",
+    notes: "釣りログ・釣り日記と近いため、将来的に統合候補。"
+  }
+};
 
 function normalizeMediaDateString(value?: string) {
   const date = parseMediaDate(value);
@@ -309,6 +434,16 @@ function getFirstParagraphText(value: string) {
     if (text.length >= 24) return text;
   }
   return "";
+}
+
+function getContentLeadDescription(value: string) {
+  const paragraphs = [...value.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map((paragraph) => htmlToText(paragraph[1] || ""))
+    .filter((text) => text.length >= 12 && !looksTruncated(text));
+  const combined = paragraphs.slice(0, 4).join(" ");
+  const lead = toCompleteLead(combined);
+  if (lead) return lead;
+  return toCompleteLead(getFirstParagraphText(value));
 }
 
 function looksTruncated(value: string) {

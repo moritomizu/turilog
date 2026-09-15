@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL } from "@/lib/wordpress";
+import { findMediaTermBySlug, getCategoryMetadata, getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL } from "@/lib/wordpress";
 
 type CategoryPageProps = {
   params: { slug: string };
@@ -16,28 +16,28 @@ const MEDIA_OG_IMAGE = "https://www.tsurilogue.com/opengraph-image";
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const categories = await getMediaCategories().catch(() => []);
-  const category = categories.find((item) => item.slug === params.slug);
-  const title = category ? `${category.name}の記事 | TSURILOGUE Media` : "カテゴリ記事 | TSURILOGUE Media";
-  const description = `${category?.name ?? "カテゴリ"}に関するTSURILOGUE（釣りローグ）公式メディアの記事一覧です。釣果記録・釣りログ・釣行データの振り返りに役立つ情報をまとめています。`;
-  const canonical = getMediaCanonical(`category/${params.slug}`);
+  const category = findMediaTermBySlug(categories, params.slug);
+  const categoryMeta = getCategoryMetadata(category);
+  const slug = category?.slug ?? params.slug;
+  const canonical = getMediaCanonical(`category/${slug}`);
   return {
-    title,
-    description,
-    alternates: getMediaAlternates(`category/${params.slug}`),
+    title: categoryMeta.title,
+    description: categoryMeta.description,
+    alternates: getMediaAlternates(`category/${slug}`),
     robots: { index: true, follow: true },
     openGraph: {
       type: "website",
       siteName: "TSURILOGUE",
       locale: "ja_JP",
-      title,
-      description,
+      title: categoryMeta.title,
+      description: categoryMeta.description,
       url: canonical,
-      images: [{ url: MEDIA_OG_IMAGE, width: 1200, height: 630, alt: title }]
+      images: [{ url: MEDIA_OG_IMAGE, width: 1200, height: 630, alt: categoryMeta.title }]
     },
     twitter: {
       card: "summary_large_image",
-      title,
-      description,
+      title: categoryMeta.title,
+      description: categoryMeta.description,
       images: [MEDIA_OG_IMAGE]
     }
   };
@@ -45,29 +45,30 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 export default async function MediaCategoryPage({ params, searchParams }: CategoryPageProps) {
   const page = parsePage(searchParams?.page);
-  const [posts, categories, tags] = await Promise.all([
-    getMediaPosts({ page, perPage: 10, category: params.slug }),
-    getMediaCategories().catch(() => []),
+  const categories = await getMediaCategories().catch(() => []);
+  const category = findMediaTermBySlug(categories, params.slug);
+  const slug = category?.slug ?? params.slug;
+  const [posts, tags] = await Promise.all([
+    getMediaPosts({ page, perPage: 10, category: slug }),
     getMediaTags().catch(() => [])
   ]);
-  const category = categories.find((item) => item.slug === params.slug);
   if (!category && !posts.items.length) notFound();
 
-  const title = category ? `${category.name}の記事` : "カテゴリ記事";
-  const canonical = getMediaCanonical(`category/${params.slug}`);
+  const categoryMeta = getCategoryMetadata(category);
+  const canonical = getMediaCanonical(`category/${slug}`);
 
   return (
     <>
       <PageHeader title="Media" titleAs="div" />
-      <JsonLd data={[webPageJsonLd(title, canonical), breadcrumbJsonLd(title, canonical)]} />
+      <JsonLd data={[webPageJsonLd(categoryMeta.heading, canonical), breadcrumbJsonLd(categoryMeta.heading, canonical)]} />
       <MediaListPage
-        title={title}
-        description="釣果記録、釣行データ、釣りの振り返りに役立つカテゴリ記事をまとめています。"
+        title={categoryMeta.heading}
+        description={categoryMeta.description}
         posts={posts.items}
         pagination={posts.pagination}
         categories={categories}
         tags={tags}
-        basePath={getMediaPath(`category/${params.slug}`)}
+        basePath={getMediaPath(`category/${slug}`)}
       />
     </>
   );

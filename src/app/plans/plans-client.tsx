@@ -171,7 +171,7 @@ export function PlansClient() {
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-5">
         <section className="rounded border border-teal-100 bg-white p-5 shadow-soft">
           <p className="text-xs font-black text-water">COMING SOON</p>
-          <h1 className="mt-1 text-2xl font-black">便利な機能を、必要な人に。準備中です。</h1>
+          <h2 className="mt-1 text-2xl font-black">便利な機能を、必要な人に。準備中です。</h2>
           <p className="mt-2 text-sm font-bold leading-6 text-slate-700">
             Premiumプランだけ先行して月額登録を試せるようになりました。Organizer / Group Pro は引き続きニーズ調査中です。
           </p>
