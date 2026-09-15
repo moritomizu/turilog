@@ -214,9 +214,7 @@ export function getMediaAlternates(path = "") {
   return {
     canonical: getMediaCanonical(cleanPath),
     languages: {
-      ja: `${MEDIA_PUBLIC_BASE_URL}${suffix}`,
-      en: `https://www.tsurilogue.com/en/media${suffix}`,
-      "x-default": "https://www.tsurilogue.com"
+      ja: `${MEDIA_PUBLIC_BASE_URL}${suffix}`
     }
   };
 }
@@ -233,6 +231,32 @@ export function formatMediaDate(value?: string) {
   return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric" }).format(date);
 }
 
+export function getPostPublishedAt(post: WpPost) {
+  return normalizeMediaDateString(post.date);
+}
+
+export function getPostModifiedAt(post: WpPost) {
+  const published = parseMediaDate(post.date);
+  const modified = parseMediaDate(post.modified);
+  if (!published && !modified) return undefined;
+  if (!published) return modified?.toISOString();
+  if (!modified) return published.toISOString();
+  return (modified.getTime() >= published.getTime() ? modified : published).toISOString();
+}
+
+export function getPostSitemapLastModified(post: WpPost) {
+  const modified = getPostModifiedAt(post);
+  return modified ? new Date(modified) : undefined;
+}
+
+export function getLatestPostModifiedAt(posts: WpPost[]) {
+  const timestamps = posts
+    .map((post) => getPostSitemapLastModified(post)?.getTime())
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (!timestamps.length) return undefined;
+  return new Date(Math.max(...timestamps));
+}
+
 export function htmlToText(value: string) {
   return value
     .replace(/<[^>]*>/g, "")
@@ -244,6 +268,18 @@ export function htmlToText(value: string) {
     .replace(/&#039;/g, "'")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizeMediaDateString(value?: string) {
+  const date = parseMediaDate(value);
+  return date?.toISOString();
+}
+
+function parseMediaDate(value?: string) {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date;
 }
 
 function slugifyHeading(value: string) {

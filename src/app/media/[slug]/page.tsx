@@ -18,6 +18,8 @@ import {
   getPostExcerpt,
   getPostKeywords,
   getPostLeadDescription,
+  getPostModifiedAt,
+  getPostPublishedAt,
   getPostTitle,
   getPostWordCount,
   getRelatedMediaPosts,
@@ -45,6 +47,8 @@ export async function generateMetadata({ params }: MediaArticlePageProps): Promi
   const canonical = getMediaCanonical(post.slug);
   const image = getOgImage(post);
   const keywords = getPostKeywords(post);
+  const publishedAt = getPostPublishedAt(post);
+  const modifiedAt = getPostModifiedAt(post);
 
   return {
     title,
@@ -60,8 +64,8 @@ export async function generateMetadata({ params }: MediaArticlePageProps): Promi
       title,
       description,
       url: canonical,
-      publishedTime: post.date,
-      modifiedTime: post.modified,
+      publishedTime: publishedAt,
+      modifiedTime: modifiedAt,
       images: image ? [{ url: image, width: post.featuredImage?.width || 1200, height: post.featuredImage?.height || 630, alt: post.featuredImage?.alt || getPostTitle(post) }] : undefined
     },
     twitter: {
@@ -81,8 +85,10 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
   const title = getPostTitle(post);
   const canonical = getMediaCanonical(post.slug);
   const { html, headings } = enhanceArticleHtml(post.content?.rendered || "");
-  const publishedLabel = formatMediaDate(post.date);
-  const modifiedLabel = post.modified && post.modified !== post.date ? formatMediaDate(post.modified) : "";
+  const publishedAt = getPostPublishedAt(post);
+  const modifiedAt = getPostModifiedAt(post);
+  const publishedLabel = formatMediaDate(publishedAt);
+  const modifiedLabel = modifiedAt && modifiedAt !== publishedAt ? formatMediaDate(modifiedAt) : "";
   const jsonLd = [
     articleJsonLd(post, canonical),
     breadcrumbJsonLd(post, canonical),
@@ -102,8 +108,8 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
                 {category.name}
               </Link>
             ))}
-            {post.date ? <time dateTime={post.date}>公開日: {publishedLabel}</time> : null}
-            {modifiedLabel ? <time dateTime={post.modified}>更新日: {modifiedLabel}</time> : null}
+            {publishedAt ? <time dateTime={publishedAt}>公開日: {publishedLabel}</time> : null}
+            {modifiedAt && modifiedLabel ? <time dateTime={modifiedAt}>更新日: {modifiedLabel}</time> : null}
           </div>
 
           <h1 className="text-4xl font-black leading-tight text-slate-950 sm:text-5xl">{title}</h1>
@@ -242,6 +248,8 @@ function normalizeDigestText(value: string) {
 function articleJsonLd(post: WpPost, canonical: string) {
   const image = getOgImage(post);
   const keywords = getPostKeywords(post);
+  const publishedAt = getPostPublishedAt(post);
+  const modifiedAt = getPostModifiedAt(post);
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -249,8 +257,8 @@ function articleJsonLd(post: WpPost, canonical: string) {
     headline: getPostTitle(post),
     description: getPostLeadDescription(post),
     inLanguage: "ja-JP",
-    datePublished: post.date,
-    dateModified: post.modified || post.date,
+    datePublished: publishedAt,
+    dateModified: modifiedAt || publishedAt,
     mainEntityOfPage: {
       "@type": "WebPage",
       "@id": canonical
