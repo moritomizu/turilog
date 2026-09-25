@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
-import { getLocaleFromPathname, localizePath, type AppLocale } from "@/lib/i18n";
+import { getLocaleFromPathname, getLocaleSwitchPath, type AppLocale } from "@/lib/i18n";
 import { saveUserProfileData } from "@/lib/userProfiles";
 
 const labels: Record<AppLocale, string> = {
@@ -33,7 +33,7 @@ export function LocaleSwitcher({ compact = false, className = "" }: { compact?: 
       {(["ja", "en"] as const).map((locale) => (
         <Link
           key={locale}
-          href={localizePath(pathname, locale)}
+          href={getLocaleSwitchPath(pathname, locale)}
           onClick={() => rememberLocale(locale)}
           className={`rounded-full ${compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"} font-black ${currentLocale === locale ? "bg-water text-white" : "text-slate-600"}`}
           aria-current={currentLocale === locale ? "true" : undefined}

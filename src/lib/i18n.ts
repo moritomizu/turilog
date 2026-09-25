@@ -25,3 +25,15 @@ export function localizePath(pathname: string, locale: AppLocale) {
   const clean = stripLocaleFromPathname(pathname);
   return clean === "/" ? `/${locale}` : `/${locale}${clean}`;
 }
+
+export function getLocaleSwitchPath(pathname: string, locale: AppLocale) {
+  const clean = stripLocaleFromPathname(pathname);
+
+  // Media currently has Japanese content only. Sending the English switch to a
+  // mirrored /en/media URL creates a crawlable 404, so use the English home.
+  if (locale === "en" && (clean === "/media" || clean.startsWith("/media/"))) {
+    return "/en";
+  }
+
+  return localizePath(pathname, locale);
+}

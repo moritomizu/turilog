@@ -27,16 +27,6 @@ type LiveDataBlockProps = {
   fallbackQuery?: LiveDataBlockQuery;
 };
 
-const defaultLiveData: LiveDataBlockData = {
-  totalCatches: 0,
-  averageSize: 0,
-  maxSize: 0,
-  popularTimeRange: "朝マズメ",
-  popularFish: "マダイ",
-  popularArea: "大阪湾",
-  latestUpdatedAt: null
-};
-
 const defaultQuery: LiveDataBlockQuery = { fish: "チヌ", area: "大阪", days: 30 };
 const defaultFallbackQuery: LiveDataBlockQuery = { fish: "チヌ", area: "大阪", days: 365 };
 
@@ -55,7 +45,7 @@ export function LiveDataBlock({
     () => (fallbackQuery ? { fish: fallbackQuery.fish, area: fallbackQuery.area, method: fallbackQuery.method, days: fallbackQuery.days } : undefined),
     [fallbackQuery]
   );
-  const [liveData, setLiveData] = useState<LiveDataBlockData>(data ?? defaultLiveData);
+  const [liveData, setLiveData] = useState<LiveDataBlockData | null>(data ?? null);
   const [activeQuery, setActiveQuery] = useState<LiveDataBlockQuery>(primaryQuery);
   const [status, setStatus] = useState<"loading" | "ready" | "fallback" | "empty" | "error">(data ? "ready" : "loading");
   const periodLabel = `直近${activeQuery.days ?? 30}日`;
@@ -90,6 +80,8 @@ export function LiveDataBlock({
     };
   }, [data, fallback, fallbackQueryString, primaryQuery, queryString]);
 
+  if (!liveData || status === "loading" || status === "empty" || status === "error") return null;
+
   const updatedAtLabel = liveData.latestUpdatedAt ? `${formatDate(liveData.latestUpdatedAt)} 更新` : "";
   const metrics = [
     { label: "投稿数", value: `${liveData.totalCatches.toLocaleString("ja-JP")}件`, helper: periodLabel },
@@ -108,7 +100,6 @@ export function LiveDataBlock({
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-white/12 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-cyan-100 ring-1 ring-white/15">Live Data Block</span>
             {updatedAtLabel ? <span className="rounded-full bg-orange-400 px-3 py-1 text-[11px] font-black text-slate-950">{updatedAtLabel}</span> : null}
-            {status === "loading" ? <span className="rounded-full bg-white/12 px-3 py-1 text-[11px] font-black text-cyan-100 ring-1 ring-white/15">読み込み中</span> : null}
           </div>
           <h2 className="mt-4 text-2xl font-black leading-tight sm:text-3xl">{title}</h2>
           <p className="mt-3 max-w-2xl text-sm font-bold leading-7 text-slate-200">{description}</p>
@@ -129,11 +120,7 @@ export function LiveDataBlock({
       </div>
 
       <div className="border-t border-teal-50 bg-teal-50/50 px-5 py-4 sm:px-7">
-        {status === "empty" ? (
-          <p className="text-xs font-bold leading-6 text-slate-600">まだ十分な釣果データがありません。投稿が増えるほど、この記事のデータも成長していきます。</p>
-        ) : status === "error" ? (
-          <p className="text-xs font-bold leading-6 text-red-700">現在データを取得できません</p>
-        ) : status === "fallback" ? (
+        {status === "fallback" ? (
           <p className="text-xs font-bold leading-6 text-slate-600">
             直近30日は十分なデータがないため、参考として直近365日の公開釣果を表示しています。個人情報や正確なGPS座標は表示しません。
           </p>

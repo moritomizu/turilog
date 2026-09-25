@@ -1,0 +1,27 @@
+{
+  "auditedAt": "2026-09-25T09:21:31.878Z",
+  "crawl": {
+    "htmlPages": 302,
+    "internalTargets": 302,
+    "internalLinks": 9202,
+    "sitemapUrls": 79,
+    "wordpressPublishedPosts": 61
+  },
+  "findings": {
+    "unique404Urls": 116,
+    "linksTo404": 254,
+    "soft404Candidates": 27,
+    "imageAsset404Urls": 0,
+    "sitemap404Urls": 0,
+    "sitemapRedirectUrls": 0,
+    "canonical404Urls": 0,
+    "liveDataPages": 61,
+    "liveDataZeroOrErrorPages": 61
+  },
+  "wordpress": {
+    "frontend200": 61,
+    "selfCanonical": 61,
+    "inSitemap": 61
+  },
+  "verdict": "CRAWL_INTEGRITY_NOT_READY"
+}
