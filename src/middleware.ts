@@ -19,12 +19,12 @@ export function middleware(request: NextRequest) {
 
   const appLocaleMatch = pathname.match(/^\/app\/(ja|en)\/?$/);
   if (appLocaleMatch) {
-    const locale = appLocaleMatch[1];
+    const locale = isAppLocale(appLocaleMatch[1]) ? appLocaleMatch[1] : defaultLocale;
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = search;
 
-    const response = NextResponse.rewrite(url);
+    const response = rewriteWithLocale(request, url, locale);
     response.cookies.set("NEXT_LOCALE", locale, { path: "/", sameSite: "lax" });
     return response;
   }
@@ -41,11 +41,23 @@ export function middleware(request: NextRequest) {
   url.pathname = stripLocaleFromPathname(pathname);
   url.search = search;
 
-  const response = NextResponse.rewrite(url);
+  const response = rewriteWithLocale(request, url, locale);
   if (!isPublicMediaPath) {
     response.cookies.set("NEXT_LOCALE", locale, { path: "/", sameSite: "lax" });
   }
   return response;
+}
+
+function rewriteWithLocale(request: NextRequest, url: URL, locale: "ja" | "en") {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-tsurilog-locale", locale);
+  requestHeaders.set("x-tsurilog-pathname", request.nextUrl.pathname);
+
+  return NextResponse.rewrite(url, {
+    request: {
+      headers: requestHeaders
+    }
+  });
 }
 
 function shouldRedirectMediaTrailingSlash(pathname: string) {

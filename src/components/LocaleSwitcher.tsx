@@ -24,6 +24,7 @@ export function LocaleSwitcher({ compact = false, className = "" }: { compact?: 
   }, []);
 
   async function rememberLocale(locale: AppLocale) {
+    document.cookie = `NEXT_LOCALE=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
     if (!userId) return;
     await saveUserProfileData(userId, { preferredLocale: locale }).catch(() => undefined);
   }

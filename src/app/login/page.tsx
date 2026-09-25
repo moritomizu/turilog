@@ -83,14 +83,14 @@ function LoginContent() {
         setMessage(locale === "en" ? "Signed in with your email link." : "メールリンクでログインしました。");
         goNext();
       })
-      .catch((error) => setMessage(getAuthErrorMessage(error)))
+      .catch((error) => setMessage(getAuthErrorMessage(error, locale)))
       .finally(() => setBusy(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleLogin() {
     if (!acceptedLegal) {
-      setMessage("利用規約とプライバシーポリシーへの同意が必要です。");
+      setMessage(locale === "en" ? "Please agree to the Terms and Privacy Policy." : "利用規約とプライバシーポリシーへの同意が必要です。");
       return;
     }
 
@@ -99,10 +99,10 @@ function LoginContent() {
     try {
       const result = await signInWithPopup(getFirebaseAuth(), googleProvider);
       await saveUserProfile(result.user);
-      setMessage("ログインしました。");
+      setMessage(locale === "en" ? "Signed in." : "ログインしました。");
       goNext();
     } catch (error) {
-      setMessage(getAuthErrorMessage(error));
+      setMessage(getAuthErrorMessage(error, locale));
     } finally {
       setBusy(false);
     }
@@ -137,7 +137,7 @@ function LoginContent() {
       setMessage(mode === "signup" ? (locale === "en" ? "Signed up." : "登録しました。") : locale === "en" ? "Signed in." : "ログインしました。");
       goNext();
     } catch (error) {
-      setMessage(getAuthErrorMessage(error));
+      setMessage(getAuthErrorMessage(error, locale));
     } finally {
       setBusy(false);
     }
@@ -167,7 +167,7 @@ function LoginContent() {
       if (displayName.trim()) window.localStorage.setItem(EMAIL_LINK_NAME_STORAGE_KEY, displayName.trim());
       setMessage(locale === "en" ? "Login link sent. Open the link in your email to finish." : "ログインリンクを送信しました。メール内のリンクを開くと登録/ログインが完了します。");
     } catch (error) {
-      setMessage(getAuthErrorMessage(error));
+      setMessage(getAuthErrorMessage(error, locale));
     } finally {
       setBusy(false);
     }
@@ -213,7 +213,7 @@ function LoginContent() {
 
           {!isFirebaseConfigured ? (
             <p className="mt-4 rounded bg-orange-50 p-3 text-sm font-bold text-orange-800">
-              Firebase設定が不足しています: {missingFirebaseEnv.join(", ")}
+              {locale === "en" ? "Firebase configuration is missing" : "Firebase設定が不足しています"}: {missingFirebaseEnv.join(", ")}
             </p>
           ) : user ? (
             <div className="mt-5 space-y-3">
@@ -234,7 +234,17 @@ function LoginContent() {
                   onChange={(event) => setAcceptedLegal(event.target.checked)}
                   className="mt-1 h-5 w-5 shrink-0 accent-teal-700"
                 />
-                <span>{t("termsAgreement")}</span>
+                <span>
+                  {locale === "en" ? "I agree to the " : ""}
+                  <Link href={localizePath("/terms", locale)} className="text-water underline underline-offset-2">
+                    {locale === "en" ? "Terms" : "利用規約"}
+                  </Link>
+                  {locale === "en" ? " and " : "と"}
+                  <Link href={localizePath("/privacy", locale)} className="text-water underline underline-offset-2">
+                    {locale === "en" ? "Privacy Policy" : "プライバシーポリシー"}
+                  </Link>
+                  {locale === "en" ? "." : "に同意します。"}
+                </span>
               </label>
               <button disabled={busy || !acceptedLegal} onClick={handleLogin} className="tap-target w-full rounded bg-water px-5 py-4 font-black text-white disabled:opacity-60">
                 {busy ? t("googleBusy") : t("google")}
@@ -247,7 +257,7 @@ function LoginContent() {
               <div className="space-y-3 rounded border border-teal-100 bg-white p-3">
                 <label className="block">
                   <span className="text-sm font-bold">{t("displayName")}</span>
-                  <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold" placeholder="例: TaPiYoTa" />
+                  <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold" placeholder={locale === "en" ? "e.g. Alex" : "例: TaPiYoTa"} autoComplete="name" />
                 </label>
                 <label className="block">
                   <span className="text-sm font-bold">{t("email")}</span>
@@ -286,17 +296,18 @@ function LoginContent() {
   );
 }
 
-function getAuthErrorMessage(error: unknown) {
+function getAuthErrorMessage(error: unknown, locale: "ja" | "en") {
   const code = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code) : "";
-  if (code === "auth/email-already-in-use") return "このメールアドレスはすでに登録されています。ログインをお試しください。";
-  if (code === "auth/invalid-email") return "メールアドレスの形式が正しくありません。";
-  if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") return "メールアドレスまたはパスワードが違います。";
-  if (code === "auth/weak-password") return "パスワードは6文字以上で設定してください。";
-  if (code === "auth/operation-not-allowed") return "メール/パスワード認証がFirebaseで有効になっていません。Firebase Consoleで有効化してください。";
-  if (code === "auth/expired-action-code") return "メールリンクの有効期限が切れています。もう一度送信してください。";
-  if (code === "auth/invalid-action-code") return "メールリンクが無効です。もう一度送信してください。";
-  if (code === "auth/popup-closed-by-user") return "ログイン画面が閉じられました。もう一度お試しください。";
-  return error instanceof Error ? error.message : "ログインに失敗しました。";
+  const english = locale === "en";
+  if (code === "auth/email-already-in-use") return english ? "This email address is already registered. Try logging in instead." : "このメールアドレスはすでに登録されています。ログインをお試しください。";
+  if (code === "auth/invalid-email") return english ? "Enter a valid email address." : "メールアドレスの形式が正しくありません。";
+  if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") return english ? "The email address or password is incorrect." : "メールアドレスまたはパスワードが違います。";
+  if (code === "auth/weak-password") return english ? "Use a password with at least 6 characters." : "パスワードは6文字以上で設定してください。";
+  if (code === "auth/operation-not-allowed") return english ? "Email and password authentication is not currently available." : "メール/パスワード認証がFirebaseで有効になっていません。Firebase Consoleで有効化してください。";
+  if (code === "auth/expired-action-code") return english ? "This email link has expired. Request a new one." : "メールリンクの有効期限が切れています。もう一度送信してください。";
+  if (code === "auth/invalid-action-code") return english ? "This email link is invalid. Request a new one." : "メールリンクが無効です。もう一度送信してください。";
+  if (code === "auth/popup-closed-by-user") return english ? "The login window was closed. Please try again." : "ログイン画面が閉じられました。もう一度お試しください。";
+  return error instanceof Error ? error.message : english ? "Login failed. Please try again." : "ログインに失敗しました。";
 }
 
 function LoginShell() {

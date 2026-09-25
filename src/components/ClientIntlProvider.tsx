@@ -1,14 +1,11 @@
 "use client";
 
 import { NextIntlClientProvider } from "next-intl";
-import { usePathname } from "next/navigation";
-import { getLocaleFromPathname } from "@/lib/i18n";
+import type { AppLocale } from "@/lib/i18n";
 import enMessages from "../../messages/en.json";
 import jaMessages from "../../messages/ja.json";
 
-export function ClientIntlProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const locale = getLocaleFromPathname(pathname);
+export function ClientIntlProvider({ children, locale }: { children: React.ReactNode; locale: AppLocale }) {
   const messages = locale === "en" ? enMessages : jaMessages;
 
   return (

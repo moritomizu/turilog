@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { onAuthStateChanged, type User } from "firebase/auth";
+import { useLocale } from "next-intl";
 import { useEffect, useState } from "react";
 import { getGroupCatches, getTournamentCatches } from "@/lib/catches";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
@@ -55,6 +56,7 @@ const seoMediaLinks = [
 ];
 
 export default function Home() {
+  const locale = useLocale();
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
@@ -103,6 +105,8 @@ export default function Home() {
 
   const approvalCount = approvalSummary.groupRequests + approvalSummary.tournamentEntries + approvalSummary.tournamentPaymentReviews;
   const commentCount = approvalSummary.commentDetails.reduce((sum, item) => sum + item.count, 0);
+
+  if (!authReady && locale === "en") return <LandingPage />;
 
   if (!authReady) {
     return (

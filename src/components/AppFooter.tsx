@@ -32,9 +32,11 @@ export function AppFooter() {
             <Link href={localizePath("/about", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
               {t("about")}
             </Link>
-            <Link href={localizePath("/media", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
-              {t("media")}
-            </Link>
+            {locale === "ja" ? (
+              <Link href="/ja/media" className="text-water hover:text-teal-900 dark:text-cyan-200">
+                {t("media")}
+              </Link>
+            ) : null}
             <Link href={localizePath("/features", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
               {t("features")}
             </Link>

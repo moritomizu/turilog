@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { useLocale } from "next-intl";
 import { useEffect, type ReactNode } from "react";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { TsuriLogLogo } from "@/components/TsuriLogLogo";
-import { getLocaleFromPathname } from "@/lib/i18n";
 import { captureAcquisitionFromUrl } from "@/lib/referralTracking";
 
 const navItems = [
@@ -36,7 +35,7 @@ const locationRules = ["本人：正確位置", "仲間：ぼかし表示", "一
 const locationCards = ["個人ログでは正確に記録", "グループでは共有範囲に応じて表示", "大会では主催者・参加者で表示を切替", "公開時はポイント流出を防止"];
 
 export function LandingPage() {
-  const locale = getLocaleFromPathname(usePathname());
+  const locale = useLocale();
   useEffect(() => {
     if (typeof window !== "undefined") captureAcquisitionFromUrl(window.location.href);
   }, []);
