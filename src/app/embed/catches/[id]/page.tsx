@@ -1,48 +1,53 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 import { getPublicCatch } from "@/lib/catches";
 import { isFirebaseConfigured, missingFirebaseEnv } from "@/lib/firebase";
-import type { Catch } from "@/types";
+import { type AppLocale } from "@/lib/i18n";
+import { formatLengthFromCm, formatTemperatureFromCelsius, getDefaultUnitSystem } from "@/lib/units";
+import type { Catch, UnitSystem } from "@/types";
 
 type ShareMode = "standard" | "data" | "tackle";
 
 export default function EmbedCatchPage({ params }: { params: { id: string } }) {
+  const locale = useLocale() as AppLocale;
+  const unitSystem = getDefaultUnitSystem(locale);
   const [item, setItem] = useState<Catch | null>(null);
-  const [message, setMessage] = useState("釣果を読み込んでいます。");
+  const [message, setMessage] = useState(tr(locale, "Loading catch...", "釣果を読み込んでいます。"));
   const [mode, setMode] = useState<ShareMode>("standard");
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
-      setMessage(`Firebase設定が不足しています: ${missingFirebaseEnv.join(", ")}`);
+      setMessage(locale === "en" ? `Firebase configuration is missing: ${missingFirebaseEnv.join(", ")}` : `Firebase設定が不足しています: ${missingFirebaseEnv.join(", ")}`);
       return;
     }
 
     getPublicCatch(params.id)
       .then((result) => {
         setItem(result);
-        setMessage(result ? "" : "この釣果は公開されていないか、見つかりませんでした。");
+        setMessage(result ? "" : tr(locale, "This catch is private or could not be found.", "この釣果は公開されていないか、見つかりませんでした。"));
       })
-      .catch((error) => setMessage(error instanceof Error ? error.message : "釣果を読み込めませんでした。"));
-  }, [params.id]);
+      .catch((error) => setMessage(error instanceof Error ? error.message : tr(locale, "Could not load this catch.", "釣果を読み込めませんでした。")));
+  }, [locale, params.id]);
 
   return (
     <main className="min-h-[100svh] bg-foam px-3 py-3">
       <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-md flex-col">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <BackButton />
-          {item ? <ShareModeTabs mode={mode} onChange={setMode} /> : null}
+          <BackButton locale={locale} />
+          {item ? <ShareModeTabs locale={locale} mode={mode} onChange={setMode} /> : null}
         </div>
-        {item ? <ShareCatchCard item={item} mode={mode} /> : <Notice message={message} />}
+        {item ? <ShareCatchCard item={item} mode={mode} locale={locale} unitSystem={unitSystem} /> : <Notice message={message} />}
       </div>
     </main>
   );
 }
 
-function ShareCatchCard({ item, mode }: { item: Catch; mode: ShareMode }) {
+function ShareCatchCard({ item, mode, locale, unitSystem }: { item: Catch; mode: ShareMode; locale: AppLocale; unitSystem: UnitSystem }) {
   const anglerName = item.publicAnglerName?.trim() || "TSURILOGUE Angler";
-  const infoItems = getShareInfoItems(item, mode);
+  const infoItems = getShareInfoItems(item, mode, locale, unitSystem);
   return (
     <article className="flex flex-1 flex-col overflow-hidden rounded border border-teal-100 bg-white shadow-soft">
       <div className="flex items-center justify-between gap-3 border-b border-teal-50 px-4 py-3">
@@ -54,16 +59,16 @@ function ShareCatchCard({ item, mode }: { item: Catch; mode: ShareMode }) {
         {item.imageUrl ? (
           <img src={item.imageUrl} alt={item.fishType} className="h-[52svh] min-h-[295px] w-full object-cover" />
         ) : (
-          <div className="flex h-[52svh] min-h-[295px] items-center justify-center text-sm font-bold text-slate-500">写真なし</div>
+          <div className="flex h-[52svh] min-h-[295px] items-center justify-center text-sm font-bold text-slate-500">{tr(locale, "No photo", "写真なし")}</div>
         )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-4 text-white">
           <div className="flex items-end justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-white/75">Catch record</p>
               <h1 className="mt-1 truncate text-3xl font-black leading-tight">{item.fishType}</h1>
-              <p className="mt-1 text-sm font-bold text-white/90">{formatDate(item.caughtAt)}</p>
+              <p className="mt-1 text-sm font-bold text-white/90">{formatDate(item.caughtAt, locale)}</p>
             </div>
-            <p className="shrink-0 text-4xl font-black leading-none">{item.sizeCm}<span className="ml-1 text-lg">cm</span></p>
+            <p className="shrink-0 text-3xl font-black leading-none">{formatLengthFromCm(item.sizeCm, locale, unitSystem)}</p>
           </div>
         </div>
       </div>
@@ -74,7 +79,7 @@ function ShareCatchCard({ item, mode }: { item: Catch; mode: ShareMode }) {
             {item.publicAnglerAvatarUrl ? <img src={item.publicAnglerAvatarUrl} alt="" className="h-full w-full object-cover" /> : getInitial(anglerName)}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-black text-slate-500">釣った人</p>
+            <p className="text-[11px] font-black text-slate-500">{tr(locale, "Angler", "釣った人")}</p>
             <p className="truncate text-base font-black text-ink">{anglerName}</p>
           </div>
         </div>
@@ -91,14 +96,14 @@ function ShareCatchCard({ item, mode }: { item: Catch; mode: ShareMode }) {
   );
 }
 
-function ShareModeTabs({ mode, onChange }: { mode: ShareMode; onChange: (mode: ShareMode) => void }) {
+function ShareModeTabs({ mode, onChange, locale }: { mode: ShareMode; onChange: (mode: ShareMode) => void; locale: AppLocale }) {
   const items: Array<{ mode: ShareMode; label: string }> = [
-    { mode: "standard", label: "標準" },
-    { mode: "data", label: "データ" },
-    { mode: "tackle", label: "タックル" }
+    { mode: "standard", label: tr(locale, "Standard", "標準") },
+    { mode: "data", label: tr(locale, "Data", "データ") },
+    { mode: "tackle", label: tr(locale, "Tackle", "タックル") }
   ];
   return (
-    <div className="flex rounded bg-white p-1 shadow-soft" aria-label="シェアカード表示設定">
+    <div className="flex rounded bg-white p-1 shadow-soft" aria-label={tr(locale, "Share card display", "シェアカード表示設定")}>
       {items.map((item) => (
         <button
           key={item.mode}
@@ -122,18 +127,18 @@ function MiniInfo({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BackButton() {
+function BackButton({ locale }: { locale: AppLocale }) {
   function handleBack() {
     if (window.history.length > 1) {
       window.history.back();
       return;
     }
-    window.location.href = "/catches";
+    window.location.href = `/${locale}/catches`;
   }
 
   return (
     <button type="button" onClick={handleBack} className="tap-target inline-flex w-fit items-center rounded bg-white px-3 py-2 text-xs font-black text-water shadow-soft">
-      ← 戻る
+      ← {tr(locale, "Back", "戻る")}
     </button>
   );
 }
@@ -146,10 +151,10 @@ function Notice({ message }: { message: string }) {
   );
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, locale: AppLocale) {
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "日時未取得";
-  return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(date);
+  if (!Number.isFinite(date.getTime())) return tr(locale, "Date unknown", "日時未取得");
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "ja-JP", { year: "numeric", month: locale === "en" ? "short" : "2-digit", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
 function getInitial(value: string) {
@@ -162,76 +167,82 @@ function getModeLabel(mode: ShareMode) {
   return "FISHING LOG";
 }
 
-function getShareInfoItems(item: Catch, mode: ShareMode) {
+function getShareInfoItems(item: Catch, mode: ShareMode, locale: AppLocale, unitSystem: UnitSystem) {
+  const unknown = tr(locale, "Unknown", "未取得");
+  const unset = tr(locale, "Not set", "未設定");
   if (mode === "data") {
     return [
-      { label: "エリア", value: item.areaName || "未取得" },
-      { label: "天候", value: item.weather.weatherLabel || "未取得" },
-      { label: "風", value: formatWind(item) },
-      { label: "気温", value: item.weather.temperatureC == null ? "未取得" : `${item.weather.temperatureC}度` },
-      { label: "潮", value: item.tidePhaseLabel || "未取得" },
-      { label: "水温", value: formatSeaTemperature(item) },
-      { label: "潮回り", value: formatTideCycle(item) },
-      { label: "月齢", value: item.lunar.moonAge == null ? "未取得" : `${item.lunar.moonAge}` },
-      { label: "時刻", value: formatTime(item.caughtAt) }
+      { label: tr(locale, "Area", "エリア"), value: item.areaName || unknown },
+      { label: tr(locale, "Weather", "天候"), value: item.weather.weatherLabel || unknown },
+      { label: tr(locale, "Wind", "風"), value: formatWind(item, locale) },
+      { label: tr(locale, "Air", "気温"), value: item.weather.temperatureC == null ? unknown : formatTemperatureFromCelsius(item.weather.temperatureC, locale, unitSystem) },
+      { label: tr(locale, "Tide", "潮"), value: item.tidePhaseLabel || unknown },
+      { label: tr(locale, "Water", "水温"), value: formatSeaTemperature(item, locale, unitSystem) },
+      { label: tr(locale, "Cycle", "潮回り"), value: formatTideCycle(item, locale) },
+      { label: tr(locale, "Moon age", "月齢"), value: item.lunar.moonAge == null ? unknown : `${item.lunar.moonAge}` },
+      { label: tr(locale, "Time", "時刻"), value: formatTime(item.caughtAt, locale) }
     ];
   }
   if (mode === "tackle") {
     return [
-      { label: "セット", value: item.tackleName || "未設定" },
-      { label: "ルアー", value: item.lure || item.tackle.lureName || "未設定" },
-      { label: "ロッド", value: item.rod || item.tackle.rodName || "未設定" },
-      { label: "リール", value: item.reel || item.tackle.reelName || "未設定" },
-      { label: "ライン", value: item.line || item.tackle.lineName || "未設定" },
-      { label: "リーダー", value: item.leader || item.tackle.leaderName || "未設定" }
+      { label: tr(locale, "Setup", "セット"), value: item.tackleName || unset },
+      { label: tr(locale, "Lure", "ルアー"), value: item.lure || item.tackle.lureName || unset },
+      { label: tr(locale, "Rod", "ロッド"), value: item.rod || item.tackle.rodName || unset },
+      { label: tr(locale, "Reel", "リール"), value: item.reel || item.tackle.reelName || unset },
+      { label: tr(locale, "Line", "ライン"), value: item.line || item.tackle.lineName || unset },
+      { label: tr(locale, "Leader", "リーダー"), value: item.leader || item.tackle.leaderName || unset }
     ];
   }
   return [
-    { label: "ポイント", value: formatPoint(item) },
-    { label: "天候", value: item.weather.weatherLabel || "未取得" },
-    { label: "潮", value: item.tidePhaseLabel || "未取得" },
-    { label: "風", value: formatWind(item) },
-    { label: "水温", value: formatSeaTemperature(item) },
-    { label: "タックル", value: item.tackleName || item.lure || item.tackle.lureName || "未設定" }
+    { label: tr(locale, "Area", "ポイント"), value: formatPoint(item, locale) },
+    { label: tr(locale, "Weather", "天候"), value: item.weather.weatherLabel || unknown },
+    { label: tr(locale, "Tide", "潮"), value: item.tidePhaseLabel || unknown },
+    { label: tr(locale, "Wind", "風"), value: formatWind(item, locale) },
+    { label: tr(locale, "Water", "水温"), value: formatSeaTemperature(item, locale, unitSystem) },
+    { label: tr(locale, "Tackle", "タックル"), value: item.tackleName || item.lure || item.tackle.lureName || unset }
   ];
 }
 
-function formatPoint(item: Catch) {
+function formatPoint(item: Catch, locale: AppLocale) {
   if (item.pointName && item.areaName) return `${item.pointName}(${item.areaName})`;
   if (item.pointName) return item.pointName;
-  return item.areaName || "未取得";
+  return item.areaName || tr(locale, "Unknown", "未取得");
 }
 
-function formatWind(item: Catch) {
-  if (item.weather.windSpeedMs == null) return "未取得";
+function formatWind(item: Catch, locale: AppLocale) {
+  if (item.weather.windSpeedMs == null) return tr(locale, "Unknown", "未取得");
   const direction = item.weather.windDirectionLabel ? `${item.weather.windDirectionLabel} ` : "";
   return `${direction}${item.weather.windSpeedMs}m/s`;
 }
 
-function formatSeaTemperature(item: Catch) {
-  if (item.seaTemperature.seaTemperatureC == null) return "未取得";
-  return `${item.seaTemperature.seaTemperatureC}度`;
+function formatSeaTemperature(item: Catch, locale: AppLocale, unitSystem: UnitSystem) {
+  if (item.seaTemperature.seaTemperatureC == null) return tr(locale, "Unknown", "未取得");
+  return formatTemperatureFromCelsius(item.seaTemperature.seaTemperatureC, locale, unitSystem);
 }
 
-function formatTime(value: string) {
+function formatTime(value: string, locale: AppLocale) {
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "未取得";
-  return new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" }).format(date);
+  if (!Number.isFinite(date.getTime())) return tr(locale, "Unknown", "未取得");
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "ja-JP", { hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
-function formatTideCycle(item: Catch) {
+function formatTideCycle(item: Catch, locale: AppLocale) {
   const lunarDay = item.lunar.lunarDay;
-  if (lunarDay != null) return getTideCycleByLunarDay(lunarDay);
+  if (lunarDay != null) return getTideCycleByLunarDay(lunarDay, locale);
   const moonAge = item.lunar.moonAge;
-  if (moonAge == null) return "未取得";
-  return `${getTideCycleByLunarDay(Math.max(1, Math.min(30, Math.round(moonAge) + 1)))}目安`;
+  if (moonAge == null) return tr(locale, "Unknown", "未取得");
+  return `${getTideCycleByLunarDay(Math.max(1, Math.min(30, Math.round(moonAge) + 1)), locale)}${tr(locale, " (estimated)", "目安")}`;
 }
 
-function getTideCycleByLunarDay(lunarDay: number) {
+function getTideCycleByLunarDay(lunarDay: number, locale: AppLocale) {
   const day = ((Math.round(lunarDay) - 1) % 30) + 1;
-  if ([1, 2, 3, 15, 16, 17].includes(day)) return "大潮";
-  if ([7, 8, 9, 22, 23, 24].includes(day)) return "小潮";
-  if ([10, 25].includes(day)) return "長潮";
-  if ([11, 26].includes(day)) return "若潮";
-  return "中潮";
+  if ([1, 2, 3, 15, 16, 17].includes(day)) return tr(locale, "Spring", "大潮");
+  if ([7, 8, 9, 22, 23, 24].includes(day)) return tr(locale, "Neap", "小潮");
+  if ([10, 25].includes(day)) return tr(locale, "Long", "長潮");
+  if ([11, 26].includes(day)) return tr(locale, "Young", "若潮");
+  return tr(locale, "Medium", "中潮");
+}
+
+function tr(locale: AppLocale, english: string, japanese: string) {
+  return locale === "en" ? english : japanese;
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useLocale } from "next-intl";
 import { AuthGate } from "@/components/AuthGate";
 import { CatchCard } from "@/components/CatchCard";
 import { FeatureLock } from "@/components/FeatureLock";
@@ -9,7 +10,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { CatchDataOverlay } from "@/components/share/CatchDataOverlay";
 import { deleteCatch, getUserCatches, updateCatchPublicStatus } from "@/lib/catches";
 import { logShareEvent } from "@/lib/shareEvents";
-import type { Catch } from "@/types";
+import { formatLengthFromCm, getDefaultUnitSystem } from "@/lib/units";
+import { getUserProfile } from "@/lib/userProfiles";
+import { localizePath, type AppLocale } from "@/lib/i18n";
+import type { Catch, UnitSystem } from "@/types";
 
 export default function CatchesPage() {
   return (
@@ -20,33 +24,39 @@ export default function CatchesPage() {
 }
 
 function CatchList({ userId }: { userId: string }) {
+  const locale = useLocale() as AppLocale;
   const [items, setItems] = useState<Catch[]>([]);
-  const [message, setMessage] = useState("読み込み中です。");
-  const digest = useMemo(() => buildDigest(items), [items]);
+  const [message, setMessage] = useState(locale === "en" ? "Loading your catch log..." : "読み込み中です。");
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>(getDefaultUnitSystem(locale));
+  const digest = useMemo(() => buildDigest(items, locale, unitSystem), [items, locale, unitSystem]);
 
   useEffect(() => {
     getUserCatches(userId)
       .then((result) => {
         setItems(result);
-        setMessage(result.length ? "" : "まだ釣果がありません。最初の一匹を投稿しましょう。");
+        setMessage(result.length ? "" : locale === "en" ? "No catches yet. Log your first catch." : "まだ釣果がありません。最初の一匹を投稿しましょう。");
       })
-      .catch((error) => setMessage(error instanceof Error ? error.message : "釣果を読み込めませんでした。"));
-  }, [userId]);
+      .catch((error) => setMessage(error instanceof Error ? error.message : locale === "en" ? "Could not load your catch log." : "釣果を読み込めませんでした。"));
+    getUserProfile(userId)
+      .then((profile) => setUnitSystem(profile?.unitSystem ?? getDefaultUnitSystem(locale)))
+      .catch(() => setUnitSystem(getDefaultUnitSystem(locale)));
+  }, [locale, userId]);
 
   return (
     <>
-      <PageHeader title="釣果一覧" actionHref="/post" actionLabel="投稿" />
+      <PageHeader title={locale === "en" ? "Catch Log" : "釣果一覧"} actionHref="/post" actionLabel={locale === "en" ? "Log catch" : "投稿"} />
       <main className="mx-auto max-w-5xl space-y-5 px-4 py-5">
         {message ? <p className="rounded bg-white p-4 text-sm font-bold text-slate-700 shadow-soft">{message}</p> : null}
-        {items.length ? <CatchDigest digest={digest} /> : null}
+        {items.length ? <CatchDigest digest={digest} locale={locale} unitSystem={unitSystem} /> : null}
         {items.length ? <FeatureLock userId={userId} featureKey="csvExport" compact /> : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
             <div key={item.id} className="relative">
-              <CatchCard item={item} />
+              <CatchCard item={item} unitSystem={unitSystem} />
               <CatchActionMenu
                 item={item}
                 userId={userId}
+                locale={locale}
                 onChange={(nextItem) => setItems((current) => current.map((value) => (value.id === nextItem.id ? nextItem : value)))}
                 onDelete={(deletedId) => setItems((current) => current.filter((value) => value.id !== deletedId))}
               />
@@ -58,18 +68,18 @@ function CatchList({ userId }: { userId: string }) {
   );
 }
 
-function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; userId: string; onChange: (item: Catch) => void; onDelete: (catchId: string) => void }) {
+function CatchActionMenu({ item, userId, locale, onChange, onDelete }: { item: Catch; userId: string; locale: AppLocale; onChange: (item: Catch) => void; onDelete: (catchId: string) => void }) {
   const [open, setOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/embed/catches/${item.id}`;
+  const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}${localizePath(`/embed/catches/${item.id}`, locale)}`;
   const embedCode = `<iframe src="${shareUrl}" width="100%" height="560" style="border:0;border-radius:8px;max-width:420px;" loading="lazy" title="TSURILOGUE catch"></iframe>`;
 
   async function togglePublic() {
     setBusy(true);
-    setMessage(item.isPublic ? "公開を停止しています。" : "埋め込み公開を有効にしています。");
+    setMessage(item.isPublic ? tr(locale, "Stopping public sharing...", "公開を停止しています。") : tr(locale, "Enabling public sharing...", "埋め込み公開を有効にしています。"));
     try {
       const nextPublic = !item.isPublic;
       await updateCatchPublicStatus(item.id, userId, nextPublic);
@@ -78,9 +88,9 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
         isPublic: nextPublic,
         publicShareEnabledAt: nextPublic ? new Date().toISOString() : null
       });
-      setMessage(nextPublic ? "埋め込みコードを使えるようになりました。" : "埋め込み公開を停止しました。");
+      setMessage(nextPublic ? tr(locale, "Public sharing is now enabled.", "埋め込みコードを使えるようになりました。") : tr(locale, "Public sharing was stopped.", "埋め込み公開を停止しました。"));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "公開設定を変更できませんでした。");
+      setMessage(error instanceof Error ? error.message : tr(locale, "Could not change the sharing settings.", "公開設定を変更できませんでした。"));
     } finally {
       setBusy(false);
     }
@@ -89,21 +99,21 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
   async function copyEmbedCode() {
     try {
       await navigator.clipboard.writeText(embedCode);
-      setMessage("埋め込みコードをコピーしました。");
+      setMessage(tr(locale, "Embed code copied.", "埋め込みコードをコピーしました。"));
     } catch {
-      setMessage("コピーできませんでした。");
+      setMessage(tr(locale, "Could not copy the embed code.", "コピーできませんでした。"));
     }
   }
 
   async function handleDelete() {
-    if (!window.confirm("この釣果を削除しますか？削除すると元に戻せません。")) return;
+    if (!window.confirm(tr(locale, "Delete this catch? This cannot be undone.", "この釣果を削除しますか？削除すると元に戻せません。"))) return;
     setBusy(true);
-    setMessage("削除しています。");
+    setMessage(tr(locale, "Deleting catch...", "削除しています。"));
     try {
       await deleteCatch(item.id, userId);
       onDelete(item.id);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "釣果を削除できませんでした。");
+      setMessage(error instanceof Error ? error.message : tr(locale, "Could not delete the catch.", "釣果を削除できませんでした。"));
     } finally {
       setBusy(false);
     }
@@ -113,8 +123,8 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
     <>
       <button
         type="button"
-        title="釣果メニュー"
-        aria-label="釣果メニュー"
+        title={tr(locale, "Catch menu", "釣果メニュー")}
+        aria-label={tr(locale, "Catch menu", "釣果メニュー")}
         aria-expanded={open}
         onClick={() => {
           setOpen((value) => !value);
@@ -127,8 +137,8 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
       </button>
       <button
         type="button"
-        title="共有・埋め込み"
-        aria-label="共有・埋め込み"
+        title={tr(locale, "Share and embed", "共有・埋め込み")}
+        aria-label={tr(locale, "Share and embed", "共有・埋め込み")}
         aria-expanded={shareOpen}
         onClick={() => {
           setShareOpen((value) => !value);
@@ -137,7 +147,7 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
           logShareEvent(userId, "share_open", {
             share_type: "public_embed",
             catch_proof: Boolean(item.verificationScore),
-            locale: "ja"
+            locale
           });
         }}
         className={`tap-target absolute right-16 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border shadow-soft ${
@@ -150,16 +160,16 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
       {open ? (
         <section className="absolute left-3 right-3 top-16 z-20 rounded border border-teal-100 bg-white p-3 shadow-soft">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-black text-ink">メニュー</p>
+            <p className="text-sm font-black text-ink">{tr(locale, "Menu", "メニュー")}</p>
             <span className={`rounded-full px-2 py-1 text-xs font-black ${item.isPublic ? "bg-sky-100 text-sky-800" : "bg-slate-100 text-slate-600"}`}>
-              {item.isPublic ? "公開中" : "非公開"}
+              {item.isPublic ? tr(locale, "Public", "公開中") : tr(locale, "Private", "非公開")}
             </span>
           </div>
-          <Link href={`/catches/${item.id}/edit`} className="tap-target mt-3 flex w-full items-center justify-center rounded bg-water px-4 py-2 text-sm font-black text-white">
-            編集する
+          <Link href={localizePath(`/catches/${item.id}/edit`, locale)} className="tap-target mt-3 flex w-full items-center justify-center rounded bg-water px-4 py-2 text-sm font-black text-white">
+            {tr(locale, "Edit catch", "編集する")}
           </Link>
           <button type="button" disabled={busy} onClick={handleDelete} className="tap-target mt-3 w-full rounded border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-700 disabled:opacity-60">
-            削除する
+            {tr(locale, "Delete catch", "削除する")}
           </button>
           {message ? <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p> : null}
         </section>
@@ -167,13 +177,13 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
       {shareOpen ? (
         <section className="absolute left-3 right-3 top-16 z-20 rounded border border-teal-100 bg-white p-3 shadow-soft">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-black text-ink">共有・埋め込み</p>
+            <p className="text-sm font-black text-ink">{tr(locale, "Share and embed", "共有・埋め込み")}</p>
             <span className={`rounded-full px-2 py-1 text-xs font-black ${item.isPublic ? "bg-sky-100 text-sky-800" : "bg-slate-100 text-slate-600"}`}>
-              {item.isPublic ? "公開中" : "非公開"}
+              {item.isPublic ? tr(locale, "Public", "公開中") : tr(locale, "Private", "非公開")}
             </span>
           </div>
           <button type="button" disabled={busy} onClick={togglePublic} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-2 text-sm font-black text-water disabled:opacity-60">
-            {item.isPublic ? "公開を停止" : "埋め込みを有効化"}
+            {item.isPublic ? tr(locale, "Stop public sharing", "公開を停止") : tr(locale, "Enable public sharing", "埋め込みを有効化")}
           </button>
           <button
             type="button"
@@ -183,15 +193,15 @@ function CatchActionMenu({ item, userId, onChange, onDelete }: { item: Catch; us
             }}
             className="tap-target mt-3 w-full rounded bg-coral px-4 py-2 text-sm font-black text-white"
           >
-            釣果データを重ねる
+            {tr(locale, "Create data overlay", "釣果データを重ねる")}
           </button>
           {item.isPublic ? (
             <div className="mt-3 space-y-2">
               <button type="button" onClick={copyEmbedCode} className="tap-target w-full rounded bg-water px-4 py-2 text-sm font-black text-white">
-                コードをコピー
+                {tr(locale, "Copy embed code", "コードをコピー")}
               </button>
               <a href={shareUrl} className="tap-target block rounded border border-slate-300 px-4 py-2 text-center text-sm font-black text-ink">
-                表示を確認
+                {tr(locale, "View public catch", "表示を確認")}
               </a>
             </div>
           ) : null}
@@ -241,42 +251,42 @@ type Digest = {
   latestText: string;
 };
 
-function CatchDigest({ digest }: { digest: Digest }) {
+function CatchDigest({ digest, locale, unitSystem }: { digest: Digest; locale: AppLocale; unitSystem: UnitSystem }) {
   return (
     <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-black text-water">RECENT REPORT</p>
-          <h2 className="mt-1 text-xl font-black">釣果ダイジェスト</h2>
+          <h2 className="mt-1 text-xl font-black">{tr(locale, "Catch summary", "釣果ダイジェスト")}</h2>
           <p className="mt-1 text-sm leading-6 text-slate-600">{digest.latestText}</p>
         </div>
         <div className="rounded bg-coral px-3 py-2 text-center text-white">
-          <p className="text-xs font-bold">総投稿</p>
+          <p className="text-xs font-bold">{tr(locale, "Total", "総投稿")}</p>
           <p className="text-2xl font-black">{digest.total}</p>
         </div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <DigestStat label="今月" value={`${digest.thisMonth}匹`} />
-        <DigestStat label="直近30日" value={`${digest.recent30}匹`} />
-        <DigestStat label="連続記録" value={`${digest.streak}日`} />
-        <DigestStat label="最大" value={digest.best ? `${digest.best.sizeCm}cm` : "未取得"} />
+        <DigestStat label={tr(locale, "This month", "今月")} value={`${digest.thisMonth}${tr(locale, " catches", "匹")}`} />
+        <DigestStat label={tr(locale, "Last 30 days", "直近30日")} value={`${digest.recent30}${tr(locale, " catches", "匹")}`} />
+        <DigestStat label={tr(locale, "Current streak", "連続記録")} value={`${digest.streak}${tr(locale, " days", "日")}`} />
+        <DigestStat label={tr(locale, "Largest", "最大")} value={digest.best ? formatLengthFromCm(digest.best.sizeCm, locale, unitSystem) : tr(locale, "Unknown", "未取得")} />
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        <DigestStat label="釣行日数" value={`${digest.activeDays}日`} />
-        <DigestStat label="1日平均" value={`${digest.averagePerActiveDay}匹`} />
+        <DigestStat label={tr(locale, "Active days", "釣行日数")} value={`${digest.activeDays}${tr(locale, " days", "日")}`} />
+        <DigestStat label={tr(locale, "Daily average", "1日平均")} value={`${digest.averagePerActiveDay}${tr(locale, " catches", "匹")}`} />
         <div className="rounded bg-foam p-3">
-          <p className="text-xs font-bold text-slate-500">平均釣速({digest.digestYear})</p>
+          <p className="text-xs font-bold text-slate-500">{tr(locale, "Average catch pace", "平均釣速")} ({digest.digestYear})</p>
           <p className="mt-1 text-lg font-black text-ink">{digest.averageCatchPace}</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">はじめと終わりの釣果からその日の釣果までの平均期間を算出しています。</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{tr(locale, "Calculated from the time between the first and last catch on active days.", "はじめと終わりの釣果からその日の釣果までの平均期間を算出しています。")}</p>
         </div>
       </div>
 
       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-        <DigestTag label="よく釣れる魚種" value={digest.topFish} />
-        <DigestTag label="好調な潮" value={digest.topTide} />
-        <DigestTag label="よく行くエリア" value={digest.topArea} />
+        <DigestTag label={tr(locale, "Top fish", "よく釣れる魚種")} value={digest.topFish} />
+        <DigestTag label={tr(locale, "Top tide", "好調な潮")} value={digest.topTide} />
+        <DigestTag label={tr(locale, "Top area", "よく行くエリア")} value={digest.topArea} />
       </div>
     </section>
   );
@@ -300,7 +310,7 @@ function DigestTag({ label, value }: { label: string; value: string }) {
   );
 }
 
-function buildDigest(items: Catch[]): Digest {
+function buildDigest(items: Catch[], locale: AppLocale, unitSystem: UnitSystem): Digest {
   const now = new Date();
   const thisMonthKey = `${now.getFullYear()}-${now.getMonth()}`;
   const thirtyDaysAgo = now.getTime() - 30 * 86400000;
@@ -319,24 +329,26 @@ function buildDigest(items: Catch[]): Digest {
     streak: getStreakDays(items),
     best,
     latest,
-    topFish: topLabel(items, (item) => item.fishType),
-    topTide: topLabel(items, (item) => item.tidePhaseLabel),
-    topArea: topLabel(items, (item) => item.areaName || item.officialCurrentStationName || "未取得"),
+    topFish: topLabel(items, (item) => item.fishType, locale),
+    topTide: topLabel(items, (item) => item.tidePhaseLabel, locale),
+    topArea: topLabel(items, (item) => item.areaName || item.officialCurrentStationName || tr(locale, "Unknown", "未取得"), locale),
     activeDays,
     averagePerActiveDay,
     digestYear,
-    averageCatchPace: formatAverageCatchPace(yearlyGroups),
-    latestText: latest ? `最新は${formatShortDate(latest.caughtAt)}の${latest.fishType} ${latest.sizeCm}cm。次の一匹で記録を伸ばしましょう。` : "まだ釣果がありません。"
+    averageCatchPace: formatAverageCatchPace(yearlyGroups, locale),
+    latestText: latest
+      ? (locale === "en" ? `Latest: ${latest.fishType}, ${formatLengthFromCm(latest.sizeCm, locale, unitSystem)}, on ${formatShortDate(latest.caughtAt, locale)}. Keep building your catch log.` : `最新は${formatShortDate(latest.caughtAt, locale)}の${latest.fishType} ${latest.sizeCm}cm。次の一匹で記録を伸ばしましょう。`)
+      : tr(locale, "No catches yet.", "まだ釣果がありません。")
   };
 }
 
-function topLabel(items: Catch[], getKey: (item: Catch) => string) {
+function topLabel(items: Catch[], getKey: (item: Catch) => string, locale: AppLocale) {
   const counts = new Map<string, number>();
   for (const item of items) {
-    const key = getKey(item) || "未取得";
+    const key = getKey(item) || tr(locale, "Unknown", "未取得");
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "未取得";
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? tr(locale, "Unknown", "未取得");
 }
 
 function getMonthKey(value: string) {
@@ -364,7 +376,7 @@ function groupByDay(items: Catch[]) {
   return groups;
 }
 
-function formatAverageCatchPace(groups: Map<string, Catch[]>) {
+function formatAverageCatchPace(groups: Map<string, Catch[]>, locale: AppLocale) {
   const intervals: number[] = [];
   for (const dayItems of groups.values()) {
     if (dayItems.length < 2) continue;
@@ -373,17 +385,21 @@ function formatAverageCatchPace(groups: Map<string, Catch[]>) {
     intervals.push((times[times.length - 1] - times[0]) / (times.length - 1));
   }
 
-  if (!intervals.length) return "単発記録";
+  if (!intervals.length) return tr(locale, "Single catches", "単発記録");
   const averageMinutes = intervals.reduce((sum, value) => sum + value, 0) / intervals.length / 60000;
-  if (averageMinutes < 60) return `${Math.round(averageMinutes)}分/匹`;
+  if (averageMinutes < 60) return locale === "en" ? `${Math.round(averageMinutes)} min/catch` : `${Math.round(averageMinutes)}分/匹`;
   const hours = Math.floor(averageMinutes / 60);
   const minutes = Math.round(averageMinutes % 60);
-  return minutes ? `${hours}時間${minutes}分/匹` : `${hours}時間/匹`;
+  return locale === "en" ? (minutes ? `${hours} hr ${minutes} min/catch` : `${hours} hr/catch`) : (minutes ? `${hours}時間${minutes}分/匹` : `${hours}時間/匹`);
 }
 
-function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    month: "2-digit",
-    day: "2-digit"
+function formatShortDate(value: string, locale: AppLocale) {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "ja-JP", {
+    month: locale === "en" ? "short" : "2-digit",
+    day: "numeric"
   }).format(new Date(value));
+}
+
+function tr(locale: AppLocale, english: string, japanese: string) {
+  return locale === "en" ? english : japanese;
 }

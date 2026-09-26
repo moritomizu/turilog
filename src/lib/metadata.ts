@@ -89,16 +89,18 @@ export function createPageMetadata({
   };
 }
 
-export async function getPublicCatchMetadata(catchId: string) {
+export async function getPublicCatchMetadata(catchId: string, locale: AppLocale = "ja") {
   const data = await getDocData("publicCatches", catchId);
   if (!data || data.isPublic !== true) return null;
-  const fishType = text(data.fishType, "釣果");
-  const sizeCm = typeof data.sizeCm === "number" ? `${data.sizeCm}cm` : "";
-  const tide = text(data.tidePhaseLabel, "潮情報も記録");
-  const area = text(data.areaName, "釣果エリア");
+  const fishType = text(data.fishType, locale === "en" ? "Catch" : "釣果");
+  const sizeCm = typeof data.sizeCm === "number" ? `${data.sizeCm} cm` : "";
+  const tide = text(data.tidePhaseLabel, locale === "en" ? "fishing conditions recorded" : "潮情報も記録");
+  const area = text(data.areaName, locale === "en" ? "the fishing area" : "釣果エリア");
   return {
-    title: `${fishType}${sizeCm ? ` ${sizeCm}` : ""} | ${APP_NAME}釣果`,
-    description: `${area}で記録された${fishType}${sizeCm ? ` ${sizeCm}` : ""}の釣果。${tide}、天候、水温、タックルも一緒に振り返れる釣りログです。`,
+    title: locale === "en" ? `${fishType}${sizeCm ? ` ${sizeCm}` : ""} | ${APP_NAME} Catch` : `${fishType}${sizeCm ? ` ${sizeCm}` : ""} | ${APP_NAME}釣果`,
+    description: locale === "en"
+      ? `${fishType}${sizeCm ? ` ${sizeCm}` : ""} logged in ${area}. ${tide}, weather, water temperature, and tackle can be recorded with TSURILOGUE.`
+      : `${area}で記録された${fishType}${sizeCm ? ` ${sizeCm}` : ""}の釣果。${tide}、天候、水温、タックルも一緒に振り返れる釣りログです。`,
     image: typeof data.imageUrl === "string" ? data.imageUrl : null
   };
 }
