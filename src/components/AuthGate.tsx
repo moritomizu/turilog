@@ -41,16 +41,26 @@ export function AuthGate({ children, skipOnboardingCheck = false }: { children: 
   }, [locale, pathname, router, skipOnboardingCheck, user]);
 
   if (!isFirebaseConfigured) {
-    return <Notice title="Firebase設定が必要です" message={`${missingFirebaseEnv.join(", ")} を .env.local に設定してください。`} />;
+    return (
+      <Notice
+        title={locale === "en" ? "Firebase configuration required" : "Firebase設定が必要です"}
+        message={locale === "en" ? `Configure ${missingFirebaseEnv.join(", ")} in .env.local.` : `${missingFirebaseEnv.join(", ")} を .env.local に設定してください。`}
+      />
+    );
   }
 
-  if (loading || checkingOnboarding) return <Notice title="確認中" message="ログイン状態を確認しています。" />;
+  if (loading || checkingOnboarding) {
+    return <Notice title={locale === "en" ? "Checking your account" : "確認中"} message={locale === "en" ? "Checking your login status..." : "ログイン状態を確認しています。"} />;
+  }
 
   if (!user) {
     return (
-      <Notice title="ログインしてください" message="釣果ログはログイン済みユーザーだけが利用できます。">
+      <Notice
+        title={locale === "en" ? "Log in to continue" : "ログインしてください"}
+        message={locale === "en" ? "Log in or create a free account to start your catch log." : "釣果ログはログイン済みユーザーだけが利用できます。"}
+      >
         <Link className="tap-target mt-4 inline-flex w-full items-center justify-center rounded bg-water px-5 py-3 font-bold text-white" href={localizePath("/login", locale)}>
-          {locale === "en" ? "Go to login" : "Googleでログインへ"}
+          {locale === "en" ? "Log in or sign up" : "ログインへ"}
         </Link>
       </Notice>
     );

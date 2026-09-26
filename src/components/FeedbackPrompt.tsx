@@ -41,9 +41,9 @@ export function FeedbackPrompt({ userId, trigger, category, title, compact = fal
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : ""
       });
       setDone(true);
-      setMessage("ありがとうございます。改善の参考にします。");
+      setMessage(locale === "en" ? "Thank you. Your feedback will help us improve." : "ありがとうございます。改善の参考にします。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "送信できませんでした。");
+      setMessage(error instanceof Error ? error.message : locale === "en" ? "Could not send your feedback." : "送信できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -59,7 +59,7 @@ export function FeedbackPrompt({ userId, trigger, category, title, compact = fal
       <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
         <p className="text-sm font-black text-water">{message}</p>
         <button type="button" onClick={onClose} className="mt-3 rounded bg-water px-4 py-2 text-sm font-black text-white">
-          閉じる
+          {locale === "en" ? "Close" : "閉じる"}
         </button>
       </section>
     );
@@ -70,9 +70,9 @@ export function FeedbackPrompt({ userId, trigger, category, title, compact = fal
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-black text-coral">FEEDBACK</p>
-          <h2 className="mt-1 text-lg font-black text-ink">{title ?? `${APP_NAME}の使い心地はいかがですか？`}</h2>
+          <h2 className="mt-1 text-lg font-black text-ink">{title ?? (locale === "en" ? `How was your ${APP_NAME} experience?` : `${APP_NAME}の使い心地はいかがですか？`)}</h2>
         </div>
-        <button type="button" onClick={dismiss} className="rounded-full bg-white px-3 py-1 text-lg font-black text-slate-500" aria-label="閉じる">
+        <button type="button" onClick={dismiss} className="rounded-full bg-white px-3 py-1 text-lg font-black text-slate-500" aria-label={locale === "en" ? "Close" : "閉じる"}>
           ×
         </button>
       </div>
@@ -85,19 +85,19 @@ export function FeedbackPrompt({ userId, trigger, category, title, compact = fal
             onClick={() => setRating(option.value)}
             className={`tap-target rounded border px-2 py-3 text-xs font-black ${rating === option.value ? "border-coral bg-white text-coral" : "border-orange-100 bg-white/70 text-slate-700"}`}
           >
-            {option.label}
+            {locale === "en" ? feedbackRatingLabelsEn[option.value] : option.label}
           </button>
         ))}
       </div>
 
       {rating ? (
         <label className="block">
-          <span className="text-sm font-bold text-slate-700">よければ、感じたことや改善してほしいことを教えてください</span>
+          <span className="text-sm font-bold text-slate-700">{locale === "en" ? "What worked well, or what could we improve?" : "よければ、感じたことや改善してほしいことを教えてください"}</span>
           <textarea
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             className="mt-2 min-h-24 w-full rounded border border-orange-100 bg-white p-3 text-base"
-            placeholder="例: 投稿はしやすいけど、場所指定をもう少し簡単にしたい"
+            placeholder={locale === "en" ? "e.g. Logging was easy, but choosing a location could be simpler." : "例: 投稿はしやすいけど、場所指定をもう少し簡単にしたい"}
           />
         </label>
       ) : null}
@@ -106,15 +106,23 @@ export function FeedbackPrompt({ userId, trigger, category, title, compact = fal
 
       <div className="grid gap-2 sm:grid-cols-2">
         <button type="button" disabled={!rating || busy} onClick={submit} className="tap-target rounded bg-coral px-4 py-3 text-sm font-black text-white disabled:opacity-50">
-          {busy ? "送信中..." : "送信する"}
+          {busy ? (locale === "en" ? "Sending..." : "送信中...") : (locale === "en" ? "Send feedback" : "送信する")}
         </button>
         <button type="button" onClick={dismiss} className="tap-target rounded border border-orange-200 bg-white px-4 py-3 text-sm font-black text-slate-700">
-          今はしない
+          {locale === "en" ? "Not now" : "今はしない"}
         </button>
       </div>
     </section>
   );
 }
+
+const feedbackRatingLabelsEn: Record<FeedbackRating, string> = {
+  excellent: "😊 Great",
+  good: "🙂 Good",
+  neutral: "😐 Okay",
+  poor: "😕 Poor",
+  bad: "😡 Bad"
+};
 
 export function SimpleFeedbackPrompt({ userId, trigger, category, title }: FeedbackPromptProps) {
   const [initialRating, setInitialRating] = useState<FeedbackRating | null>(null);

@@ -12,7 +12,7 @@ import { buildCatchProofPackage, calculateVerificationScore, checkRankingEligibi
 import { createCatch, emptyTackleInfo, getUserCatches, updateCatchEnrichment, uploadCatchImage, uploadMeasurementPhoto } from "@/lib/catches";
 import { markAfterCatchFeedbackShown, shouldShowAfterCatchCreatedFeedback } from "@/lib/feedback";
 import { getFishingAreaById, getNearestFishingArea, groupedFishingAreas } from "@/lib/fishingAreas";
-import { getLocaleFromPathname, localizePath } from "@/lib/i18n";
+import { getLocaleFromPathname, localizePath, type AppLocale } from "@/lib/i18n";
 import { getPostableGroupsForUser } from "@/lib/groups";
 import { getCurrentLocation, formatCoordinate } from "@/lib/location";
 import { generateBlurredLocation, getAreaFromLocation, getDefaultBlurRadius } from "@/lib/locationBlur";
@@ -72,6 +72,7 @@ function PostForm({ userId }: { userId: string }) {
   const pathname = usePathname();
   const locale = getLocaleFromPathname(pathname);
   const t = useTranslations("post");
+  const en = locale === "en";
   const [fishType, setFishType] = useState("");
   const [sizeCm, setSizeCm] = useState("");
   const [caughtAt, setCaughtAt] = useState(toLocalInputValue(new Date()));
@@ -142,7 +143,9 @@ function PostForm({ userId }: { userId: string }) {
         setSelectedGroupId(draft.selectedGroupId);
         setShowDetails(draft.showDetails);
         setShowMeasurementPhoto(draft.showMeasurementPhoto);
-        setDraftNotice(draft.unsent ? "未送信の釣果を復元しました。通信が安定したらもう一度投稿できます。" : "前回の入力途中の内容を復元しました。");
+        setDraftNotice(draft.unsent
+          ? tr(locale, "Your unsent catch was restored. Try posting again when your connection is stable.", "未送信の釣果を復元しました。通信が安定したらもう一度投稿できます。")
+          : tr(locale, "Your previous draft was restored.", "前回の入力途中の内容を復元しました。"));
       }
       const [draftFile, draftMeasurementFile] = await Promise.all([readDraftFile(userId, "catchPhoto"), readDraftFile(userId, "measurementPhoto")]);
       if (!mounted) return;
@@ -155,7 +158,7 @@ function PostForm({ userId }: { userId: string }) {
     return () => {
       mounted = false;
     };
-  }, [userId]);
+  }, [userId, en, locale]);
 
   useEffect(() => {
     if (!draftReady) return;
@@ -224,12 +227,12 @@ function PostForm({ userId }: { userId: string }) {
           lineName: topValues(items.map((item) => item.tackle.lineName), 6),
           leaderName: topValues(items.map((item) => item.tackle.leaderName), 6)
         });
-        setLocationSuggestions(topLocations(items, 6));
+        setLocationSuggestions(topLocations(items, 6, locale));
       })
       .catch(() => {
-        setFishSuggestions(["シーバス", "アジ", "メバル", "クロダイ", "マダイ", "ヒラメ"]);
+        setFishSuggestions(en ? ["Sea bass", "Horse mackerel", "Rockfish", "Black sea bream", "Red sea bream", "Flounder"] : ["シーバス", "アジ", "メバル", "クロダイ", "マダイ", "ヒラメ"]);
       });
-  }, [userId]);
+  }, [en, locale, userId]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -245,10 +248,10 @@ function PostForm({ userId }: { userId: string }) {
         const options = linked && linkedPaymentOk && !joined.some((item) => item.id === linked.id) ? [linked, ...joined] : joined;
         setTournamentOptions(options);
         if (tournamentId && linkedPaymentOk) setSelectedTournamentId(tournamentId);
-        if (tournamentId && linked && !linkedPaymentOk) setMessage("参加費の支払い確認後に大会投稿できます。通常投稿として保存できます。");
+        if (tournamentId && linked && !linkedPaymentOk) setMessage(tr(locale, "You can submit to this tournament after your entry payment is confirmed. You can still save a regular catch.", "参加費の支払い確認後に大会投稿できます。通常投稿として保存できます。"));
       })
       .catch(() => setTournamentOptions([]));
-  }, [userId]);
+  }, [locale, userId]);
 
   useEffect(() => {
     getPostableGroupsForUser(userId)
@@ -280,7 +283,7 @@ function PostForm({ userId }: { userId: string }) {
     const selected = tackleOptions.find((item) => item.id === tackleId);
     if (selected) {
       setTackle(tackleToTackleInfo(selected));
-      setMessage(`${selected.name} をタックルに反映しました。`);
+      setMessage(en ? `${selected.name} was applied to your tackle.` : `${selected.name} をタックルに反映しました。`);
     }
   }
 
@@ -290,7 +293,9 @@ function PostForm({ userId }: { userId: string }) {
     if (nextFile) {
       const photoDate = await readPhotoTakenAt(nextFile).catch(() => null);
       setCaughtAt(toLocalInputValue(photoDate ?? new Date()));
-      setMessage(photoDate ? "写真の撮影日時を釣った日時に反映しました。" : "写真の撮影日時を読み取れなかったため、現在時刻を設定しました。");
+      setMessage(photoDate
+        ? tr(locale, "The photo date was used as the catch time.", "写真の撮影日時を釣った日時に反映しました。")
+        : tr(locale, "The photo date could not be read, so the current time was used.", "写真の撮影日時を読み取れなかったため、現在時刻を設定しました。"));
     } else {
       setCaughtAt(toLocalInputValue(new Date()));
     }
@@ -304,13 +309,13 @@ function PostForm({ userId }: { userId: string }) {
   }
 
   async function handleLocation() {
-    setMessage("位置情報を取得しています。");
+    setMessage(tr(locale, "Getting your location...", "位置情報を取得しています。"));
     try {
       const point = await getCurrentLocation();
-      applyLocation(point, "", "", { inferArea: true, message: "位置情報を取得しました。" });
+      applyLocation(point, "", "", { inferArea: true, message: tr(locale, "Location saved.", "位置情報を取得しました。") });
       setPointName("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "位置情報を取得できませんでした。");
+      setMessage(error instanceof Error ? error.message : tr(locale, "Could not get your location.", "位置情報を取得できませんでした。"));
     }
   }
 
@@ -318,14 +323,14 @@ function PostForm({ userId }: { userId: string }) {
     const latitude = Number(manualLatitude);
     const longitude = Number(manualLongitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      setMessage("緯度と経度を数字で入力してください。");
+      setMessage(tr(locale, "Enter numeric latitude and longitude values.", "緯度と経度を数字で入力してください。"));
       return;
     }
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-      setMessage("緯度は-90〜90、経度は-180〜180の範囲で入力してください。");
+      setMessage(tr(locale, "Latitude must be between -90 and 90, and longitude between -180 and 180.", "緯度は-90〜90、経度は-180〜180の範囲で入力してください。"));
       return;
     }
-    applyLocation({ latitude, longitude }, "", "", { inferArea: true, message: "入力した位置を設定しました。" });
+    applyLocation({ latitude, longitude }, "", "", { inferArea: true, message: tr(locale, "The entered location was saved.", "入力した位置を設定しました。") });
   }
 
   const applyLocation = useCallback((point: LocationPoint, nextPointName = "", nextAreaName = "", options: { inferArea?: boolean; message?: string } = {}) => {
@@ -342,12 +347,14 @@ function PostForm({ userId }: { userId: string }) {
       if (nearest) {
         setSelectedAreaId(nearest.area.id);
         setAreaName(`${nearest.area.prefecture}・${nearest.area.name}`);
-        setMessage(`${options.message ?? "位置を設定しました。"} 近くのエリアとして ${nearest.area.prefecture}・${nearest.area.name} を自動選択しました。`);
+        setMessage(en
+          ? `${options.message ?? "Location saved."} ${nearest.area.prefecture} / ${nearest.area.name} was selected as the nearest area.`
+          : `${options.message ?? "位置を設定しました。"} 近くのエリアとして ${nearest.area.prefecture}・${nearest.area.name} を自動選択しました。`);
         return;
       }
     }
-    setMessage(options.message ?? "過去の釣果地点を設定しました。");
-  }, []);
+    setMessage(options.message ?? tr(locale, "A previous catch location was selected.", "過去の釣果地点を設定しました。"));
+  }, [en, locale]);
 
   function handleAreaChange(areaId: string) {
     setSelectedAreaId(areaId);
@@ -356,21 +363,21 @@ function PostForm({ userId }: { userId: string }) {
     applyLocation(area);
     setAreaName(`${area.prefecture}・${area.name}`);
     setPointName("");
-    setMessage(`${area.prefecture}・${area.name} の代表地点を設定しました。必要なら地図でピンを微調整してください。`);
+    setMessage(en ? `A representative point for ${area.prefecture} / ${area.name} was selected. Adjust the pin if needed.` : `${area.prefecture}・${area.name} の代表地点を設定しました。必要なら地図でピンを微調整してください。`);
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setSuccessSummary("");
-    setSubmitStage(file ? "写真をアップロードしています。" : "釣果を保存しています。");
+    setSubmitStage(file ? tr(locale, "Uploading photo...", "写真をアップロードしています。") : tr(locale, "Saving catch...", "釣果を保存しています。"));
     setMessage("");
     try {
       let imageUrl: string | null = null;
       if (file) imageUrl = await uploadCatchImage(userId, file);
       let measurementPhotoUrl: string | null = null;
       if (measurementFile) measurementPhotoUrl = await uploadMeasurementPhoto(userId, measurementFile);
-      setSubmitStage("釣果を保存しています。");
+      setSubmitStage(tr(locale, "Saving catch...", "釣果を保存しています。"));
       const caughtAtIso = new Date(caughtAt).toISOString();
       const emptyTideInfo = getEmptyTideInfo();
       const selectedTournament = tournamentOptions.find((item) => item.id === selectedTournamentId) ?? null;
@@ -471,8 +478,8 @@ function PostForm({ userId }: { userId: string }) {
       setMeasurementFile(null);
       setShowMeasurementPhoto(false);
       setCaughtAt(toLocalInputValue(new Date()));
-      setSuccessSummary(`${savedFishType} ${savedSizeCm}cm を投稿しました。`);
-      setMessage(`${buildPostMessage(selectedTournament, tournamentCheck, selectedGroup)} 潮位・天候・水温は裏側で追記中です。`);
+      setSuccessSummary(en ? `${savedFishType} · ${savedSizeCm} cm saved.` : `${savedFishType} ${savedSizeCm}cm を投稿しました。`);
+      setMessage(`${buildPostMessage(selectedTournament, tournamentCheck, selectedGroup, locale)} ${tr(locale, "Tide, weather, and water temperature are being added in the background.", "潮位・天候・水温は裏側で追記中です。")}`);
       if (await shouldShowAfterCatchCreatedFeedback(userId, nextCatchCount).catch(() => false)) {
         await markAfterCatchFeedbackShown(userId).catch(() => undefined);
         setShowPostFeedback(true);
@@ -506,8 +513,10 @@ function PostForm({ userId }: { userId: string }) {
           unsent: true
         })
       );
-      setDraftNotice("未送信の釣果として端末に保持しました。通信が安定したら、この画面から再度投稿してください。");
-      setMessage(error instanceof Error ? `${error.message} 入力内容は端末に保持しています。` : "投稿に失敗しました。入力内容は端末に保持しています。");
+      setDraftNotice(tr(locale, "This unsent catch was saved on your device. Try again from this screen when your connection is stable.", "未送信の釣果として端末に保持しました。通信が安定したら、この画面から再度投稿してください。"));
+      setMessage(error instanceof Error
+        ? `${error.message} ${tr(locale, "Your entries remain saved on this device.", "入力内容は端末に保持しています。")}`
+        : tr(locale, "Could not save the catch. Your entries remain saved on this device.", "投稿に失敗しました。入力内容は端末に保持しています。"));
     } finally {
       setSubmitStage("");
       setBusy(false);
@@ -535,11 +544,11 @@ function PostForm({ userId }: { userId: string }) {
                   setMeasurementFile(null);
                   setCaughtAt(toLocalInputValue(new Date()));
                   setDraftNotice("");
-                  setMessage("下書きを破棄しました。");
+                  setMessage(tr(locale, "Draft discarded.", "下書きを破棄しました。"));
                 }}
                 className="mt-3 rounded border border-orange-200 bg-white px-3 py-2 text-xs font-black text-coral"
               >
-                この下書きを破棄
+                {tr(locale, "Discard this draft", "この下書きを破棄")}
               </button>
             </section>
           ) : null}
@@ -548,7 +557,7 @@ function PostForm({ userId }: { userId: string }) {
             <input className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(e) => handleCatchPhotoChange(e.target.files?.[0] ?? null)} />
             <p className="mt-2 text-xs font-bold text-slate-500">{t("photoHelp")}</p>
           </label>
-          {preview ? <SizeEstimator imageUrl={preview} onApply={(value) => setSizeCm(value)} /> : null}
+          {preview ? <SizeEstimator imageUrl={preview} locale={locale} onApply={(value) => setSizeCm(value)} /> : null}
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
             <Field label={t("fishType")} value={fishType} onChange={setFishType} placeholder={t("fishPlaceholder")} required listId="fish-suggestions" autoFocus />
@@ -567,24 +576,24 @@ function PostForm({ userId }: { userId: string }) {
 
           {tournamentOptions.length ? (
             <section className="rounded border border-coral/30 bg-orange-50 p-4 shadow-soft">
-              <h2 className="text-sm font-black text-coral">大会エントリー</h2>
+              <h2 className="text-sm font-black text-coral">{tr(locale, "Tournament entry", "大会エントリー")}</h2>
               <select
                 value={selectedTournamentId}
                 onChange={(event) => setSelectedTournamentId(event.target.value)}
                 className="mt-3 w-full rounded border border-orange-200 bg-white p-3 text-base font-bold"
               >
-                <option value="">通常投稿のみ</option>
+                <option value="">{tr(locale, "Regular catch only", "通常投稿のみ")}</option>
                 {tournamentOptions.map((tournament) => (
                   <option key={tournament.id} value={tournament.id}>
                     {tournament.name}
                   </option>
                 ))}
               </select>
-              <p className="mt-2 text-xs font-bold leading-5 text-slate-600">期間内・対象魚種・位置情報ありの場合、大会投稿として承認待ち保存します。</p>
+              <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{tr(locale, "Eligible catches within the event period are submitted for tournament approval.", "期間内・対象魚種・位置情報ありの場合、大会投稿として承認待ち保存します。")}</p>
               {selectedTournamentForUi ? (
                 <div className="mt-3 rounded border border-orange-200 bg-white p-3">
-                  <p className="text-xs font-black text-coral">大会投稿の確認写真</p>
-                  <p className="mt-1 text-xs font-bold leading-5 text-slate-600">メジャー写真があると、サイズ確認や承認時の判断に役立ちます。</p>
+                  <p className="text-xs font-black text-coral">{tr(locale, "Tournament measurement photo", "大会投稿の確認写真")}</p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-slate-600">{tr(locale, "A photo showing the fish with a measuring device helps reviewers verify its size.", "メジャー写真があると、サイズ確認や承認時の判断に役立ちます。")}</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -593,7 +602,7 @@ function PostForm({ userId }: { userId: string }) {
                     }}
                     className="tap-target mt-2 rounded border border-coral bg-white px-3 py-2 text-xs font-black text-coral"
                   >
-                    {measurementFile ? "メジャー写真を変更" : "メジャー写真を追加"}
+                    {measurementFile ? tr(locale, "Change measurement photo", "メジャー写真を変更") : tr(locale, "Add measurement photo", "メジャー写真を追加")}
                   </button>
                 </div>
               ) : null}
@@ -602,31 +611,31 @@ function PostForm({ userId }: { userId: string }) {
 
           {groupOptions.length ? (
             <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
-              <h2 className="text-sm font-black text-water">共有先グループ</h2>
+              <h2 className="text-sm font-black text-water">{tr(locale, "Share with a group", "共有先グループ")}</h2>
               <select
                 value={selectedGroupId}
                 onChange={(event) => setSelectedGroupId(event.target.value)}
                 className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
               >
-                <option value="">自分だけの釣果ログ</option>
+                <option value="">{tr(locale, "Private catch log", "自分だけの釣果ログ")}</option>
                 {groupOptions.map((group) => (
                   <option key={group.id} value={group.id}>
                     {group.name}
                   </option>
                 ))}
               </select>
-              <p className="mt-2 text-xs font-bold leading-5 text-slate-600">前回選んだ共有先を次回も自動で選択します。秘密にしたい釣果は「自分だけ」を選んでください。</p>
+              <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{tr(locale, "Your last group selection is remembered. Keep the catch private if you do not want to share it.", "前回選んだ共有先を次回も自動で選択します。秘密にしたい釣果は「自分だけ」を選んでください。")}</p>
             </section>
           ) : null}
 
           <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm font-black text-water">使用タックルセット</h2>
-                <p className="mt-1 text-xs font-bold leading-5 text-slate-600">ジャンル別に登録したタックルセットから選ぶと、ロッド・リール・ラインを自動入力します。</p>
+                <h2 className="text-sm font-black text-water">{tr(locale, "Tackle setup", "使用タックルセット")}</h2>
+                <p className="mt-1 text-xs font-bold leading-5 text-slate-600">{tr(locale, "Choose a saved setup to fill in your rod, reel, line, and lure.", "ジャンル別に登録したタックルセットから選ぶと、ロッド・リール・ラインを自動入力します。")}</p>
               </div>
-              <Link href="/profile/tackles" className="shrink-0 rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">
-                管理
+              <Link href={localizePath("/profile/tackles", locale)} className="shrink-0 rounded border border-water bg-white px-3 py-2 text-xs font-black text-water">
+                {tr(locale, "Manage", "管理")}
               </Link>
             </div>
             {tackleOptions.length ? (
@@ -635,8 +644,8 @@ function PostForm({ userId }: { userId: string }) {
                 onChange={(event) => handleTackleSelect(event.target.value)}
                 className="mt-3 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
               >
-                <option value="">選択しない / 手入力</option>
-                {groupTacklesByGenre(tackleOptions).map((group) => (
+                <option value="">{tr(locale, "None / enter manually", "選択しない / 手入力")}</option>
+                {groupTacklesByGenre(tackleOptions, locale).map((group) => (
                   <optgroup key={group.label} label={group.label}>
                     {group.items.map((item) => (
                       <option key={item.id} value={item.id}>
@@ -648,7 +657,7 @@ function PostForm({ userId }: { userId: string }) {
               </select>
             ) : (
               <p className="mt-3 rounded bg-foam p-3 text-xs font-bold leading-5 text-slate-600">
-                登録済みタックルはまだありません。よく使うセットを登録すると、投稿がかなり楽になります。
+                {tr(locale, "You have no saved tackle setups yet. Save a frequently used setup to log catches faster.", "登録済みタックルはまだありません。よく使うセットを登録すると、投稿がかなり楽になります。")}
               </p>
             )}
           </section>
@@ -691,9 +700,9 @@ function PostForm({ userId }: { userId: string }) {
             <button type="button" onClick={() => setShowMapPicker((value) => !value)} className="tap-target mt-3 w-full rounded bg-water px-4 py-3 text-sm font-black text-white">
               {showMapPicker ? t("closeMap") : t("openMap")}
             </button>
-            {showMapPicker ? <MapPicker location={location} onPick={(point) => applyLocation(point, "", "", { inferArea: true, message: "ピンの場所を投稿位置に設定しました。" })} /> : null}
+            {showMapPicker ? <MapPicker locale={locale} location={location} onPick={(point) => applyLocation(point, "", "", { inferArea: true, message: tr(locale, "The pin location was saved.", "ピンの場所を投稿位置に設定しました。") })} /> : null}
             <p className="mt-3 text-sm text-slate-600">
-              {t("currentLocation")}: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
+              {t("currentLocation")}: {tr(locale, "Lat", "緯度")} {formatCoordinate(location?.latitude)} / {tr(locale, "Lng", "経度")} {formatCoordinate(location?.longitude)}
             </p>
             <label className="mt-3 block">
               <span className="text-sm font-bold">{t("pointName")}</span>
@@ -701,7 +710,7 @@ function PostForm({ userId }: { userId: string }) {
                 className="mt-2 w-full rounded border border-slate-300 bg-white p-3 text-base font-bold"
                 value={pointName}
                 onChange={(event) => setPointName(event.target.value)}
-                placeholder="例: いつもの堤防先端"
+                placeholder={tr(locale, "e.g. North pier", "例: いつもの堤防先端")}
               />
             </label>
             <SuggestionLocationChips values={locationSuggestions} onPick={(value) => applyLocation(value, value.pointName, value.areaName)} />
@@ -720,6 +729,7 @@ function PostForm({ userId }: { userId: string }) {
                 <Field label={t("boatName")} value={boatName} onChange={setBoatName} placeholder={t("boatPlaceholder")} compact />
 
                 <MeasurementPhotoInput
+                  locale={locale}
                   file={measurementFile}
                   open={showMeasurementPhoto}
                   recommended={Boolean(selectedTournamentForUi)}
@@ -728,28 +738,28 @@ function PostForm({ userId }: { userId: string }) {
                 />
 
                 <section className="rounded bg-foam p-3">
-                  <h2 className="text-sm font-black">場所</h2>
+                  <h2 className="text-sm font-black">{tr(locale, "Location", "場所")}</h2>
                   <p className="mt-1 text-sm text-slate-600">
-                    緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
+                    {tr(locale, "Lat", "緯度")} {formatCoordinate(location?.latitude)} / {tr(locale, "Lng", "経度")} {formatCoordinate(location?.longitude)}
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <Field label="緯度" type="number" inputMode="decimal" value={manualLatitude} onChange={setManualLatitude} placeholder="35.454" />
-                    <Field label="経度" type="number" inputMode="decimal" value={manualLongitude} onChange={setManualLongitude} placeholder="139.644" />
+                    <Field label={tr(locale, "Latitude", "緯度")} type="number" inputMode="decimal" value={manualLatitude} onChange={setManualLatitude} placeholder="35.454" />
+                    <Field label={tr(locale, "Longitude", "経度")} type="number" inputMode="decimal" value={manualLongitude} onChange={setManualLongitude} placeholder="139.644" />
                   </div>
                   <button type="button" onClick={applyManualLocation} className="tap-target mt-3 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
-                    入力した場所を使う
+                    {tr(locale, "Use this location", "入力した場所を使う")}
                   </button>
                 </section>
 
                 <section className="rounded bg-foam p-3">
-                  <h2 className="text-sm font-black">タックル</h2>
+                  <h2 className="text-sm font-black">{tr(locale, "Tackle", "タックル")}</h2>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <TackleField label="ルアー" field="lureName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lureName} placeholder="例: カゲロウ100F" />
-                    <TackleField label="カラー" field="lureColor" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lureColor} placeholder="例: チャートバック" />
-                    <TackleField label="ロッド" field="rodName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.rodName} placeholder="例: 9.6ft ML" />
-                    <TackleField label="リール" field="reelName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.reelName} placeholder="例: 4000XG" />
-                    <TackleField label="ライン" field="lineName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lineName} placeholder="例: PE1.0号" />
-                    <TackleField label="リーダー" field="leaderName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.leaderName} placeholder="例: フロロ20lb" />
+                    <TackleField label={tr(locale, "Lure / bait", "ルアー")} field="lureName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lureName} placeholder={tr(locale, "e.g. Minnow 100F", "例: カゲロウ100F")} />
+                    <TackleField label={tr(locale, "Color", "カラー")} field="lureColor" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lureColor} placeholder={tr(locale, "e.g. Chartreuse", "例: チャートバック")} />
+                    <TackleField label={tr(locale, "Rod", "ロッド")} field="rodName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.rodName} placeholder="e.g. 9.6ft ML" />
+                    <TackleField label={tr(locale, "Reel", "リール")} field="reelName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.reelName} placeholder="e.g. 4000XG" />
+                    <TackleField label={tr(locale, "Line", "ライン")} field="lineName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.lineName} placeholder={tr(locale, "e.g. PE 1.0", "例: PE1.0号")} />
+                    <TackleField label={tr(locale, "Leader", "リーダー")} field="leaderName" tackle={tackle} setTackle={setTackle} suggestions={tackleSuggestions.leaderName} placeholder={tr(locale, "e.g. Fluorocarbon 20 lb", "例: フロロ20lb")} />
                   </div>
                 </section>
 
@@ -761,26 +771,26 @@ function PostForm({ userId }: { userId: string }) {
               </div>
             ) : (
               <div className="mt-3 text-sm leading-6 text-slate-600">
-                <p>日時: {formatLocalDateTime(caughtAt)}</p>
+                <p>{tr(locale, "Date", "日時")}: {formatLocalDateTime(caughtAt, locale)}</p>
                 <p>
-                  位置: 緯度 {formatCoordinate(location?.latitude)} / 経度 {formatCoordinate(location?.longitude)}
+                  {tr(locale, "Location", "位置")}: {tr(locale, "Lat", "緯度")} {formatCoordinate(location?.latitude)} / {tr(locale, "Lng", "経度")} {formatCoordinate(location?.longitude)}
                 </p>
               </div>
             )}
           </section>
 
-          {location ? <p className="rounded bg-foam p-3 text-sm font-bold leading-6 text-slate-700">釣った場所と日時をもとに、潮位、公式潮汐曲線リンク、当時の天候、当時の風速を自動保存します。</p> : null}
+          {location ? <p className="rounded bg-foam p-3 text-sm font-bold leading-6 text-slate-700">{tr(locale, "Tide, official tide references, weather, and wind are added from the catch location and time.", "釣った場所と日時をもとに、潮位、公式潮汐曲線リンク、当時の天候、当時の風速を自動保存します。")}</p> : null}
           <p className="rounded bg-white p-3 text-xs font-bold leading-5 text-slate-600 shadow-soft">
-            位置情報は釣果記録・潮位取得・マップ表示のために保存されます。グループや大会での表示範囲は、それぞれの設定に従います。
+            {tr(locale, "Location is stored for your catch log, tide lookup, and map. Sharing follows each group or tournament's visibility settings. Exact GPS coordinates are not included in public share images.", "位置情報は釣果記録・潮位取得・マップ表示のために保存されます。グループや大会での表示範囲は、それぞれの設定に従います。")}
           </p>
 
           {message ? <p className="rounded bg-foam p-3 text-sm font-bold text-slate-700">{message}</p> : null}
           {successSummary ? (
             <section className="rounded border border-water/20 bg-white p-4 shadow-soft" aria-live="polite">
-              <p className="text-xs font-black text-water">投稿完了</p>
+              <p className="text-xs font-black text-water">{tr(locale, "CATCH SAVED", "投稿完了")}</p>
               <h2 className="mt-1 text-lg font-black text-ink">{successSummary}</h2>
               <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
-                場所・エリア・共有先はそのまま残しています。続けて釣れた魚だけ入力すれば、すぐ次の投稿ができます。
+                {tr(locale, "Your location, area, and sharing destination remain selected so you can quickly log another catch.", "場所・エリア・共有先はそのまま残しています。続けて釣れた魚だけ入力すれば、すぐ次の投稿ができます。")}
               </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <button
@@ -793,10 +803,10 @@ function PostForm({ userId }: { userId: string }) {
                   }}
                   className="tap-target rounded bg-water px-4 py-3 text-sm font-black text-white"
                 >
-                  続けて投稿する
+                  {tr(locale, "Log another catch", "続けて投稿する")}
                 </button>
-                <Link href="/catches" className="tap-target rounded border border-slate-300 bg-white px-4 py-3 text-center text-sm font-black text-ink">
-                  一覧で確認
+                <Link href={localizePath("/catches", locale)} className="tap-target rounded border border-slate-300 bg-white px-4 py-3 text-center text-sm font-black text-ink">
+                  {tr(locale, "View catch log", "一覧で確認")}
                 </Link>
               </div>
               {showPostFeedback ? (
@@ -814,7 +824,7 @@ function PostForm({ userId }: { userId: string }) {
 
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-teal-100 bg-white/95 p-4 backdrop-blur">
             <div className="mx-auto max-w-xl">
-              {busy && submitStage ? <SubmitProgress label={submitStage} /> : null}
+              {busy && submitStage ? <SubmitProgress label={submitStage} locale={locale} /> : null}
               <button disabled={busy || !canQuickPost} className="tap-target flex w-full items-center justify-center gap-3 rounded bg-water px-5 py-4 text-lg font-black text-white shadow-soft disabled:opacity-60">
                 {busy ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" /> : null}
                 {busy ? submitStage || t("saving") : t("submit")}
@@ -827,13 +837,13 @@ function PostForm({ userId }: { userId: string }) {
   );
 }
 
-function MapPicker({ location, onPick }: { location: LocationPoint | null; onPick: (point: LocationPoint) => void }) {
+function MapPicker({ locale, location, onPick }: { locale: AppLocale; location: LocationPoint | null; onPick: (point: LocationPoint) => void }) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   const onPickRef = useRef(onPick);
   const initialLocationRef = useRef(location);
-  const [message, setMessage] = useState("地図を読み込んでいます。");
+  const [message, setMessage] = useState(tr(locale, "Loading map...", "地図を読み込んでいます。"));
 
   useEffect(() => {
     onPickRef.current = onPick;
@@ -845,7 +855,7 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
     async function load() {
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
       if (!apiKey) {
-        setMessage("Google Maps APIキーが未設定です。");
+        setMessage(tr(locale, "Google Maps is not configured.", "Google Maps APIキーが未設定です。"));
         return;
       }
 
@@ -878,7 +888,7 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
         const point = { latitude: latLng.lat(), longitude: latLng.lng() };
         markerRef.current?.setPosition(latLng);
         onPickRef.current(point);
-        setMessage("ピンの場所を投稿位置に設定しました。");
+        setMessage(tr(locale, "The pin location was saved.", "ピンの場所を投稿位置に設定しました。"));
       }
 
       map.addListener("click", (event: google.maps.MapMouseEvent) => {
@@ -890,17 +900,17 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
         if (position) setPoint(position);
       });
 
-      setMessage("地図をタップ、ピンを動かす、または地図中心を指定して場所を決められます。");
+      setMessage(tr(locale, "Tap the map, drag the pin, or use the map center to choose a location.", "地図をタップ、ピンを動かす、または地図中心を指定して場所を決められます。"));
     }
 
     load().catch((error) => {
-      setMessage(error instanceof Error ? error.message : "地図を表示できませんでした。");
+      setMessage(error instanceof Error ? error.message : tr(locale, "Could not display the map.", "地図を表示できませんでした。"));
     });
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (!location || !mapInstanceRef.current || !markerRef.current) return;
@@ -915,27 +925,27 @@ function MapPicker({ location, onPick }: { location: LocationPoint | null; onPic
     const point = { latitude: center.lat(), longitude: center.lng() };
     markerRef.current?.setPosition(center);
     onPickRef.current(point);
-    setMessage("地図中心の場所を投稿位置に設定しました。");
+    setMessage(tr(locale, "The map center was saved as the catch location.", "地図中心の場所を投稿位置に設定しました。"));
   }
 
   return (
     <div className="mt-3">
       <div ref={mapRef} className="h-72 w-full rounded border border-teal-100 bg-white" />
       <button type="button" onClick={pickMapCenter} className="tap-target mt-2 w-full rounded border border-water bg-white px-4 py-3 text-sm font-black text-water">
-        地図中心をピン位置にする
+        {tr(locale, "Use map center", "地図中心をピン位置にする")}
       </button>
       <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p>
     </div>
   );
 }
 
-function SizeEstimator({ imageUrl, onApply }: { imageUrl: string; onApply: (value: string) => void }) {
+function SizeEstimator({ imageUrl, locale, onApply }: { imageUrl: string; locale: AppLocale; onApply: (value: string) => void }) {
   const [open, setOpen] = useState(false);
   const [knownCm, setKnownCm] = useState("10");
   const [points, setPoints] = useState<MeasurePoint[]>([]);
   const estimatedSize = useMemo(() => estimateSizeCm(points, Number(knownCm)), [knownCm, points]);
-  const stepLabels = ["メジャー始点", "メジャー終点", "魚の頭", "魚の尾"];
-  const nextStepLabel = stepLabels[points.length] ?? "計算完了";
+  const stepLabels = locale === "en" ? ["ruler start", "ruler end", "fish head", "fish tail"] : ["メジャー始点", "メジャー終点", "魚の頭", "魚の尾"];
+  const nextStepLabel = stepLabels[points.length] ?? tr(locale, "complete", "計算完了");
 
   function handlePick(event: PointerEvent<HTMLDivElement>) {
     if (points.length >= 4) return;
@@ -957,7 +967,7 @@ function SizeEstimator({ imageUrl, onApply }: { imageUrl: string; onApply: (valu
   return (
     <section className="rounded border border-teal-100 bg-white p-3 shadow-soft">
       <div className="relative overflow-hidden rounded bg-teal-50">
-        <img src={imageUrl} alt="投稿プレビュー" className="aspect-[4/3] w-full object-cover" />
+        <img src={imageUrl} alt={tr(locale, "Catch preview", "投稿プレビュー")} className="aspect-[4/3] w-full object-cover" />
         {open ? (
           <div className="absolute inset-0 cursor-crosshair" onPointerDown={handlePick}>
             {points.map((point, index) => (
@@ -974,27 +984,27 @@ function SizeEstimator({ imageUrl, onApply }: { imageUrl: string; onApply: (valu
       </div>
 
       <button type="button" onClick={() => setOpen((value) => !value)} className="tap-target mt-2 rounded border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600">
-        {open ? "サイズ推定を閉じる" : "サイズ推定(テスト)"}
+        {open ? tr(locale, "Close size estimate", "サイズ推定を閉じる") : tr(locale, "Estimate size (test)", "サイズ推定(テスト)")}
       </button>
 
       {open ? (
         <div className="mt-2 space-y-2 rounded bg-foam p-3">
           <label className="block">
-            <span className="text-xs font-bold text-slate-600">メジャー基準 cm</span>
+            <span className="text-xs font-bold text-slate-600">{tr(locale, "Known ruler length (cm)", "メジャー基準 cm")}</span>
             <input
               className="mt-1 w-full rounded border border-slate-300 bg-white p-2 text-sm font-bold"
               inputMode="decimal"
               value={knownCm}
               onChange={(event) => setKnownCm(event.target.value)}
-              placeholder="例: 10"
+              placeholder={tr(locale, "e.g. 10", "例: 10")}
             />
           </label>
           <p className="text-xs font-bold leading-5 text-slate-700">
-            {points.length < 4 ? `${nextStepLabel}をタップしてください。` : `推定サイズ: ${roundSize(estimatedSize ?? 0)}cm`}
+            {points.length < 4 ? tr(locale, `Tap the ${nextStepLabel}.`, `${nextStepLabel}をタップしてください。`) : tr(locale, `Estimated size: ${roundSize(estimatedSize ?? 0)} cm`, `推定サイズ: ${roundSize(estimatedSize ?? 0)}cm`)}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setPoints([])} className="tap-target rounded border border-slate-300 bg-white px-3 py-2 text-xs font-black text-ink">
-              やり直す
+              {tr(locale, "Reset", "やり直す")}
             </button>
             <button
               type="button"
@@ -1002,10 +1012,10 @@ function SizeEstimator({ imageUrl, onApply }: { imageUrl: string; onApply: (valu
               onClick={applyEstimate}
               className="tap-target rounded bg-water px-3 py-2 text-xs font-black text-white disabled:opacity-50"
             >
-              サイズに反映
+              {tr(locale, "Use this size", "サイズに反映")}
             </button>
           </div>
-          <p className="text-xs font-bold leading-5 text-slate-500">テスト機能です。1、2でメジャー、3、4で魚の両端を指定します。</p>
+          <p className="text-xs font-bold leading-5 text-slate-500">{tr(locale, "Test feature: mark both ends of the ruler, then the head and tail of the fish.", "テスト機能です。1、2でメジャー、3、4で魚の両端を指定します。")}</p>
         </div>
       ) : null}
     </section>
@@ -1043,29 +1053,31 @@ function MeasurementPhotoInput({
   file,
   open,
   recommended,
+  locale,
   onToggle,
   onChange
 }: {
   file: File | null;
   open: boolean;
   recommended: boolean;
+  locale: AppLocale;
   onToggle: () => void;
   onChange: (file: File | null) => void;
 }) {
   return (
     <section className={`rounded p-3 ${recommended ? "border border-orange-200 bg-orange-50" : "bg-foam"}`}>
       <button type="button" onClick={onToggle} className="tap-target flex w-full items-center justify-between rounded bg-white px-3 py-3 text-left text-sm font-black text-ink">
-        <span>{file ? "メジャー写真を選択済み" : "メジャー写真を追加"}</span>
-        <span className="text-xs text-slate-500">{open ? "閉じる" : "任意"}</span>
+        <span>{file ? tr(locale, "Measurement photo selected", "メジャー写真を選択済み") : tr(locale, "Add measurement photo", "メジャー写真を追加")}</span>
+        <span className="text-xs text-slate-500">{open ? tr(locale, "Close", "閉じる") : tr(locale, "Optional", "任意")}</span>
       </button>
-      {recommended ? <p className="mt-2 text-xs font-bold leading-5 text-coral">大会投稿では、サイズ確認写真があると承認時の確認がスムーズです。</p> : null}
+      {recommended ? <p className="mt-2 text-xs font-bold leading-5 text-coral">{tr(locale, "A measurement photo helps tournament reviewers verify your catch.", "大会投稿では、サイズ確認写真があると承認時の確認がスムーズです。")}</p> : null}
       {open ? (
         <div className="mt-3">
           <input className="w-full rounded border border-slate-300 bg-white p-3 text-base" type="file" accept="image/*" onChange={(event) => onChange(event.target.files?.[0] ?? null)} />
-          <p className="mt-2 text-xs font-bold leading-5 text-slate-500">メジャーと魚体全体が写る写真を登録すると、今後のサイズ確認や大会承認で役立ちます。</p>
+          <p className="mt-2 text-xs font-bold leading-5 text-slate-500">{tr(locale, "Use a photo showing the whole fish and measuring device. It remains private unless the applicable sharing settings allow it.", "メジャーと魚体全体が写る写真を登録すると、今後のサイズ確認や大会承認で役立ちます。")}</p>
           {file ? (
             <button type="button" onClick={() => onChange(null)} className="mt-2 rounded border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600">
-              選択を外す
+              {tr(locale, "Remove", "選択を外す")}
             </button>
           ) : null}
         </div>
@@ -1182,7 +1194,7 @@ function topValues(values: string[], limit: number) {
     .map(([value]) => value);
 }
 
-function topLocations(items: Catch[], limit: number) {
+function topLocations(items: Catch[], limit: number, locale: AppLocale) {
   const counts = new Map<
     string,
     { latitude: number; longitude: number; count: number; latestTime: number; pointNames: Map<string, number>; areaNames: Map<string, number> }
@@ -1213,7 +1225,7 @@ function topLocations(items: Catch[], limit: number) {
     .sort((a, b) => b.latestTime - a.latestTime || b.count - a.count)
     .slice(0, limit)
     .map((value, index) => ({
-      label: formatLocationSuggestionLabel(value, index),
+      label: formatLocationSuggestionLabel(value, index, locale),
       pointName: topMapValue(value.pointNames),
       areaName: topMapValue(value.areaNames),
       latitude: value.latitude,
@@ -1223,24 +1235,25 @@ function topLocations(items: Catch[], limit: number) {
 
 function formatLocationSuggestionLabel(
   value: { latitude: number; longitude: number; pointNames: Map<string, number>; areaNames: Map<string, number> },
-  index: number
+  index: number,
+  locale: AppLocale
 ) {
   const pointName = topMapValue(value.pointNames);
   const areaName = topMapValue(value.areaNames);
   const coordinates = `${value.latitude.toFixed(4)}, ${value.longitude.toFixed(4)}`;
   if (pointName) return `${pointName} (${coordinates})`;
   if (areaName) return `${areaName} (${coordinates})`;
-  return `過去地点${index + 1} (${coordinates})`;
+  return locale === "en" ? `Previous location ${index + 1} (${coordinates})` : `過去地点${index + 1} (${coordinates})`;
 }
 
 function topMapValue(values: Map<string, number>) {
   return [...values.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"))[0]?.[0] ?? "";
 }
 
-function groupTacklesByGenre(items: Tackle[]) {
+function groupTacklesByGenre(items: Tackle[], locale: AppLocale) {
   const groups = new Map<string, Tackle[]>();
   items.forEach((item) => {
-    const label = item.fishingGenre?.trim() || "ジャンル未設定";
+    const label = item.fishingGenre?.trim() || tr(locale, "Uncategorized", "ジャンル未設定");
     groups.set(label, [...(groups.get(label) ?? []), item]);
   });
   return [...groups.entries()]
@@ -1248,22 +1261,24 @@ function groupTacklesByGenre(items: Tackle[]) {
     .map(([label, groupItems]) => ({ label, items: groupItems }));
 }
 
-function getTournamentSkipMessage(check: ReturnType<typeof isTournamentEntryEligible> | null) {
-  if (!check) return "通常の釣果として保存しました。大会エントリー条件を確認できませんでした。";
+function getTournamentSkipMessage(check: ReturnType<typeof isTournamentEntryEligible> | null, locale: AppLocale) {
+  if (!check) return tr(locale, "Saved as a regular catch because tournament eligibility could not be checked.", "通常の釣果として保存しました。大会エントリー条件を確認できませんでした。");
   const reasons = [
-    !check.inPeriod ? "大会期間外" : "",
-    !check.targetMatched ? "対象魚種外" : "",
-    !check.hasLocation ? "位置情報なし" : "",
-    !check.validSize ? "サイズ未入力" : ""
+    !check.inPeriod ? tr(locale, "outside event period", "大会期間外") : "",
+    !check.targetMatched ? tr(locale, "fish not eligible", "対象魚種外") : "",
+    !check.hasLocation ? tr(locale, "location missing", "位置情報なし") : "",
+    !check.validSize ? tr(locale, "size missing", "サイズ未入力") : ""
   ].filter(Boolean);
-  return `通常の釣果として保存しました。大会エントリー不可: ${reasons.join("、")}`;
+  return locale === "en" ? `Saved as a regular catch. Not eligible for the tournament: ${reasons.join(", ")}.` : `通常の釣果として保存しました。大会エントリー不可: ${reasons.join("、")}`;
 }
 
-function buildPostMessage(selectedTournament: Tournament | null, tournamentCheck: ReturnType<typeof isTournamentEntryEligible> | null, selectedGroup: Group | null) {
-  const groupText = selectedGroup ? ` ${selectedGroup.name}にも共有しました。` : "";
-  if (!selectedTournament) return `投稿しました。${groupText}`.trim();
-  const tournamentText = tournamentCheck?.ok ? "大会投稿は承認待ちです。" : `${getTournamentSkipMessage(tournamentCheck)} 承認画面で確認できます。`;
-  return `投稿しました。${tournamentText}${groupText}`;
+function buildPostMessage(selectedTournament: Tournament | null, tournamentCheck: ReturnType<typeof isTournamentEntryEligible> | null, selectedGroup: Group | null, locale: AppLocale) {
+  const groupText = selectedGroup ? (locale === "en" ? ` Shared with ${selectedGroup.name}.` : ` ${selectedGroup.name}にも共有しました。`) : "";
+  if (!selectedTournament) return `${tr(locale, "Catch saved.", "投稿しました。")}${groupText}`.trim();
+  const tournamentText = tournamentCheck?.ok
+    ? tr(locale, " The tournament entry is awaiting approval.", "大会投稿は承認待ちです。")
+    : `${getTournamentSkipMessage(tournamentCheck, locale)} ${tr(locale, "You can review it from the approval screen.", "承認画面で確認できます。")}`;
+  return `${tr(locale, "Catch saved.", "投稿しました。")}${tournamentText}${groupText}`;
 }
 
 function getEmptyTideInfo() {
@@ -1297,12 +1312,12 @@ function enrichCatchAfterPost(catchId: string, location: LocationPoint | null, c
   });
 }
 
-function SubmitProgress({ label }: { label: string }) {
+function SubmitProgress({ label, locale }: { label: string; locale: AppLocale }) {
   return (
     <div className="mb-2 overflow-hidden rounded border border-teal-100 bg-white p-3 shadow-soft" aria-live="polite">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-black text-water">{label}</p>
-        <p className="text-[11px] font-bold text-slate-500">画面を閉じずに少しお待ちください</p>
+        <p className="text-[11px] font-bold text-slate-500">{tr(locale, "Keep this screen open", "画面を閉じずに少しお待ちください")}</p>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-foam">
         <div className="h-full w-1/2 animate-pulse rounded-full bg-water" />
@@ -1443,13 +1458,18 @@ function roundSize(value: number) {
   return Math.round(value * 10) / 10;
 }
 
-function formatLocalDateTime(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    month: "2-digit",
-    day: "2-digit",
+function formatLocalDateTime(value: string, locale: AppLocale) {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "ja-JP", {
+    year: "numeric",
+    month: locale === "en" ? "short" : "2-digit",
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
+}
+
+function tr(locale: AppLocale, english: string, japanese: string) {
+  return locale === "en" ? english : japanese;
 }
 
 function toLocalInputValue(date: Date) {
