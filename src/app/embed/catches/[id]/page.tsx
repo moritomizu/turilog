@@ -6,6 +6,8 @@ import { TsuriLogLogo } from "@/components/TsuriLogLogo";
 import { getPublicCatch } from "@/lib/catches";
 import { isFirebaseConfigured, missingFirebaseEnv } from "@/lib/firebase";
 import { type AppLocale } from "@/lib/i18n";
+import { getTidePhaseDisplayLabel, getWeatherDisplayLabel, getWindDirectionDisplayLabel } from "@/lib/catchDisplay";
+import { getFishSpeciesLabel } from "@/lib/fishingDictionary";
 import { formatLengthFromCm, formatTemperatureFromCelsius, getDefaultUnitSystem } from "@/lib/units";
 import type { Catch, UnitSystem } from "@/types";
 
@@ -29,7 +31,7 @@ export default function EmbedCatchPage({ params }: { params: { id: string } }) {
         setItem(result);
         setMessage(result ? "" : tr(locale, "This catch is private or could not be found.", "この釣果は公開されていないか、見つかりませんでした。"));
       })
-      .catch((error) => setMessage(error instanceof Error ? error.message : tr(locale, "Could not load this catch.", "釣果を読み込めませんでした。")));
+      .catch((error) => setMessage(locale === "en" ? "Could not load this catch." : error instanceof Error ? error.message : "釣果を読み込めませんでした。"));
   }, [locale, params.id]);
 
   return (
@@ -57,7 +59,7 @@ function ShareCatchCard({ item, mode, locale, unitSystem }: { item: Catch; mode:
 
       <div className="relative bg-slate-100">
         {item.imageUrl ? (
-          <img src={item.imageUrl} alt={item.fishType} className="h-[52svh] min-h-[295px] w-full object-cover" />
+          <img src={item.imageUrl} alt={getFishSpeciesLabel(item.fishType, locale)} className="h-[52svh] min-h-[295px] w-full object-cover" />
         ) : (
           <div className="flex h-[52svh] min-h-[295px] items-center justify-center text-sm font-bold text-slate-500">{tr(locale, "No photo", "写真なし")}</div>
         )}
@@ -65,7 +67,7 @@ function ShareCatchCard({ item, mode, locale, unitSystem }: { item: Catch; mode:
           <div className="flex items-end justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-white/75">Catch record</p>
-              <h1 className="mt-1 truncate text-3xl font-black leading-tight">{item.fishType}</h1>
+              <h1 className="mt-1 truncate text-3xl font-black leading-tight">{getFishSpeciesLabel(item.fishType, locale)}</h1>
               <p className="mt-1 text-sm font-bold text-white/90">{formatDate(item.caughtAt, locale)}</p>
             </div>
             <p className="shrink-0 text-3xl font-black leading-none">{formatLengthFromCm(item.sizeCm, locale, unitSystem)}</p>
@@ -173,10 +175,10 @@ function getShareInfoItems(item: Catch, mode: ShareMode, locale: AppLocale, unit
   if (mode === "data") {
     return [
       { label: tr(locale, "Area", "エリア"), value: item.areaName || unknown },
-      { label: tr(locale, "Weather", "天候"), value: item.weather.weatherLabel || unknown },
+      { label: tr(locale, "Weather", "天候"), value: getWeatherDisplayLabel(item.weather, locale) },
       { label: tr(locale, "Wind", "風"), value: formatWind(item, locale) },
       { label: tr(locale, "Air", "気温"), value: item.weather.temperatureC == null ? unknown : formatTemperatureFromCelsius(item.weather.temperatureC, locale, unitSystem) },
-      { label: tr(locale, "Tide", "潮"), value: item.tidePhaseLabel || unknown },
+      { label: tr(locale, "Tide", "潮"), value: getTidePhaseDisplayLabel(item, locale) },
       { label: tr(locale, "Water", "水温"), value: formatSeaTemperature(item, locale, unitSystem) },
       { label: tr(locale, "Cycle", "潮回り"), value: formatTideCycle(item, locale) },
       { label: tr(locale, "Moon age", "月齢"), value: item.lunar.moonAge == null ? unknown : `${item.lunar.moonAge}` },
@@ -194,24 +196,19 @@ function getShareInfoItems(item: Catch, mode: ShareMode, locale: AppLocale, unit
     ];
   }
   return [
-    { label: tr(locale, "Area", "ポイント"), value: formatPoint(item, locale) },
-    { label: tr(locale, "Weather", "天候"), value: item.weather.weatherLabel || unknown },
-    { label: tr(locale, "Tide", "潮"), value: item.tidePhaseLabel || unknown },
+    { label: tr(locale, "Area", "エリア"), value: item.areaName || unknown },
+    { label: tr(locale, "Weather", "天候"), value: getWeatherDisplayLabel(item.weather, locale) },
+    { label: tr(locale, "Tide", "潮"), value: getTidePhaseDisplayLabel(item, locale) },
     { label: tr(locale, "Wind", "風"), value: formatWind(item, locale) },
     { label: tr(locale, "Water", "水温"), value: formatSeaTemperature(item, locale, unitSystem) },
     { label: tr(locale, "Tackle", "タックル"), value: item.tackleName || item.lure || item.tackle.lureName || unset }
   ];
 }
 
-function formatPoint(item: Catch, locale: AppLocale) {
-  if (item.pointName && item.areaName) return `${item.pointName}(${item.areaName})`;
-  if (item.pointName) return item.pointName;
-  return item.areaName || tr(locale, "Unknown", "未取得");
-}
-
 function formatWind(item: Catch, locale: AppLocale) {
   if (item.weather.windSpeedMs == null) return tr(locale, "Unknown", "未取得");
-  const direction = item.weather.windDirectionLabel ? `${item.weather.windDirectionLabel} ` : "";
+  const displayDirection = getWindDirectionDisplayLabel(item.weather, locale);
+  const direction = displayDirection ? `${displayDirection} ` : "";
   return `${direction}${item.weather.windSpeedMs}m/s`;
 }
 

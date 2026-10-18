@@ -29,35 +29,28 @@ export function AppFooter() {
         </div>
         <div className="flex flex-col gap-4 sm:items-end">
           <nav className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:justify-end">
-            <Link href={localizePath("/about", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
-              {t("about")}
-            </Link>
-            {locale === "ja" ? (
-              <Link href="/ja/media" className="text-water hover:text-teal-900 dark:text-cyan-200">
-                {t("media")}
-              </Link>
-            ) : null}
-            <Link href={localizePath("/features", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
-              {t("features")}
-            </Link>
-            <Link href={localizePath("/pricing", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
-              {t("pricing")}
-            </Link>
-            <Link href={localizePath("/plans", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
-              {t("plans")}
-            </Link>
-            <Link href={localizePath("/feedback", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
-              {t("feedback")}
-            </Link>
-            <Link href={localizePath("/install", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
-              {t("install")}
-            </Link>
-            <Link href={localizePath("/terms", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
-              {t("terms")}
-            </Link>
-            <Link href={localizePath("/privacy", locale)} className="text-water hover:text-teal-900 dark:text-cyan-200">
-              {t("privacy")}
-            </Link>
+            {locale === "en" ? (
+              <>
+                <FooterLink href="/en">Home</FooterLink>
+                <FooterLink href="/en/features">{t("features")}</FooterLink>
+                <FooterLink href="/en/signup">{t("signup")}</FooterLink>
+                <FooterLink href="/en/login">{t("login")}</FooterLink>
+                <FooterLink href="/ja/terms">Terms (Japanese)</FooterLink>
+                <FooterLink href="/ja/privacy">Privacy Policy (Japanese)</FooterLink>
+              </>
+            ) : (
+              <>
+                <FooterLink href="/ja/about">{t("about")}</FooterLink>
+                <FooterLink href="/ja/media">{t("media")}</FooterLink>
+                <FooterLink href="/ja/features">{t("features")}</FooterLink>
+                <FooterLink href="/ja/pricing">{t("pricing")}</FooterLink>
+                <FooterLink href="/ja/plans">{t("plans")}</FooterLink>
+                <FooterLink href="/ja/feedback">{t("feedback")}</FooterLink>
+                <FooterLink href="/ja/install">{t("install")}</FooterLink>
+                <FooterLink href="/ja/terms">{t("terms")}</FooterLink>
+                <FooterLink href="/ja/privacy">{t("privacy")}</FooterLink>
+              </>
+            )}
           </nav>
           <div className="flex flex-wrap items-center gap-3 sm:justify-end">
             <LocaleSwitcher compact />
@@ -67,4 +60,8 @@ export function AppFooter() {
       </div>
     </footer>
   );
+}
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return <Link href={href} className="text-water hover:text-teal-900 dark:text-cyan-200">{children}</Link>;
 }

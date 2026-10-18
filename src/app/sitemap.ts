@@ -2,12 +2,15 @@ import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/metadata";
 import { MEDIA_PUBLIC_BASE_URL, getAllMediaPosts, getLatestPostModifiedAt, getLatestPostModifiedAtByCategory, getMediaCanonical, getMediaCategories, getPostSitemapLastModified } from "@/lib/wordpress";
 
-const staticRoutes = [
-  { path: "/ja", priority: 1, lastModified: "2026-09-15T00:00:00.000Z" },
+const staticRoutes: Array<{ path: string; priority: number; lastModified: string; localizedPath?: string }> = [
+  { path: "/ja", priority: 1, lastModified: "2026-10-17T00:00:00.000Z", localizedPath: "/" },
+  { path: "/en", priority: 1, lastModified: "2026-10-17T00:00:00.000Z", localizedPath: "/" },
   { path: "/ja/about", priority: 0.9, lastModified: "2026-09-15T00:00:00.000Z" },
-  { path: "/ja/features", priority: 0.9, lastModified: "2026-09-15T00:00:00.000Z" },
+  { path: "/ja/features", priority: 0.9, lastModified: "2026-10-17T00:00:00.000Z", localizedPath: "/features" },
+  { path: "/en/features", priority: 0.9, lastModified: "2026-10-17T00:00:00.000Z", localizedPath: "/features" },
   { path: "/ja/pricing", priority: 0.8, lastModified: "2026-09-15T00:00:00.000Z" },
-  { path: "/ja/signup", priority: 0.8, lastModified: "2026-09-15T00:00:00.000Z" },
+  { path: "/ja/signup", priority: 0.8, lastModified: "2026-10-17T00:00:00.000Z", localizedPath: "/signup" },
+  { path: "/en/signup", priority: 0.8, lastModified: "2026-10-17T00:00:00.000Z", localizedPath: "/signup" },
   { path: "/ja/install", priority: 0.7, lastModified: "2026-09-15T00:00:00.000Z" },
   { path: "/ja/feedback", priority: 0.5, lastModified: "2026-09-15T00:00:00.000Z" }
 ];
@@ -18,8 +21,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticSitemapRoutes: MetadataRoute.Sitemap = staticRoutes.map((route) => ({
     url: `${siteUrl}${route.path}`,
     lastModified: new Date(route.lastModified),
-    changeFrequency: route.path === "/" ? "weekly" : "monthly",
-    priority: route.priority
+    changeFrequency: route.localizedPath === "/" ? "weekly" : "monthly",
+    priority: route.priority,
+    ...(route.localizedPath
+      ? {
+          alternates: {
+            languages: {
+              ja: `${siteUrl}/ja${route.localizedPath === "/" ? "" : route.localizedPath}`,
+              en: `${siteUrl}/en${route.localizedPath === "/" ? "" : route.localizedPath}`
+            }
+          }
+        }
+      : {})
   }));
 
   return [...staticSitemapRoutes, ...mediaRoutes];

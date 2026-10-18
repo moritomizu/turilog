@@ -2,6 +2,7 @@ import type { Catch } from "@/types";
 import type { AppLocale } from "@/lib/i18n";
 import type { UnitSystem } from "@/types";
 import { getFishSpeciesLabel } from "@/lib/fishingDictionary";
+import { getTidePhaseDisplayLabel, getWeatherDisplayLabel, getWindDirectionDisplayLabel } from "@/lib/catchDisplay";
 import { formatLengthFromCm, formatTemperatureFromCelsius, getDefaultUnitSystem } from "@/lib/units";
 
 export type ShareOverlayTemplate = "simple" | "catch" | "data";
@@ -29,10 +30,10 @@ export type ShareOverlayOptions = {
   unitSystem?: UnitSystem;
 };
 
-export const shareOverlayTemplates: Array<{ key: ShareOverlayTemplate; label: string; description: string }> = [
-  { key: "simple", label: "SIMPLE", description: "ロゴと主要データだけを控えめに表示" },
-  { key: "catch", label: "CATCH", description: "魚種とサイズを大きく見せる写真向け" },
-  { key: "data", label: "DATA", description: "潮・水温・タックルも入れる記録向け" }
+export const shareOverlayTemplates: Array<{ key: ShareOverlayTemplate; label: string }> = [
+  { key: "simple", label: "SIMPLE" },
+  { key: "catch", label: "CATCH" },
+  { key: "data", label: "DATA" }
 ];
 
 export const shareOverlayFormats: Array<{ key: ShareOverlayFormat; label: string; width: number; height: number }> = [
@@ -55,8 +56,8 @@ export function getShareOverlayData(item: Catch, options: ShareOverlayOptions = 
     methodLabel: getMethodLabel(item, locale),
     lureLabel: item.lure || item.tackle.lureName || "",
     tackleLabel: item.tackleName || item.rod || item.tackle.rodName || "",
-    tideLabel: item.tidePhaseLabel && item.tidePhaseLabel !== "潮位未取得" ? item.tidePhaseLabel : "",
-    weatherLabel: item.weather.weatherLabel && item.weather.weatherLabel !== "天候未取得" ? item.weather.weatherLabel : "",
+    tideLabel: getOptionalTideLabel(item, locale),
+    weatherLabel: getOptionalWeatherLabel(item, locale),
     windLabel: formatWindLabel(item, locale),
     waterTempLabel: item.seaTemperature.seaTemperatureC == null ? "" : formatTemperatureFromCelsius(item.seaTemperature.seaTemperatureC, locale, unitSystem),
     catchProofLabel: getCatchProofLabel(item),
@@ -67,8 +68,19 @@ export function getShareOverlayData(item: Catch, options: ShareOverlayOptions = 
 function formatWindLabel(item: Catch, locale: AppLocale) {
   if (item.weather.windSpeedMs == null) return "";
   const speed = `${roundOneDecimal(item.weather.windSpeedMs)}m/s`;
-  if (!item.weather.windDirectionLabel) return locale === "en" ? `Wind ${speed}` : `風 ${speed}`;
-  return locale === "en" ? `Wind ${item.weather.windDirectionLabel} ${speed}` : `${item.weather.windDirectionLabel} ${speed}`;
+  const direction = getWindDirectionDisplayLabel(item.weather, locale);
+  if (!direction) return locale === "en" ? `Wind ${speed}` : `風 ${speed}`;
+  return locale === "en" ? `Wind ${direction} ${speed}` : `${direction} ${speed}`;
+}
+
+function getOptionalTideLabel(item: Catch, locale: AppLocale) {
+  const label = getTidePhaseDisplayLabel(item, locale);
+  return label === "Unknown" || label === "未取得" ? "" : label;
+}
+
+function getOptionalWeatherLabel(item: Catch, locale: AppLocale) {
+  const label = getWeatherDisplayLabel(item.weather, locale);
+  return label === "Unknown" || label === "未取得" ? "" : label;
 }
 
 function roundOneDecimal(value: number) {

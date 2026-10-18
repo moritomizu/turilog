@@ -65,7 +65,7 @@ function EnglishLandingPage() {
     <main data-landing-page="true" className="min-h-screen overflow-hidden bg-[#f6fbfb] text-slate-950">
       <header className="fixed left-0 right-0 top-0 z-40 border-b border-white/50 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-4 lg:px-8">
-          <Link href="/en/lp" aria-label="TSURILOGUE landing page" className="flex items-center">
+          <Link href="/en" aria-label="TSURILOGUE home" className="flex items-center">
             <TsuriLogLogo className="h-10 w-28 sm:h-12 sm:w-32" />
           </Link>
           <nav className="hidden items-center gap-8 text-sm font-black text-slate-700 md:flex">
@@ -118,7 +118,7 @@ function EnglishLandingPage() {
         title="Turn every trip into a hint for your next catch."
         description="Record species, size, time, area, tide, wind, water temperature, weather, and tackle. The more you log, the easier it becomes to look back and notice your own patterns."
         tags={["Species", "Size", "Time", "Area", "Tide", "Wind", "Water temp", "Weather", "Tackle"]}
-        visual={<CatchLogMockup />}
+        visual={<EnglishFeatureMockup title="Today’s catch" items={["Red sea bream", "24.4 in", "Morning", "Osaka Bay", "Falling tide", "NW 6.7 mph", "65.7°F", "Tairaba"]} />}
       />
       <EnglishFeatureBlock
         id="ai"
@@ -126,7 +126,7 @@ function EnglishLandingPage() {
         title="Find useful patterns in your own fishing history."
         description="AI reports summarize tendencies from your catch log and conditions. They are shown as helpful hypotheses, not catch guarantees."
         tags={["Tide trends", "Time of day", "Area trends", "Tackle notes", "Next-trip hints"]}
-        visual={<AIReportMockup />}
+        visual={<EnglishFeatureMockup title="Fishing insights" items={["Best results on a falling tide", "Morning catches lead this month", "Tairaba produced the largest average size"]} dark />}
         reverse
       />
       <EnglishFeatureBlock
@@ -135,7 +135,7 @@ function EnglishLandingPage() {
         title="Share catches with friends and learn together."
         description="Private groups help fishing friends compare catches, review monthly trends, and enjoy friendly rankings while respecting spot privacy."
         tags={["Private groups", "Shared catch log", "Group map", "Monthly review", "Member ranking"]}
-        visual={<GroupMockup />}
+        visual={<EnglishFeatureMockup title="Weekend anglers" items={["Shared catch log", "Private member map", "Monthly catch review", "Friendly ranking"]} />}
       />
       <EnglishFeatureBlock
         id="tournament"
@@ -143,7 +143,7 @@ function EnglishLandingPage() {
         title="Run small online fishing challenges with your crew."
         description="Create a tournament, set the target species and period, and let TSURILOGUE organize entries into rankings. Start with a small friendly challenge."
         tags={["Friendly events", "Auto ranking", "Entry approval", "Catch Proof β", "Share results"]}
-        visual={<TournamentMockup />}
+        visual={<EnglishFeatureMockup title="Autumn fishing challenge" items={["Event period", "Target species", "Entry approval", "Live ranking"]} dark />}
         reverse
       />
       <EnglishFeatureBlock
@@ -151,7 +151,7 @@ function EnglishLandingPage() {
         title="Share the catch. Protect the spot."
         description="Exact points stay protected. Shared views can use blurred locations or broad area names based on group, tournament, and permission settings."
         tags={["Exact for you", "Blurred for sharing", "Area only", "Hidden when needed"]}
-        visual={<MapBlurMockup />}
+        visual={<EnglishFeatureMockup title="Location privacy" items={["Exact location: only you", "Friends: blurred location", "Public share: area only", "Hidden when needed"]} />}
       />
       <section id="premium" className="px-5 py-24 lg:px-8">
         <div className="mx-auto max-w-5xl rounded-[2rem] bg-[#06131f] p-8 text-white shadow-2xl shadow-slate-900/20 lg:p-12">
@@ -161,7 +161,7 @@ function EnglishLandingPage() {
             Premium unlocks deeper analysis such as AI catch reports, detailed tide review, tackle analysis, and advanced search. Start free, then go deeper when you need it.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/en/plans" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#f97316] px-6 font-black text-white">View plans</Link>
+            <Link href="/en/login" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#f97316] px-6 font-black text-white">Start free</Link>
             <Link href="/en/login" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/30 px-6 font-black text-white">Start free</Link>
           </div>
         </div>
@@ -197,6 +197,22 @@ function EnglishHeroMockup() {
           <MetricPill label="Wind" value="NW 7mph" />
         </div>
       </MockupPhone>
+    </div>
+  );
+}
+
+function EnglishFeatureMockup({ title, items, dark = false }: { title: string; items: string[]; dark?: boolean }) {
+  return (
+    <div className={`rounded-[2rem] p-6 shadow-2xl ${dark ? "bg-[#071827] text-white shadow-cyan-950/20" : "border border-teal-100 bg-white text-slate-950 shadow-slate-900/10"}`}>
+      <p className={`text-xs font-black uppercase tracking-[0.18em] ${dark ? "text-cyan-200" : "text-[#0f766e]"}`}>TSURILOGUE</p>
+      <h3 className="mt-2 text-2xl font-black">{title}</h3>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        {items.map((item) => (
+          <div key={item} className={`rounded-2xl p-4 text-sm font-black ${dark ? "border border-white/10 bg-white/10 text-slate-100" : "bg-[#f8fafc] text-slate-700"}`}>
+            {item}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -259,10 +275,12 @@ function EnglishLandingFooter() {
           <p className="mt-2">Personal fishing log for anglers.</p>
         </div>
         <nav className="flex flex-wrap gap-4">
-          <Link href="/en/about">About</Link>
-          <Link href="/en/how-to-use-app">Use like an app</Link>
-          <Link href="/en/terms">Terms</Link>
-          <Link href="/en/privacy">Privacy</Link>
+          <Link href="/en">Home</Link>
+          <Link href="/en/features">Features</Link>
+          <Link href="/en/signup">Sign up</Link>
+          <Link href="/en/login">Log in</Link>
+          <Link href="/ja/terms">Terms (Japanese)</Link>
+          <Link href="/ja/privacy">Privacy Policy (Japanese)</Link>
           <LocaleSwitcher compact />
         </nav>
         <p>Copyright TSURILOGUE</p>

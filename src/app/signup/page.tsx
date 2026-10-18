@@ -11,6 +11,7 @@ export function generateMetadata(): Metadata {
   const locale = getServerLocale();
   return createPageMetadata({
     locale,
+    alternateLocales: ["ja", "en"],
     title: locale === "en" ? `Start your free ${APP_NAME} catch log` : `${APP_NAME}に無料登録して釣果ログを始めよう | ${APP_NAME_JA}`,
     description: locale === "en"
       ? "Create a free TSURILOGUE account to log catches and fishing conditions, keep your fishing memories, and make share-ready catch images."
@@ -48,6 +49,17 @@ export default function SignupPage() {
                 {content.features}
               </Link>
             </div>
+            <p className="mt-4 text-sm font-bold leading-6 text-slate-500">
+              {locale === "en" ? "Before signing up, review the " : "登録前に"}
+              <Link href="/ja/terms" className="text-[#0f766e] underline underline-offset-2">
+                {locale === "en" ? "Terms (Japanese)" : "利用規約"}
+              </Link>
+              {locale === "en" ? " and " : "と"}
+              <Link href="/ja/privacy" className="text-[#0f766e] underline underline-offset-2">
+                {locale === "en" ? "Privacy Policy (Japanese)" : "プライバシーポリシー"}
+              </Link>
+              {locale === "en" ? "." : "をご確認ください。"}
+            </p>
           </div>
 
           <div className="overflow-hidden rounded-[2rem] border border-teal-100 bg-white shadow-xl shadow-slate-900/10">
@@ -70,7 +82,7 @@ export default function SignupPage() {
           <div className="rounded-[2rem] border border-teal-100 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-2xl font-black text-slate-950">{content.learnMore}</h2>
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <InternalLink href={localizePath("/about", locale)} title={content.links.about.title} text={content.links.about.text} />
+              {locale === "ja" ? <InternalLink href="/ja/about" title={content.links.about.title} text={content.links.about.text} /> : null}
               <InternalLink href={localizePath("/features", locale)} title={content.links.features.title} text={content.links.features.text} />
               {locale === "ja" ? <InternalLink href="/ja/media" title={content.links.media.title} text={content.links.media.text} /> : null}
             </div>

@@ -92,12 +92,12 @@ export function CatchDataOverlay({
       if (current.startsWith("blob:")) URL.revokeObjectURL(current);
       return objectUrl;
     });
-    setMessage(locale === "en" ? "Selected a photo from this device." : "端末の写真を背景に設定しました。");
+    setMessage(t("photoSelected"));
   }
 
   async function generateImage() {
     setBusy(true);
-    setMessage(locale === "en" ? "Generating image." : "画像を生成しています。");
+    setMessage(t("generatingMessage"));
     generatedBlobRef.current = null;
     setDownloadUrl("");
     try {
@@ -108,14 +108,19 @@ export function CatchDataOverlay({
         outputMode,
         backgroundUrl,
         locale,
-        unitSystem
+        unitSystem,
+        errors: {
+          canvas: t("canvasError"),
+          imageLoadTimeout: t("imageLoadTimeout"),
+          imageLoad: t("imageLoadError")
+        }
       });
       generatedBlobRef.current = blob;
       setDownloadUrl((current) => {
         if (current) URL.revokeObjectURL(current);
         return URL.createObjectURL(blob);
       });
-      setMessage(outputMode === "transparent" ? (locale === "en" ? "Transparent PNG generated." : "透明PNGを生成しました。") : locale === "en" ? "Share image generated." : "シェア画像を生成しました。");
+      setMessage(outputMode === "transparent" ? t("transparentGenerated") : t("photoGenerated"));
       await logShareEvent(userId, "share_image_generated", {
         template,
         share_type: outputMode,
@@ -125,7 +130,7 @@ export function CatchDataOverlay({
     } catch (error) {
       generatedBlobRef.current = null;
       setDownloadUrl("");
-      setMessage(error instanceof Error ? error.message : locale === "en" ? "Could not generate the image." : "画像を生成できませんでした。");
+      setMessage(locale === "en" ? t("generateError") : error instanceof Error ? error.message : t("generateError"));
     } finally {
       setBusy(false);
     }
@@ -147,18 +152,22 @@ export function CatchDataOverlay({
         files: [file]
       };
       if (item.isPublic) sharePayload.url = shareUrl;
-      await navigator.share(sharePayload);
-      setMessage(locale === "en" ? "Share sheet opened." : "共有を開始しました。");
-      await logShareEvent(userId, "share_completed", {
-        template,
-        share_type: outputMode,
-        catch_proof: overlayData.hasCatchProof,
-        locale
-      });
+      try {
+        await navigator.share(sharePayload);
+        setMessage(t("shareOpened"));
+        await logShareEvent(userId, "share_completed", {
+          template,
+          share_type: outputMode,
+          catch_proof: overlayData.hasCatchProof,
+          locale
+        });
+      } catch (error) {
+        setMessage(error instanceof DOMException && error.name === "AbortError" ? t("shareCancelled") : t("shareError"));
+      }
       return;
     }
 
-    setMessage(locale === "en" ? "This device cannot share the image directly. Save it and post it to your SNS app." : "この端末では画像共有に対応していないため、画像を保存してSNSへ投稿してください。");
+    setMessage(t("shareUnsupported"));
   }
 
   async function handleSaveClick() {
@@ -178,7 +187,7 @@ export function CatchDataOverlay({
             <p className="text-xs font-black text-water">{t("eyebrow")}</p>
             <h2 id="share-overlay-title" className="text-xl font-black text-ink">{t("title")}</h2>
           </div>
-          <button type="button" onClick={onClose} className="tap-target rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-600" aria-label={locale === "en" ? "Close" : "閉じる"}>
+          <button type="button" onClick={onClose} className="tap-target rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-600" aria-label={t("close")}>
             ×
           </button>
         </div>
@@ -205,7 +214,7 @@ export function CatchDataOverlay({
                     className={`rounded border p-3 text-left transition ${template === item.key ? "border-water bg-teal-50 text-water" : "border-slate-200 bg-white text-slate-700"}`}
                   >
                     <p className="text-sm font-black">{item.label}</p>
-                    <p className="mt-1 text-xs font-bold leading-5">{item.description}</p>
+                    <p className="mt-1 text-xs font-bold leading-5">{t(getTemplateDescriptionKey(item.key))}</p>
                   </button>
                 ))}
               </div>
@@ -239,7 +248,7 @@ export function CatchDataOverlay({
 
             <ControlSection title={t("backgroundPhoto")}>
               <div className="rounded border border-slate-200 bg-foam p-3">
-                <p className="text-xs font-bold leading-5 text-slate-600">{locale === "en" ? "The catch photo is used by default. You can choose another photo from this device." : "標準ではこの釣果に登録された写真を使います。端末内の別写真も背景にできます。"}</p>
+                <p className="text-xs font-bold leading-5 text-slate-600">{t("backgroundHelp")}</p>
                 <label className="tap-target mt-3 inline-flex cursor-pointer rounded bg-white px-4 py-2 text-sm font-black text-water ring-1 ring-teal-100">
                   {t("choosePhoto")}
                   <input type="file" accept="image/*" className="sr-only" onChange={(event) => handleBackgroundFile(event.target.files?.[0] ?? null)} />
@@ -248,7 +257,7 @@ export function CatchDataOverlay({
             </ControlSection>
 
             <div className="rounded border border-teal-100 bg-white p-3">
-              <p className="text-sm font-black text-ink">{locale === "en" ? "Export size" : "生成サイズ"}</p>
+              <p className="text-sm font-black text-ink">{t("exportSize")}</p>
               <p className="mt-1 text-xs font-bold text-slate-600">{selectedFormat.width} × {selectedFormat.height}px / {getTemplateLabel(template)}</p>
               <p className="mt-2 text-xs font-bold leading-5 text-slate-600">{message}</p>
             </div>
@@ -340,7 +349,8 @@ async function renderShareOverlayImage({
   outputMode,
   backgroundUrl,
   locale,
-  unitSystem
+  unitSystem,
+  errors
 }: {
   item: Catch;
   template: ShareOverlayTemplate;
@@ -349,16 +359,17 @@ async function renderShareOverlayImage({
   backgroundUrl: string;
   locale: ReturnType<typeof getLocaleFromPathname>;
   unitSystem: UnitSystem;
+  errors: { canvas: string; imageLoadTimeout: string; imageLoad: string };
 }) {
   const size = getFormatSize(format);
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
   canvas.height = size.height;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("画像を書き出せませんでした。");
+  if (!ctx) throw new Error(errors.canvas);
 
   if (outputMode === "photo") {
-    await drawBackground(ctx, backgroundUrl, size.width, size.height);
+    await drawBackground(ctx, backgroundUrl, size.width, size.height, errors);
     drawGradient(ctx, size.width, size.height);
   } else {
     ctx.clearRect(0, 0, size.width, size.height);
@@ -366,12 +377,12 @@ async function renderShareOverlayImage({
 
   await drawOverlay(ctx, getShareOverlayData(item, { locale, unitSystem }), template, size.width, size.height, outputMode);
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-  if (!blob) throw new Error("画像を書き出せませんでした。");
+  if (!blob) throw new Error(errors.canvas);
   return blob;
 }
 
-async function drawBackground(ctx: CanvasRenderingContext2D, imageUrl: string, width: number, height: number) {
-  const image = imageUrl ? await loadImage(imageUrl) : null;
+async function drawBackground(ctx: CanvasRenderingContext2D, imageUrl: string, width: number, height: number, errors: { imageLoadTimeout: string; imageLoad: string }) {
+  const image = imageUrl ? await loadImage(imageUrl, errors) : null;
   if (!image) {
     const gradient = ctx.createLinearGradient(0, 0, width, height);
     gradient.addColorStop(0, "#082f49");
@@ -539,12 +550,12 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: n
   ctx.closePath();
 }
 
-async function loadImage(url: string) {
+async function loadImage(url: string, errors = { imageLoadTimeout: "Background photo loading timed out.", imageLoad: "Could not load the background photo." }) {
   const safeUrl = getCanvasSafeImageUrl(url);
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new window.Image();
     const timeoutId = window.setTimeout(() => {
-      reject(new Error("背景写真の読み込みに時間がかかっています。通信状況を確認するか、端末内の写真を背景に選び直してください。"));
+      reject(new Error(errors.imageLoadTimeout));
     }, 20000);
     if (!safeUrl.startsWith("blob:") && !safeUrl.startsWith("data:")) {
       image.crossOrigin = "anonymous";
@@ -556,10 +567,16 @@ async function loadImage(url: string) {
     };
     image.onerror = () => {
       window.clearTimeout(timeoutId);
-      reject(new Error("背景写真を読み込めませんでした。通信状況を確認するか、端末内の写真を背景に選び直してください。"));
+      reject(new Error(errors.imageLoad));
     };
     image.src = safeUrl;
   });
+}
+
+function getTemplateDescriptionKey(template: ShareOverlayTemplate) {
+  if (template === "catch") return "templateCatchDescription" as const;
+  if (template === "data") return "templateDataDescription" as const;
+  return "templateSimpleDescription" as const;
 }
 
 function getCanvasSafeImageUrl(url: string) {

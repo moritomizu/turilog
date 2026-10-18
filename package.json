@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "audit:seo": "node scripts/audit-seo.mjs",
+    "check:i18n": "node scripts/check-i18n-keys.mjs",
+    "check:global-seo": "node scripts/check-global-seo.mjs",
     "lint": "next lint"
   },
   "dependencies": {

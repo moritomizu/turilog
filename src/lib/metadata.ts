@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { APP_NAME, APP_NAME_WITH_JA } from "@/lib/brand";
-import { localizePath, stripLocaleFromPathname, type AppLocale } from "@/lib/i18n";
+import { defaultLocale, localizePath, stripLocaleFromPathname, type AppLocale } from "@/lib/i18n";
 
 type MetadataDoc = Record<string, unknown>;
 
@@ -43,7 +43,8 @@ export function createPageMetadata({
   image,
   keywords,
   locale,
-  alternateLocales = ["ja", "en"]
+  alternateLocales,
+  robots
 }: {
   title: string;
   description?: string;
@@ -52,6 +53,7 @@ export function createPageMetadata({
   keywords?: string[];
   locale?: AppLocale;
   alternateLocales?: AppLocale[];
+  robots?: Metadata["robots"];
 }): Metadata {
   const siteUrl = getSiteUrl();
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -59,9 +61,13 @@ export function createPageMetadata({
   const canonicalPath = locale ? localizePath(localeFreePath, locale) : normalizedPath;
   const url = `${siteUrl}${canonicalPath}`;
   const imageUrl = image ? (image.startsWith("http") ? image : `${siteUrl}${image.startsWith("/") ? image : `/${image}`}`) : `${siteUrl}/opengraph-image`;
-  const languages = Object.fromEntries(
-    alternateLocales.map((alternateLocale) => [alternateLocale, `${siteUrl}${localizePath(localeFreePath, alternateLocale)}`])
-  );
+  const availableLocales = alternateLocales ?? (locale ? [locale] : []);
+  const languages = availableLocales.length
+    ? {
+        ...Object.fromEntries(availableLocales.map((alternateLocale) => [alternateLocale, `${siteUrl}${localizePath(localeFreePath, alternateLocale)}`])),
+        "x-default": localeFreePath === "/" ? siteUrl : `${siteUrl}${localizePath(localeFreePath, defaultLocale)}`
+      }
+    : undefined;
   return {
     title,
     description,
@@ -70,8 +76,9 @@ export function createPageMetadata({
       : ["TSURILOGUE", "釣りローグ", "釣果記録", "釣りログ", "釣果ログ", "釣りアプリ", "釣果分析"]),
     alternates: {
       canonical: url,
-      languages: { ...languages, "x-default": siteUrl }
+      ...(languages ? { languages } : {})
     },
+    ...(robots ? { robots } : {}),
     openGraph: {
       type: "website",
       siteName: appName,

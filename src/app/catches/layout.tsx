@@ -10,7 +10,8 @@ export function generateMetadata(): Metadata {
     description: locale === "en"
       ? "Review your catches, photos, sizes, fishing conditions, tackle, and fishing areas in your TSURILOGUE catch log."
       : "釣った魚、サイズ、写真、潮位、水温、タックル、釣果ポイントを新着順で見返せるTSURILOGUEの釣果一覧です。",
-    path: "/catches"
+    path: "/catches",
+    robots: { index: false, follow: false }
   });
 }
 
