@@ -236,12 +236,12 @@ function LoginContent() {
                 />
                 <span>
                   {locale === "en" ? "I agree to the " : ""}
-                  <Link href={localizePath("/terms", locale)} className="text-water underline underline-offset-2">
-                    {locale === "en" ? "Terms" : "利用規約"}
+                  <Link href="/ja/terms" className="text-water underline underline-offset-2">
+                    {locale === "en" ? "Terms (Japanese)" : "利用規約"}
                   </Link>
                   {locale === "en" ? " and " : "と"}
-                  <Link href={localizePath("/privacy", locale)} className="text-water underline underline-offset-2">
-                    {locale === "en" ? "Privacy Policy" : "プライバシーポリシー"}
+                  <Link href="/ja/privacy" className="text-water underline underline-offset-2">
+                    {locale === "en" ? "Privacy Policy (Japanese)" : "プライバシーポリシー"}
                   </Link>
                   {locale === "en" ? "." : "に同意します。"}
                 </span>
@@ -307,7 +307,7 @@ function getAuthErrorMessage(error: unknown, locale: "ja" | "en") {
   if (code === "auth/expired-action-code") return english ? "This email link has expired. Request a new one." : "メールリンクの有効期限が切れています。もう一度送信してください。";
   if (code === "auth/invalid-action-code") return english ? "This email link is invalid. Request a new one." : "メールリンクが無効です。もう一度送信してください。";
   if (code === "auth/popup-closed-by-user") return english ? "The login window was closed. Please try again." : "ログイン画面が閉じられました。もう一度お試しください。";
-  return error instanceof Error ? error.message : english ? "Login failed. Please try again." : "ログインに失敗しました。";
+  return english ? "Login failed. Please try again." : error instanceof Error ? error.message : "ログインに失敗しました。";
 }
 
 function LoginShell() {

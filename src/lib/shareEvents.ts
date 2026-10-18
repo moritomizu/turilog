@@ -25,6 +25,20 @@ export async function logShareEvent(userId: string, eventName: ShareEventName, m
 }
 
 function sanitizeShareMetadata(metadata: Record<string, unknown>) {
-  const blockedKeys = new Set(["latitude", "longitude", "pointName", "location", "gps"]);
-  return Object.fromEntries(Object.entries(metadata).filter(([key]) => !blockedKeys.has(key)));
+  return sanitizeObject(metadata);
+}
+
+function sanitizeObject(value: Record<string, unknown>): Record<string, unknown> {
+  const blockedKeys = new Set(["latitude", "longitude", "pointname", "location", "gps", "coordinates"]);
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => !blockedKeys.has(key.toLowerCase()))
+      .map(([key, child]) => [key, sanitizeValue(child)])
+  );
+}
+
+function sanitizeValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sanitizeValue);
+  if (value && typeof value === "object") return sanitizeObject(value as Record<string, unknown>);
+  return value;
 }

@@ -49,7 +49,8 @@ export function generateMetadata(): Metadata {
       description: isEnglish
         ? "Keep your fishing memories in one place. Log catches and fishing conditions, create share-ready images, and share your catch with TSURILOGUE."
         : "TSURILOGUE（釣りローグ）は、釣果写真、潮位、水温、天候、タックル、ポイントをかんたんに記録し、あとから振り返れる釣果記録・釣りログアプリです。",
-      path: "/"
+      path: "/",
+      alternateLocales: ["ja", "en"]
     })
   };
 }

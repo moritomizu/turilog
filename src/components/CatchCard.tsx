@@ -6,6 +6,8 @@ import { useState } from "react";
 import { CatchVerificationPanel } from "@/components/CatchVerificationPanel";
 import { getVerificationFlagLabel, getVerificationScoreLabel } from "@/lib/catchVerification";
 import { type AppLocale } from "@/lib/i18n";
+import { getTidePhaseDisplayLabel, getWeatherDisplayLabel, getWindDirectionDisplayLabel } from "@/lib/catchDisplay";
+import { getFishSpeciesLabel } from "@/lib/fishingDictionary";
 import { formatLengthFromCm, formatTemperatureFromCelsius, getDefaultUnitSystem } from "@/lib/units";
 import type { Catch, ProofFlag, UnitSystem } from "@/types";
 
@@ -19,7 +21,7 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick, unitSystem 
     <article className="overflow-hidden rounded border border-teal-100 bg-white shadow-soft">
       <div className="relative aspect-[4/3] bg-teal-50">
         {item.imageUrl ? (
-          <Image src={item.imageUrl} alt={item.fishType} fill className="object-cover" sizes="(max-width: 768px) 100vw, 360px" />
+          <Image src={item.imageUrl} alt={getFishSpeciesLabel(item.fishType, locale)} fill className="object-cover" sizes="(max-width: 768px) 100vw, 360px" />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-slate-500">{tr(locale, "No photo", "写真なし")}</div>
         )}
@@ -38,7 +40,7 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick, unitSystem 
       <div className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black">{item.fishType}</h2>
+            <h2 className="text-xl font-black">{getFishSpeciesLabel(item.fishType, locale)}</h2>
             <p className="mt-0.5 text-sm text-slate-600">{formatDate(item.caughtAt, locale)}</p>
           </div>
           <p className="shrink-0 text-2xl font-black text-water">{formatLengthFromCm(item.sizeCm, locale, displayUnitSystem)}</p>
@@ -56,7 +58,7 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick, unitSystem 
         ) : null}
         <div className="grid grid-cols-2 gap-2 text-sm">
           <Info label={tr(locale, "Fishing area", "ポイント")} value={formatPoint(item, locale)} />
-          <Info label={tr(locale, "Weather", "当時の天候")} value={item.weather.weatherLabel || tr(locale, "Unknown", "未取得")} />
+          <Info label={tr(locale, "Weather", "当時の天候")} value={getWeatherDisplayLabel(item.weather, locale)} />
           <Info label={tr(locale, "Wind", "当時の風")} value={formatWind(item, locale)} />
           <Info label={tr(locale, "Air temperature", "当時の気温")} value={item.weather.temperatureC == null ? tr(locale, "Unknown", "未取得") : formatTemperatureFromCelsius(item.weather.temperatureC, locale, displayUnitSystem)} />
           <Info label={tr(locale, "Water temperature", "当時の水温")} value={formatSeaTemperature(item, locale, displayUnitSystem)} />
@@ -64,7 +66,7 @@ export function CatchCard({ item, rank, mapPinNumber, onMapPinClick, unitSystem 
           <Info label={tr(locale, "Tide cycle", "潮回り")} value={formatTideCycle(item, locale)} />
           <Info
             label={tr(locale, "Tide", "潮")}
-            value={item.tidePhaseLabel || tr(locale, "Unknown", "未取得")}
+            value={getTidePhaseDisplayLabel(item, locale)}
             action={
               <button
                 type="button"
@@ -108,7 +110,7 @@ function VerificationSummary({ item, locale, open, onToggle }: { item: Catch; lo
   const total = score.total ?? score.totalScore ?? 0;
   const concernFlags = getConcernFlags(score.flags ?? []);
   const levelClass = getVerificationTone(score.level);
-  const topConcerns = concernFlags.slice(0, 2).map(getVerificationFlagLabel);
+  const topConcerns = concernFlags.slice(0, 2).map((flag) => locale === "en" ? formatEnglishProofFlag(flag) : getVerificationFlagLabel(flag));
 
   return (
     <section className="border-t border-slate-100 pt-3">
@@ -126,7 +128,7 @@ function VerificationSummary({ item, locale, open, onToggle }: { item: Catch; lo
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <span className={`rounded-full px-2.5 py-1 text-xs font-black ${levelClass}`}>{getVerificationScoreLabel(score)}</span>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-black ${levelClass}`}>{locale === "en" ? getEnglishVerificationScoreLabel(score.level) : getVerificationScoreLabel(score)}</span>
             <span className="text-sm font-black text-slate-600">{total}</span>
           </div>
         </button>
@@ -147,7 +149,7 @@ function VerificationSummary({ item, locale, open, onToggle }: { item: Catch; lo
       ) : null}
       {open ? (
         <div className="mt-3">
-          <CatchVerificationPanel item={item} compact />
+          {locale === "en" ? <EnglishVerificationPanel item={item} concernFlags={concernFlags} /> : <CatchVerificationPanel item={item} compact />}
         </div>
       ) : null}
     </section>
@@ -216,14 +218,15 @@ function hasTackle(item: Catch) {
 
 function formatWind(item: Catch, locale: AppLocale) {
   if (item.weather.windSpeedMs == null) return tr(locale, "Unknown", "未取得");
-  const direction = item.weather.windDirectionLabel ? `${item.weather.windDirectionLabel} ` : "";
+  const displayDirection = getWindDirectionDisplayLabel(item.weather, locale);
+  const direction = displayDirection ? `${displayDirection} ` : "";
   return `${direction}${item.weather.windSpeedMs}m/s`;
 }
 
 function formatLunar(item: Catch, locale: AppLocale) {
   if (!item.lunar.lunarDateLabel && item.lunar.moonAge == null) return tr(locale, "Unknown", "未取得");
   const moonAge = item.lunar.moonAge == null ? "" : tr(locale, `Moon age ${item.lunar.moonAge}`, `月齢${item.lunar.moonAge}`);
-  return [item.lunar.lunarDateLabel, moonAge].filter(Boolean).join(" / ");
+  return locale === "en" ? moonAge || "Unknown" : [item.lunar.lunarDateLabel, moonAge].filter(Boolean).join(" / ");
 }
 
 function formatTideCycle(item: Catch, locale: AppLocale) {
@@ -263,6 +266,54 @@ function getVerificationTone(level: string) {
   if (level === "medium" || level === "strong" || level === "standard") return "bg-sky-100 text-sky-700";
   if (level === "low" || level === "basic") return "bg-yellow-100 text-yellow-700";
   return "bg-red-100 text-red-700";
+}
+
+function EnglishVerificationPanel({ item, concernFlags }: { item: Catch; concernFlags: ProofFlag[] }) {
+  const score = item.verificationScore;
+  if (!score) return null;
+  const total = score.total ?? score.totalScore ?? 0;
+  return (
+    <section className="rounded border border-teal-100 bg-white p-4 shadow-soft">
+      <p className="text-xs font-black text-water">Catch Proof β</p>
+      <p className="mt-1 text-sm font-bold text-slate-500">Verification score</p>
+      <p className="text-3xl font-black text-ink">{total}<span className="text-base text-slate-500"> / 100</span></p>
+      <div className={`mt-4 rounded p-3 ${concernFlags.length ? "bg-yellow-50" : "bg-emerald-50"}`}>
+        <p className={`text-xs font-black ${concernFlags.length ? "text-yellow-700" : "text-emerald-700"}`}>{concernFlags.length ? "Review items" : "Verified"}</p>
+        <ul className="mt-2 space-y-1 text-xs font-bold leading-5 text-slate-700">
+          {concernFlags.length ? concernFlags.map((flag) => <li key={flag}>- {formatEnglishProofFlag(flag)}</li>) : <li>- No major concerns.</li>}
+        </ul>
+      </div>
+      <p className="mt-3 text-xs font-bold leading-5 text-slate-500">This score does not guarantee authenticity. It is reference information for review and tournament operations.</p>
+    </section>
+  );
+}
+
+function getEnglishVerificationScoreLabel(level: string) {
+  if (level === "high" || level === "highTrust") return "High confidence";
+  if (level === "medium" || level === "strong" || level === "standard") return "Standard";
+  if (level === "low" || level === "basic") return "Low confidence";
+  return "Review needed";
+}
+
+function formatEnglishProofFlag(flag: ProofFlag) {
+  const labels: Partial<Record<ProofFlag, string>> = {
+    missing_photo: "Catch photo missing",
+    missing_gps: "GPS data missing",
+    low_location_accuracy: "Low GPS accuracy",
+    posted_at_far_from_caught_at: "Catch and post times are far apart",
+    missing_tide: "Tide data missing",
+    missing_fish_type: "Species missing",
+    missing_size: "Size missing",
+    manual_measurement_only: "Size entered manually",
+    measurement_photo_missing: "Measurement photo missing",
+    tournament_out_of_period: "Outside the tournament period",
+    tournament_target_fish_mismatch: "Species does not match the tournament target",
+    duplicate_image_suspected: "Possible duplicate image",
+    impossible_travel_suspected: "Possible travel-time inconsistency",
+    abnormal_size_suspected: "Unusual size detected",
+    tournament_area_mismatch: "Possible tournament area mismatch"
+  };
+  return labels[flag] ?? String(flag).replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/^./, (character) => character.toUpperCase());
 }
 
 function Info({ label, value, action }: { label: string; value: string; action?: React.ReactNode }) {

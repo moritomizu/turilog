@@ -17,6 +17,12 @@ export function middleware(request: NextRequest) {
 
   if (shouldSkip(pathname)) return NextResponse.next();
 
+  if (pathname === "/en/terms" || pathname === "/en/privacy") {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.replace(/^\/en\//, "/ja/");
+    return NextResponse.redirect(url, 308);
+  }
+
   const appLocaleMatch = pathname.match(/^\/app\/(ja|en)\/?$/);
   if (appLocaleMatch) {
     const locale = isAppLocale(appLocaleMatch[1]) ? appLocaleMatch[1] : defaultLocale;

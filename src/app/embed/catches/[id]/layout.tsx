@@ -10,11 +10,13 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       locale,
       title: locale === "en" ? "TSURILOGUE Catch" : "TSURILOGUE釣果",
       description: locale === "en" ? "View a catch shared from TSURILOGUE." : "TSURILOGUEで公開された釣果を確認できます。釣果写真、サイズ、潮位、水温、タックルを一緒に振り返れる釣りログです。",
-      path: `/embed/catches/${params.id}`
+      path: `/embed/catches/${params.id}`,
+      robots: { index: false, follow: false }
     });
   }
   return createPageMetadata({
     locale,
+    alternateLocales: ["ja", "en"],
     title: item.title,
     description: item.description,
     path: `/embed/catches/${params.id}`,

@@ -315,7 +315,7 @@ function PostForm({ userId }: { userId: string }) {
       applyLocation(point, "", "", { inferArea: true, message: tr(locale, "Location saved.", "位置情報を取得しました。") });
       setPointName("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : tr(locale, "Could not get your location.", "位置情報を取得できませんでした。"));
+      setMessage(locale === "en" ? "Could not get your location. Check your browser location permission and try again." : error instanceof Error ? error.message : "位置情報を取得できませんでした。");
     }
   }
 
@@ -904,7 +904,7 @@ function MapPicker({ locale, location, onPick }: { locale: AppLocale; location: 
     }
 
     load().catch((error) => {
-      setMessage(error instanceof Error ? error.message : tr(locale, "Could not display the map.", "地図を表示できませんでした。"));
+      setMessage(locale === "en" ? "Could not display the map. Check the map configuration and try again." : error instanceof Error ? error.message : "地図を表示できませんでした。");
     });
 
     return () => {

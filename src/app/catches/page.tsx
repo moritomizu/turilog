@@ -13,6 +13,8 @@ import { logShareEvent } from "@/lib/shareEvents";
 import { formatLengthFromCm, getDefaultUnitSystem } from "@/lib/units";
 import { getUserProfile } from "@/lib/userProfiles";
 import { localizePath, type AppLocale } from "@/lib/i18n";
+import { getTidePhaseDisplayLabel } from "@/lib/catchDisplay";
+import { getFishSpeciesLabel } from "@/lib/fishingDictionary";
 import type { Catch, UnitSystem } from "@/types";
 
 export default function CatchesPage() {
@@ -36,7 +38,7 @@ function CatchList({ userId }: { userId: string }) {
         setItems(result);
         setMessage(result.length ? "" : locale === "en" ? "No catches yet. Log your first catch." : "まだ釣果がありません。最初の一匹を投稿しましょう。");
       })
-      .catch((error) => setMessage(error instanceof Error ? error.message : locale === "en" ? "Could not load your catch log." : "釣果を読み込めませんでした。"));
+      .catch((error) => setMessage(locale === "en" ? "Could not load your catch log." : error instanceof Error ? error.message : "釣果を読み込めませんでした。"));
     getUserProfile(userId)
       .then((profile) => setUnitSystem(profile?.unitSystem ?? getDefaultUnitSystem(locale)))
       .catch(() => setUnitSystem(getDefaultUnitSystem(locale)));
@@ -90,7 +92,7 @@ function CatchActionMenu({ item, userId, locale, onChange, onDelete }: { item: C
       });
       setMessage(nextPublic ? tr(locale, "Public sharing is now enabled.", "埋め込みコードを使えるようになりました。") : tr(locale, "Public sharing was stopped.", "埋め込み公開を停止しました。"));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : tr(locale, "Could not change the sharing settings.", "公開設定を変更できませんでした。"));
+      setMessage(locale === "en" ? "Could not change the sharing settings." : error instanceof Error ? error.message : "公開設定を変更できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -113,7 +115,7 @@ function CatchActionMenu({ item, userId, locale, onChange, onDelete }: { item: C
       await deleteCatch(item.id, userId);
       onDelete(item.id);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : tr(locale, "Could not delete the catch.", "釣果を削除できませんでした。"));
+      setMessage(locale === "en" ? "Could not delete the catch." : error instanceof Error ? error.message : "釣果を削除できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -329,15 +331,15 @@ function buildDigest(items: Catch[], locale: AppLocale, unitSystem: UnitSystem):
     streak: getStreakDays(items),
     best,
     latest,
-    topFish: topLabel(items, (item) => item.fishType, locale),
-    topTide: topLabel(items, (item) => item.tidePhaseLabel, locale),
+    topFish: topLabel(items, (item) => getFishSpeciesLabel(item.fishType, locale), locale),
+    topTide: topLabel(items, (item) => getTidePhaseDisplayLabel(item, locale), locale),
     topArea: topLabel(items, (item) => item.areaName || item.officialCurrentStationName || tr(locale, "Unknown", "未取得"), locale),
     activeDays,
     averagePerActiveDay,
     digestYear,
     averageCatchPace: formatAverageCatchPace(yearlyGroups, locale),
     latestText: latest
-      ? (locale === "en" ? `Latest: ${latest.fishType}, ${formatLengthFromCm(latest.sizeCm, locale, unitSystem)}, on ${formatShortDate(latest.caughtAt, locale)}. Keep building your catch log.` : `最新は${formatShortDate(latest.caughtAt, locale)}の${latest.fishType} ${latest.sizeCm}cm。次の一匹で記録を伸ばしましょう。`)
+      ? (locale === "en" ? `Latest: ${getFishSpeciesLabel(latest.fishType, locale)}, ${formatLengthFromCm(latest.sizeCm, locale, unitSystem)}, on ${formatShortDate(latest.caughtAt, locale)}. Keep building your catch log.` : `最新は${formatShortDate(latest.caughtAt, locale)}の${latest.fishType} ${latest.sizeCm}cm。次の一匹で記録を伸ばしましょう。`)
       : tr(locale, "No catches yet.", "まだ釣果がありません。")
   };
 }

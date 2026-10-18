@@ -10,7 +10,8 @@ export function generateMetadata(): Metadata {
     description: locale === "en"
       ? "Record your catch photo, fish, size, time, area, fishing conditions, and tackle with TSURILOGUE."
       : "釣行後すぐに写真、魚種、サイズ、場所を記録。潮位、天候、水温、潮流参照情報も自動で保存できるTSURILOGUEの投稿画面です。",
-    path: "/post"
+    path: "/post",
+    robots: { index: false, follow: false }
   });
 }
 
