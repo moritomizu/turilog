@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS } from "@/lib/wordpress";
+import { findMediaTermBySlug, getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS } from "@/lib/wordpress";
 
 type TagPageProps = {
   params: { slug: string };
@@ -18,10 +18,10 @@ const MEDIA_OG_IMAGE = "https://www.tsurilogue.com/opengraph-image";
 
 export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
   const tags = await getMediaTags().catch(() => []);
-  const tag = tags.find((item) => item.slug === params.slug);
-  const title = tag ? `#${tag.name}の記事 | TSURILOGUE Media` : "タグ記事 | TSURILOGUE Media";
+  const tag = findMediaTermBySlug(tags, params.slug);
+  const title = tag ? `${tag.name}の記事一覧｜TSURILOGUE Media` : "タグ記事一覧｜TSURILOGUE Media";
   const description = `${tag?.name ?? "タグ"}に関するTSURILOGUE（釣りローグ）公式メディアの記事一覧です。釣果記録・釣りログ・釣行データの振り返りに役立つ情報をまとめています。`;
-  const canonical = getMediaCanonical(`tag/${params.slug}`);
+  const canonical = getMediaCanonical(`tag/${tag?.slug ?? params.slug}`);
   return {
     title,
     description,
@@ -52,11 +52,11 @@ export default async function MediaTagPage({ params, searchParams }: TagPageProp
     getMediaCategories().catch(() => []),
     getMediaTags().catch(() => [])
   ]);
-  const tag = tags.find((item) => item.slug === params.slug);
+  const tag = findMediaTermBySlug(tags, params.slug);
   if (!tag && !posts.items.length) notFound();
 
   const title = tag ? `#${tag.name}の記事` : "タグ記事";
-  const canonical = getMediaCanonical(`tag/${params.slug}`);
+  const canonical = getMediaCanonical(`tag/${tag?.slug ?? params.slug}`);
 
   return (
     <>

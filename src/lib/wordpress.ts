@@ -74,6 +74,8 @@ export type MediaCategoryMetadata = {
   notes: string;
 };
 
+const INDEXABLE_MEDIA_CATEGORY_NAMES = new Set(["釣果記録", "釣果共有", "釣りログ"]);
+
 export type MediaClusterKey = "catch_log" | "catch_sharing" | "tournament" | "tsurilogue";
 
 export type MediaClusterDefinition = {
@@ -142,7 +144,7 @@ export const getAllMediaPosts = cache(async () => {
 });
 
 export const getMediaPost = cache(async (slug: string) => {
-  return wpFetch<WpPost>(`/wp-json/tsurilogue/v1/posts/${encodeURIComponent(slug)}`);
+  return wpFetch<WpPost>(`/wp-json/tsurilogue/v1/posts/${encodeURIComponent(normalizeMediaSlug(slug))}`);
 });
 
 export const getMediaCategories = cache(async () => {
@@ -278,6 +280,7 @@ export function getMediaClusterPosts(posts: WpPost[], clusterKey: MediaClusterKe
 
 export function getMediaParentArticleLinks() {
   return mediaClusterDefinitions.map((cluster) => ({
+    key: cluster.key,
     href: getMediaPath(cluster.parentSlug),
     title: cluster.label,
     body: cluster.description,
@@ -407,6 +410,10 @@ export function findMediaTermBySlug(terms: WpTerm[], slug: string) {
   return terms.find((term) => normalizeMediaSlug(term.slug) === normalizedSlug);
 }
 
+export function isIndexableMediaCategory(category?: WpTerm) {
+  return Boolean(category && INDEXABLE_MEDIA_CATEGORY_NAMES.has(category.name.replace(/\s+/g, "")));
+}
+
 export function getCategoryMetadata(category?: WpTerm): MediaCategoryMetadata {
   const name = category?.name || "カテゴリ";
   const normalizedName = name.replace(/\s+/g, "");
@@ -484,8 +491,8 @@ const categoryMetadataByName: Record<string, MediaCategoryMetadata> = {
     title: "コミュニティの記事一覧｜TSURILOGUE Media",
     heading: "コミュニティの記事一覧",
     description: "釣り仲間、グループ、チームでの釣果共有や活動記録に関する記事を紹介。仲間と釣りを楽しむヒントをまとめています。",
-    classification: "KEEP_INDEX",
-    notes: "グループ・釣り仲間文脈のカテゴリとしてindex継続候補。"
+    classification: "NOINDEX_CANDIDATE",
+    notes: "検索テーマ集中のため、固有コンテンツが充実するまでnoindex,follow。"
   },
   "遊漁船・事業者向け": {
     title: "遊漁船・事業者向けの記事一覧｜TSURILOGUE Media",
@@ -505,15 +512,15 @@ const categoryMetadataByName: Record<string, MediaCategoryMetadata> = {
     title: "釣り仲間の記事一覧｜TSURILOGUE Media",
     heading: "釣り仲間の記事一覧",
     description: "釣り仲間との釣果共有、グループ活動、仲間内ランキングに関する記事を紹介。釣果記録を仲間と楽しむ方法を解説します。",
-    classification: "KEEP_INDEX",
-    notes: "釣果共有カテゴリと近いため、将来的に役割整理を検討。"
+    classification: "NOINDEX_CANDIDATE",
+    notes: "釣果共有カテゴリと検索意図が近いため、当面noindex,follow。"
   },
   "釣り大会・イベント": {
     title: "釣り大会・イベントの記事一覧｜TSURILOGUE Media",
     heading: "釣り大会・イベントの記事一覧",
     description: "オンライン釣り大会、仲間内ランキング、大会ルールや運営方法を紹介。スマホで楽しめる釣り大会の始め方を解説します。",
-    classification: "KEEP_INDEX",
-    notes: "大会系親カテゴリとしてindex継続候補。"
+    classification: "NOINDEX_CANDIDATE",
+    notes: "一次情報・大会実績が増えた段階でindex復帰を再評価する。"
   },
   釣り日記: {
     title: "釣り日記の記事一覧｜TSURILOGUE Media",

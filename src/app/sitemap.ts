@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/metadata";
-import { MEDIA_PUBLIC_BASE_URL, getAllMediaPosts, getLatestPostModifiedAt, getLatestPostModifiedAtByCategory, getMediaCanonical, getMediaCategories, getPostSitemapLastModified } from "@/lib/wordpress";
+import { MEDIA_PUBLIC_BASE_URL, getAllMediaPosts, getLatestPostModifiedAt, getLatestPostModifiedAtByCategory, getMediaCanonical, getMediaCategories, getPostSitemapLastModified, isIndexableMediaCategory } from "@/lib/wordpress";
 
 const staticRoutes: Array<{ path: string; priority: number; lastModified: string; localizedPath?: string }> = [
   { path: "/ja", priority: 1, lastModified: "2026-10-17T00:00:00.000Z", localizedPath: "/" },
@@ -60,7 +60,7 @@ async function getMediaSitemapRoutes(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.7
     })),
-    ...safeCategories.filter((category) => (category.count ?? 0) > 0).map((category) => ({
+    ...safeCategories.filter((category) => (category.count ?? 0) > 0 && isIndexableMediaCategory(category)).map((category) => ({
       url: getMediaCanonical(`category/${category.slug}`),
       lastModified: getLatestPostModifiedAtByCategory(safePosts, category.slug),
       changeFrequency: "weekly" as const,

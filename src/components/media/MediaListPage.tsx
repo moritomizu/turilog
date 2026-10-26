@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { MediaPagination } from "@/components/media/MediaPagination";
 import { MediaPostCard } from "@/components/media/MediaPostCard";
-import { getMediaParentArticleLinks, getMediaPath, type WpPagination, type WpPost, type WpTerm } from "@/lib/wordpress";
+import { getMediaClusterForPost, getMediaParentArticleLinks, getMediaPath, type WpPagination, type WpPost, type WpTerm } from "@/lib/wordpress";
 
 const pillarArticles = getMediaParentArticleLinks();
 
 const priorityCategoryLinks = [
   { href: getMediaPath("category/record"), label: "釣果記録カテゴリ" },
   { href: getMediaPath(`category/${encodeURIComponent("釣果共有")}`), label: "釣果共有カテゴリ" },
-  { href: getMediaPath(`category/${encodeURIComponent("釣り大会・イベント")}`), label: "釣り大会カテゴリ" }
+  { href: getMediaPath(`category/${encodeURIComponent("釣りログ")}`), label: "釣りログカテゴリ" }
 ];
 
 export function MediaListPage({
@@ -28,6 +28,8 @@ export function MediaListPage({
   tags?: WpTerm[];
   basePath: string;
 }) {
+  const relatedTags = getRelatedTerms(posts, tags ?? [], "tags");
+  const featuredArticles = getFeaturedArticles(posts, basePath);
   return (
     <main className="bg-gradient-to-b from-[#eefbf7] via-white to-[#f8fafc]">
       <section className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
@@ -50,7 +52,7 @@ export function MediaListPage({
           </div>
           <div className="rounded-[1.5rem] border border-teal-100 bg-white/80 p-5 shadow-xl shadow-slate-900/5 backdrop-blur">
             <p className="text-sm font-black text-slate-950">釣果を、次の一匹のヒントに。</p>
-            <p className="mt-2 text-sm font-bold leading-6 text-slate-600">釣果記録・AI分析・大会・グループ機能とつながる、TSURILOGUE公式メディアです。</p>
+            <p className="mt-2 text-sm font-bold leading-6 text-slate-600">{title}に関連する実践情報を、釣果記録に活かしやすく整理しています。</p>
           </div>
         </div>
       </section>
@@ -61,10 +63,10 @@ export function MediaListPage({
             <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0f766e]">Start here</p>
             <h2 className="mt-2 text-xl font-black text-slate-950">主要親記事</h2>
             <p className="mt-2 text-sm font-bold leading-7 text-slate-600">
-              釣果ログ、釣果共有、オンライン釣り大会、TSURILOGUEの使い方を知るための代表記事です。
+              このテーマを理解し、釣果記録に活かすための代表記事です。
             </p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {pillarArticles.map((article) => (
+              {featuredArticles.map((article) => (
                 <Link key={article.href} href={article.href} className="rounded-2xl bg-foam p-4 transition hover:-translate-y-0.5 hover:bg-teal-50">
                   <span className="block text-sm font-black leading-6 text-slate-950">{article.title}</span>
                   <span className="mt-2 block text-xs font-bold leading-5 text-slate-600">{article.body}</span>
@@ -97,7 +99,7 @@ export function MediaListPage({
             </div>
           </section>
           <TermBox title="カテゴリ" terms={categories ?? []} pathPrefix="category" />
-          <TermBox title="タグ" terms={tags ?? []} pathPrefix="tag" />
+          {relatedTags.length ? <TermBox title="関連タグ" terms={relatedTags} pathPrefix="tag" limit={5} /> : null}
           <section className="rounded-[1.5rem] border border-teal-100 bg-white p-5 shadow-sm">
             <h2 className="text-base font-black text-slate-950">TSURILOGUEを知る</h2>
             <nav className="mt-4 grid gap-2 text-sm font-black" aria-label="TSURILOGUE関連ページ">
@@ -123,13 +125,13 @@ export function MediaListPage({
   );
 }
 
-function TermBox({ title, terms, pathPrefix }: { title: string; terms: WpTerm[]; pathPrefix: "category" | "tag" }) {
+function TermBox({ title, terms, pathPrefix, limit = 16 }: { title: string; terms: WpTerm[]; pathPrefix: "category" | "tag"; limit?: number }) {
   return (
     <section className="rounded-[1.5rem] border border-teal-100 bg-white p-5 shadow-sm">
       <h2 className="text-base font-black text-slate-950">{title}</h2>
       <div className="mt-4 flex flex-wrap gap-2">
         {terms.length ? (
-          terms.slice(0, 16).map((term) => (
+          terms.slice(0, limit).map((term) => (
             <Link key={`${pathPrefix}-${term.slug}`} href={getMediaPath(`${pathPrefix}/${term.slug}`)} className="rounded-full bg-foam px-3 py-2 text-xs font-black text-[#0f766e]">
               {term.name}
             </Link>
@@ -140,4 +142,15 @@ function TermBox({ title, terms, pathPrefix }: { title: string; terms: WpTerm[];
       </div>
     </section>
   );
+}
+
+function getRelatedTerms(posts: WpPost[], terms: WpTerm[], key: "tags") {
+  const relatedSlugs = new Set(posts.flatMap((post) => post[key] ?? []).map((term) => term.slug));
+  return terms.filter((term) => relatedSlugs.has(term.slug)).sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+}
+
+function getFeaturedArticles(posts: WpPost[], basePath: string) {
+  if (basePath === getMediaPath()) return pillarArticles;
+  const clusterKeys = [...new Set(posts.map((post) => getMediaClusterForPost(post).key))].slice(0, 2);
+  return clusterKeys.map((key) => pillarArticles.find((article) => article.key === key)).filter((article): article is (typeof pillarArticles)[number] => Boolean(article));
 }
