@@ -66,6 +66,13 @@ export type WpPostListResponse = {
   pagination: WpPagination;
 };
 
+export function emptyMediaPostList(page = 1, perPage = 10): WpPostListResponse {
+  return {
+    items: [],
+    pagination: { page, perPage, total: 0, totalPages: 0, hasNextPage: false }
+  };
+}
+
 export type MediaCategoryMetadata = {
   title: string;
   heading: string;

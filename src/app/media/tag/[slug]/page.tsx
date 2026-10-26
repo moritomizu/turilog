@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { findMediaTermBySlug, getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS } from "@/lib/wordpress";
+import { emptyMediaPostList, findMediaTermBySlug, getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS } from "@/lib/wordpress";
 
 type TagPageProps = {
   params: { slug: string };
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
 export default async function MediaTagPage({ params, searchParams }: TagPageProps) {
   const page = parsePage(searchParams?.page);
   const [posts, categories, tags] = await Promise.all([
-    getMediaPosts({ page, perPage: 10, tag: params.slug }),
+    getMediaPosts({ page, perPage: 10, tag: params.slug }).catch(() => emptyMediaPostList(page, 10)),
     getMediaCategories().catch(() => []),
     getMediaTags().catch(() => [])
   ]);

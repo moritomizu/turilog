@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { findMediaTermBySlug, getCategoryMetadata, getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, isIndexableMediaCategory, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS } from "@/lib/wordpress";
+import { emptyMediaPostList, findMediaTermBySlug, getCategoryMetadata, getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, isIndexableMediaCategory, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS } from "@/lib/wordpress";
 
 type CategoryPageProps = {
   params: { slug: string };
@@ -51,7 +51,7 @@ export default async function MediaCategoryPage({ params, searchParams }: Catego
   const category = findMediaTermBySlug(categories, params.slug);
   const slug = category?.slug ?? params.slug;
   const [posts, tags] = await Promise.all([
-    getMediaPosts({ page, perPage: 10, category: slug }),
+    getMediaPosts({ page, perPage: 10, category: slug }).catch(() => emptyMediaPostList(page, 10)),
     getMediaTags().catch(() => [])
   ]);
   if (!category && !posts.items.length) notFound();
