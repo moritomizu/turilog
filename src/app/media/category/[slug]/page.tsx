@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/media/JsonLd";
 import { MediaListPage } from "@/components/media/MediaListPage";
-import { findMediaTermBySlug, getCategoryMetadata, getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS } from "@/lib/wordpress";
+import { findMediaTermBySlug, getCategoryMetadata, getMediaAlternates, getMediaCanonical, getMediaCategories, getMediaPath, getMediaPosts, getMediaTags, isIndexableMediaCategory, MEDIA_PUBLIC_BASE_URL, MEDIA_REVALIDATE_SECONDS } from "@/lib/wordpress";
 
 type CategoryPageProps = {
   params: { slug: string };
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     title: categoryMeta.title,
     description: categoryMeta.description,
     alternates: getMediaAlternates(`category/${slug}`),
-    robots: { index: true, follow: true },
+    robots: { index: isIndexableMediaCategory(category), follow: true },
     openGraph: {
       type: "website",
       siteName: "TSURILOGUE",

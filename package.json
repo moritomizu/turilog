@@ -9,6 +9,7 @@
     "audit:seo": "node scripts/audit-seo.mjs",
     "check:i18n": "node scripts/check-i18n-keys.mjs",
     "check:global-seo": "node scripts/check-global-seo.mjs",
+    "check:taxonomy": "node scripts/check-taxonomy-cleanup.mjs",
     "lint": "next lint"
   },
   "dependencies": {

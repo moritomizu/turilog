@@ -6,6 +6,14 @@ const PUBLIC_FILE = /\.(.*)$/;
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
+  const canonicalMediaPathname = normalizeMediaPercentEncoding(pathname);
+  if (canonicalMediaPathname !== pathname) {
+    const url = request.nextUrl.clone();
+    url.pathname = canonicalMediaPathname;
+    url.search = search;
+    return NextResponse.redirect(url, 301);
+  }
+
   const isPublicMediaPath = shouldAvoidLocaleCookie(pathname);
 
   if (shouldRedirectMediaTrailingSlash(pathname)) {
@@ -52,6 +60,11 @@ export function middleware(request: NextRequest) {
     response.cookies.set("NEXT_LOCALE", locale, { path: "/", sameSite: "lax" });
   }
   return response;
+}
+
+export function normalizeMediaPercentEncoding(pathname: string) {
+  if (!/^\/(?:ja|en)\/media(?:\/|$)/.test(pathname)) return pathname;
+  return pathname.replace(/%[0-9a-fA-F]{2}/g, (triplet) => triplet.toUpperCase());
 }
 
 function rewriteWithLocale(request: NextRequest, url: URL, locale: "ja" | "en") {

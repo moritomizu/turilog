@@ -166,7 +166,7 @@ export default async function MediaArticlePage({ params }: MediaArticlePageProps
           </div>
 
           <div className="mt-12">
-            <MediaCta />
+            <MediaCta clusterKey={cluster.key} />
           </div>
         </article>
 

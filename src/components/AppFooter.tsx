@@ -12,6 +12,7 @@ export function AppFooter() {
   const pathname = usePathname();
   const locale = getLocaleFromPathname(pathname);
   const cleanPathname = stripLocaleFromPathname(pathname);
+  const isMediaPath = cleanPathname === "/media" || cleanPathname.startsWith("/media/");
   const t = useTranslations("common");
 
   if (cleanPathname.startsWith("/lp")) return null;
@@ -24,7 +25,9 @@ export function AppFooter() {
             <TsuriLogLogo className="h-9 w-36 object-contain dark:brightness-0 dark:invert" />
           </Link>
           <p className="mt-3 leading-6">
-            {t("footerDescription")}
+            {isMediaPath
+              ? "TSURILOGUE Mediaは、釣果記録や釣行の振り返りに役立つ情報を届ける公式メディアです。"
+              : t("footerDescription")}
           </p>
         </div>
         <div className="flex flex-col gap-4 sm:items-end">
