@@ -41,13 +41,8 @@ export const dynamic = "force-static";
 export const dynamicParams = true;
 
 export async function generateMetadata({ params }: MediaArticlePageProps): Promise<Metadata> {
-  const post = await getMediaPost(params.slug).catch(() => null);
-  if (!post) {
-    return {
-      title: "記事が見つかりません | TSURILOGUE Media",
-      robots: { index: false, follow: false }
-    };
-  }
+  const post = await getMediaPost(params.slug);
+  if (!post) notFound();
 
   const title = post.seo?.title || `${getPostSeoTitle(post)} | TSURILOGUE Media`;
   const description = getPostSeoDescription(post);
@@ -85,7 +80,7 @@ export async function generateMetadata({ params }: MediaArticlePageProps): Promi
 }
 
 export default async function MediaArticlePage({ params }: MediaArticlePageProps) {
-  const post = await getMediaPost(params.slug).catch(() => null);
+  const post = await getMediaPost(params.slug);
   if (!post) notFound();
 
   const [related, allPosts] = await Promise.all([getRelatedMediaPosts(post).catch(() => []), getAllMediaPosts().catch(() => [])]);
