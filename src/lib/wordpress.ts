@@ -122,10 +122,20 @@ async function wpFetch<T>(path: string, params?: Record<string, string | number 
   });
 
   if (!response.ok) {
-    throw new Error(`WordPress API request failed: ${response.status}`);
+    throw new WordPressApiError(response.status, url.toString());
   }
 
   return (await response.json()) as T;
+}
+
+export class WordPressApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly url: string
+  ) {
+    super(`WordPress API request failed: ${status}`);
+    this.name = "WordPressApiError";
+  }
 }
 
 export const getMediaPosts = cache(async ({ page = 1, perPage = 10, category, tag }: PostListParams = {}) => {
@@ -151,7 +161,22 @@ export const getAllMediaPosts = cache(async () => {
 });
 
 export const getMediaPost = cache(async (slug: string) => {
-  return wpFetch<WpPost>(`/wp-json/tsurilogue/v1/posts/${encodeURIComponent(normalizeMediaSlug(slug))}`);
+  const normalizedSlug = normalizeMediaSlug(slug);
+
+  try {
+    const post = await wpFetch<WpPost>(`/wp-json/tsurilogue/v1/posts/${encodeURIComponent(normalizedSlug)}`);
+    return normalizeMediaSlug(post.slug) === normalizedSlug ? post : null;
+  } catch (error) {
+    // The detail endpoint can fail independently while the post remains present in
+    // the paginated feed. Confirm absence against that feed before returning null,
+    // so a transient upstream failure is never cached as a not-found article.
+    try {
+      const posts = await getAllMediaPosts();
+      return posts.find((post) => normalizeMediaSlug(post.slug) === normalizedSlug) ?? null;
+    } catch {
+      throw error;
+    }
+  }
 });
 
 export const getMediaCategories = cache(async () => {
