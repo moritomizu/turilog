@@ -3,7 +3,7 @@ import { defaultLocale, isAppLocale, localizePath, stripLocaleFromPathname } fro
 
 const PUBLIC_FILE = /\.(.*)$/;
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   const canonicalMediaPathname = normalizeMediaPercentEncoding(pathname);
@@ -15,6 +15,9 @@ export function middleware(request: NextRequest) {
   }
 
   const isPublicMediaPath = shouldAvoidLocaleCookie(pathname);
+
+  const missingMediaResponse = await getMissingMediaArticleResponse(pathname);
+  if (missingMediaResponse) return missingMediaResponse;
 
   if (shouldRedirectMediaTrailingSlash(pathname)) {
     const url = request.nextUrl.clone();
@@ -60,6 +63,52 @@ export function middleware(request: NextRequest) {
     response.cookies.set("NEXT_LOCALE", locale, { path: "/", sameSite: "lax" });
   }
   return response;
+}
+
+async function getMissingMediaArticleResponse(pathname: string) {
+  const match = pathname.match(/^\/(ja)\/media\/([^/]+)$/);
+  if (!match || match[2] === "category" || match[2] === "tag") return null;
+
+  let slug: string;
+  try {
+    slug = decodeURIComponent(match[2]).normalize("NFC");
+  } catch {
+    return null;
+  }
+
+  try {
+    const lookupUrl = new URL("/wp-json/wp/v2/posts", "https://tsurilogue.tapiyota.com");
+    lookupUrl.searchParams.set("slug", slug);
+    lookupUrl.searchParams.set("status", "publish");
+    lookupUrl.searchParams.set("_fields", "id");
+
+    const response = await fetch(lookupUrl, {
+      headers: { accept: "application/json" },
+      next: { revalidate: 3600 }
+    });
+    if (!response.ok) return null;
+
+    const posts = (await response.json()) as Array<{ id?: number }>;
+    if (posts.length > 0) return null;
+
+    const locale = "ja";
+    const title = "記事が見つかりません";
+    const backLabel = "メディア一覧へ戻る";
+    const backPath = `/${locale}/media`;
+    const html = `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${title} | TSURILOGUE Media</title></head><body><main><h1>${title}</h1><p><a href="${backPath}">${backLabel}</a></p></main></body></html>`;
+
+    return new NextResponse(html, {
+      status: 404,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "x-robots-tag": "noindex, nofollow"
+      }
+    });
+  } catch {
+    // Do not turn an upstream outage into a false 404. The page-level fetch will
+    // either recover through the list endpoint or surface a retryable 5xx.
+    return null;
+  }
 }
 
 export function normalizeMediaPercentEncoding(pathname: string) {
